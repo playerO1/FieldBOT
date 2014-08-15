@@ -11,7 +11,7 @@ HISTORY of develop.
 This bot made for Spring RTS game.
 First file created on 1 june 2014. First work wersion on july 2014.
 Some test wersion have name "Peace BOT", becouse they no have army, only economic.
-Today, 14 august 2014, first day - created GitHub repository. First add modeling files. At the next time I add sources.
+Today, 14 august 2014, first day - created GitHub repository. First add UML modeling files (docs). At the next time I add sources and compiling version.
 
 PlayerO1 (C) 2014, this project licensed under GNU.
 --------
