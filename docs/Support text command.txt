@@ -1,0 +1,46 @@
+This manual syntax structure: comment «command example», {or 1|or 2|or 3} [optional 1, may be reduce][optional 2]. Don't write "{" "|" "[" it is for documentation only.
+
+-- By click on "Need resource" buttons (text chat) --
+Request resource (as button on team game), can send energy and metal. If without number (sending level) then will be send 70% of resource having.
+
+-- By text chat --
+Chat text command syntax «{bot|%botShortName%|bot_color} query text», after last command you can using «and» without bot name ("and" must work, TEST). Example: "bot make kbot factory", "red do tech up", "FieldBOT show status".
+Query text:
+1. Request resource (as button on team game), or «get|give res».
+2. Show next opportunity level «show level»
+3. Escape build command or stop do tech up «stop work»
+4. Show debug information about current state «status»
+5. Create empty(? test) base «create base {on|at} X Y», where X and Y - number.
+6. Create units «{build|make} [N] part of unit name [now]», where N-number of unit count, "now" - build now (TEST). Example: "bot make 4 light fus".
+7. Take bot unit to you «get|give unit [N|all] unit_name_element [now|now!]», where N - unit count, "now" - getting now if there working. Example "bot give 4 constructor bot now"
+8. Take army «get|give army»
+9. morphing unit «{do|start} morph [all] [now]»
+10. stop morph «stop morph» for all
+11. execute tech up to best economic level «do  tech up [now]», if "now" - don't check enought resources for this, do emiditly.
+12. Create army «{do|make} army [for [spam #] [HP|health #] [atack #] [range #] [stealth? #] [work #]] [limit #] [time # [{min|sec}]]», where # - number (percent of wanted), limit - max unit count, time-max time for build all army.
+13. Change BOT logic: «{enable | disable} { auto tech up | enemy chat | eco }». "enemy chat" - allow/disallow command from enemy team. "eco" - if disable, BOT do not build eco building, constructors will be walking random.
+14. Change BOT logic: «set {negative|pessimistic|bad}|{positive|optimistic|good} eco» - set resource analyzer mode, if "negative" then bot will be using not best eco building, if "positive" then bot will be build best eco building but they have bad if have economic cruzis (you will be take big resource from him, or if bot build too many in some time).
+15. «help|list» - show support commands (TEST, UPDATE).
+
+-- By map label --
+If game contain more that 1 bot, then all command must have prefix «{bot|%botShortName%|bot_color} query text».
+1. Get unit in marker area «get|give [ now|now!]»
+2. Build unit there «build|make part_of_unit_name»
+3. Create new economic/building base «create [empty] base». Where "empty" — not send unit, this base will be work only if player send constructor to bot on new base position..
+4. Moving center fo near base to new position «move base». If you want that bot will be build new building on other position.
+
+?. Set start position «start here|this» «start bot» (TODO), см. clb.getMap().getStartPos() и clb.getGame().sendStartPosition(boolean ready, AIFloat3 pos)).
+?. Разобрать это «reclime»(TODO)
+?. Достроить, помочь построить «help|assist» (TODO)
+?. Переместить армию «move army» (TODO)
+
+
+-- AI Options --
+This option can be set before game. Some of then can be modifed in game by text chat command.
+"Allow enemy command": AI can control by enemy team chat command. If false - only team chat.
+"Allow auto tech up": automatic do tech up to new level. If false - type in chat "bot do tech up" for manual do it.
+"Build decorator type": select choose building position on base surface. Parameters: "random" - as other AI; "spiral" - don't use it, it bad using free space; "circle" - don't use it, not work now; "tetris" - The AI will be smart play on sim-city :)
+"Show message level": debug information level, filter to in-game messages from BOT. All log save to file.
+"Metal detect map": sometime BOT can have bug with map metal type detect (for same metal field). If have bug on some map, you can choose map type manual: -2 autodetect, -1 no metal map, 0 normal map, 1 metal field.
+"Smart tech up time": TEST, use more smart time for tech up.
+

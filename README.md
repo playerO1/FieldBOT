@@ -2,9 +2,10 @@ FieldBOT
 ========
 
 Economic bot, AI for Spring RTS
-Support smart economic, tech levels.
-Not support army controll now.
-Can work with MOD's: BA, TA, RD, NOTA (need old AI Interface for Spring 94.1), some other mod's.
+Support smart economic, tech levels (by build new factory, by morph units; not support by build research center for TA/RD).
+Not support army controll now (to do later).
+Support MOD's: BA, TA, RD, NOTA (NOTA need old AI Interface for Spring 94.1), some other mod's (small support, but can work: Evo RTS ?, Zero-K ? BUG).
+Support maps: non-metal, metal field, normal metal map not best, but can work; like flat field, all water or all ground.
 
 --------
 HISTORY of develop.
