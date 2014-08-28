@@ -1,0 +1,41 @@
+Changelog of FieldBOT.
+
+=== dev a1 ===
+First public relase.
+Can build economic, execute text chat query, can play on metal map, non-metal map, normal map. Like flat map, all ground or water.
+Not can control army, then can't using as autonomic AI, only on team with human.
+
+Primary features:
+- build best economic
+- build only around base
+- tech up to new economic level, T2 and above. (bug: if current economic level better that next level then tech up skipped, can't think thread above than 1 tech up to future)
+- sharing resource and unit
+- execute chat command
+- make army for chat command
+- can play on non-metal map and metal map, normal metal map.
+- can planing building for smart use base field ("tetris" base planing)
+
+Features (http://springrts.com/wiki/AI:Compare:*A):
+non-cheating: yes, noly true economic
+teamplay support: can share resource and units on demain
+com-sharing support: ? support using share unit and recive unit.
+unit support: all who can mowind and build anythink. Can using non-moving builder, but can have some bugs.
+economy: concentrated on economy building, maximize profit.
+mex upgrading: no mex upgrade, no geotermal upgrade
+geothermal usage: no
+reclaiming: no, accidentally by nano-towers
+misc intelligence: ? (i don't know what this mean)
+attacking: no
+nukes: no
+D-Gunning: no
+defending: no
+unit repairing: no, accidentally by nano-towers
+antinukes: no
+shields: no
+build assisting: yes (TODO ally team build assisting)
+capturing ability: no
+resurrecting ability: no
+transport usage: no
+threatmap usage: ? no
+
+=======

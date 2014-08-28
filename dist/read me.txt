@@ -1,0 +1,12 @@
+Install:
+Copy "FieldBOT" folder into you'r spring folder.
+
+For Windows: into $mySpringInstallDir/AI/Skirmish/.
+For Linux: ~/.config/spring/AI/Skirmish/
+
+If you want run bot under Spring 94.1 and bot don't work, you need change AIInterface.jar file on bot folder. Replace file "FieldBOT\dev *\lib\AIInterface.jar". Copy from you'r spring folder "spring\AI\Interfaces\Java\0.1\AIInterface.jar" into "FieldBOT\dev *\lib\".
+
+If you have problem with install this AI, see page http://springrts.com/wiki/AI:Skirmish for more information.
+
+(C) PlayerO1 2014, GNU GPL license v2 or above. https://github.com/playerO1
+
