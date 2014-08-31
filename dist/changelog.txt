@@ -1,5 +1,10 @@
 Changelog of FieldBOT.
 
+=== dev a1.1 ===
+- improvent tech-up function (test: Zero-K can build some factory for product constructor, decrease bugs with wrong tech up time and level choose
+- increase CPU usage :)
+- set default base decorator "tetris" (for NOTA mod have bug, recomended set "random")
+
 === dev a1 ===
 First public relase.
 Can build economic, execute text chat query, can play on metal map, non-metal map, normal map. Like flat map, all ground or water.
