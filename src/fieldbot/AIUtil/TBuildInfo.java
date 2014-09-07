@@ -11,7 +11,7 @@ import java.util.ArrayList;
 
 /**
  * TODO Use IT!
- * @author user2
+ * @author PlayerO1
  */
 public class TBuildInfo {
     public Unit unit;

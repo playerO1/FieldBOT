@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 user2
+ * Copyright (C) 2014 PlayerO1
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,7 +24,7 @@ import com.springrts.ai.oo.clb.UnitDef;
 
 /**
  *
- * @author user2
+ * @author PlayerO1
  */
 public class MathPoints {
 
@@ -66,7 +66,9 @@ public class MathPoints {
     }
 
     public static float getRadiusFlat(UnitDef def) {
-        return def.getRadius();
+        float w=def.getXSize()*8; // TODO TEST!
+        float h=def.getZSize()*8;
+        return (float)Math.sqrt(w*w+h*h); //last: def.getRadius();
     }
 
     public static float getRadiusFlat(Unit u) {
@@ -82,7 +84,13 @@ public class MathPoints {
         return p;
     }
 
-    public static AIFloat3 getRandomPointInRadius(AIFloat3 center,float r) {
+    /**
+     * 
+     * @param center center of circle
+     * @param r fixed radius
+     * @return 
+     */
+    public static AIFloat3 getRandomPointOnRadius(AIFloat3 center,float r) {
         AIFloat3 p = new AIFloat3(center);
         double ang = Math.random() * 2 * Math.PI;
         p.x += r * Math.sin(ang);

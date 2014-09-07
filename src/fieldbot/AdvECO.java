@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Улучшенная информация об экономике. Поддерживает усреднённые значения.
- * @author user2
+ * @author PlayerO1
  */
 public class AdvECO {
     /**
@@ -25,7 +25,7 @@ public class AdvECO {
     public static final int R_Usage=3;
     
     /**
-     * текущие ресурсы
+     * Current resources
      */
     private float resCurrent[][]; // TODO...
     
@@ -52,6 +52,9 @@ public class AdvECO {
     private final OOAICallback clb;
     private final ModSpecification modMakerSpecific;
     
+    private final boolean isZeroK_mod; // Mod specification!
+    private final float zeroK_EStorX=10000.0f;// decrease E storage limit
+    
     /**
      * 
      * @param numStatisticTime число измерений для усреднения
@@ -61,6 +64,7 @@ public class AdvECO {
         this.clb= clb;
         final Economy currentEco=clb.getEconomy();
         this.modMakerSpecific=modMakerSpecific;
+        this.isZeroK_mod=modMakerSpecific.modName.equals("ZK");
         
         List<Resource> resLst=clb.getResources();
         resName=new Resource[resLst.size()];
@@ -75,7 +79,10 @@ public class AdvECO {
             resCurrent[R_Income][i]=currentEco.getIncome(resName[i]);
             resCurrent[R_Storage][i]=currentEco.getStorage(resName[i]);
             resCurrent[R_Usage][i]=currentEco.getUsage(resName[i]);
-
+            if (isZeroK_mod && i==1) { // For ZeroK E storage.
+                resCurrent[R_Storage][i]-=zeroK_EStorX;
+                resCurrent[R_Current][i]=Math.min(resCurrent[R_Current][i], resCurrent[R_Storage][i]);
+            } 
             for (int s=0;s<resStatisticRav.length;s++) for (int t=0;t<4;t++) resStatisticRav[s][t][i]=resCurrent[t][i];
         }
         dataI=0;
@@ -108,10 +115,13 @@ public class AdvECO {
                 resStatisticRav[dataI][R_Income][i]==0 && resStatisticRav[dataI][R_Usage][i]!=0
                 ) {
                 resStatisticRav[dataI][R_Income][i]=resStatisticRav[dataI][R_Usage][i]*1.2f;
-                // !!!!!!!!!!
                 // "Костыль" от того что поступление ресурсов = 0 при заполнении хранилищь
             }
             */
+        }
+        if (isZeroK_mod) { // For ZeroK E storage.
+            resStatisticRav[dataI][R_Storage][1]-=10000.0f;
+            resStatisticRav[dataI][R_Current][1]=Math.min(resStatisticRav[dataI][R_Current][1], resStatisticRav[dataI][R_Storage][1]);
         }
     }
     
@@ -153,6 +163,9 @@ public class AdvECO {
         Economy eco=clb.getEconomy();
         float r[]=new float[resName.length];
         for (int i=0;i<resName.length;i++) r[i]=eco.getCurrent(resName[i]);
+        if (isZeroK_mod) { // For ZeroK E storage.
+            r[1]=Math.max(r[1], eco.getStorage(resName[1])-zeroK_EStorX);
+        }
         return r;
     }
     public float[] getIncomeToArr() {
@@ -180,6 +193,10 @@ public class AdvECO {
             resCur[R_Income][i]=currentEco.getIncome(resName[i]);
             resCur[R_Storage][i]=currentEco.getStorage(resName[i]);
             resCur[R_Usage][i]=currentEco.getUsage(resName[i]);
+        }
+        if (isZeroK_mod) { // For ZeroK E storage.
+            resCur[R_Storage][1]-=10000.0f;
+            resCur[R_Current][1]=Math.min(resCur[R_Current][1],resCur[R_Storage][1]);
         }
         return resCur;
     }
@@ -302,6 +319,9 @@ public class AdvECO {
         //TODO use TWarStrategy - have funstion normalizeVector.
         return coast;
     }
+    public float getBuildPowerCoast(float buildPower) {
+        return buildPower/4500; // !!! TODO BuildPowerCoast
+    }
     
     /**
      * This can using for compare resources info.
@@ -320,6 +340,16 @@ public class AdvECO {
         }
         //TODO use TWarStrategy - have funstion normalizeVector.
         return coast;
+    }
+    
+    /**
+     * Convert resource object to index.
+     * @param res
+     * @return resource index on resName[] or -1.
+     */
+    public int getResourceID(Resource res) {
+        for (int i=0; i<resName.length; i++) if (resName[i].equals(res)) return i;
+        return -1;
     }
     
     /**

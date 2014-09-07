@@ -7,17 +7,15 @@
 package fieldbot.baseplaning;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
-import fieldbot.FieldBOT;
 import fieldbot.ModSpecification;
 import fieldbot.AIUtil.MathPoints;
 import fieldbot.TBase;
 
 /**
  *
- * @author user2
+ * @author PlayerO1
  */
 public class TBasePlaning_randomNear extends ABasePlaning{
 

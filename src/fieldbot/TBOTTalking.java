@@ -26,7 +26,7 @@ import java.util.Map.Entry;
 
 /**
  *
- * @author user2
+ * @author PlayerO1
  */
 public class TBOTTalking {
     
@@ -166,8 +166,8 @@ private boolean itIsForMeMsg(String msg, boolean fromPointMarker) {
 private List<Unit> selectUnitInArea_myOnly(AIFloat3 center,float r, boolean getUnitNow) {
     // TODO быстрее сделать это (owner.clb.getFriendlyUnitsIn())
     ArrayList<Unit> selectLst=new ArrayList<Unit>();
-    for (TBase base:owner.bases) {
-        for (Unit u:base.getAllUnits(getUnitNow))
+    for (AGroupManager sGroup:owner.smartGroups) {
+        for (Unit u:sGroup.getAllUnits(getUnitNow))
          if (u!=null)
          {// !!!!!!!!!!!!!!!!!
             float maxSearchR;
@@ -236,7 +236,7 @@ protected void onNewPoint(Point msgPoint) {
     if (message.contains("create") && message.contains("base")){// || message.contains("new"))) {
         if (message.contains("empty")) {
             TBase newB=new TBase(owner, msgPoint.getPosition(), 1000);
-            owner.bases.add(newB);
+            owner.addSmartGroup(newB);
             owner.sendTextMsg("New empty base created "+newB.toString(), FieldBOT.MSG_DLG);
         } else {
             //TODO Перенести в FieldBOT класс!
@@ -263,7 +263,7 @@ protected void onNewPoint(Point msgPoint) {
         final String parsingParam[]={"build","make"};
 
         HashSet<UnitDef> udSet=new HashSet<UnitDef>();
-        for (TBase base:owner.bases) udSet.addAll(base.getBuildList(true)); // всех, в т.ч. недостроенных.
+        for (TBase base:owner.selectTBasesList()) udSet.addAll(base.getBuildList(true)); // всех, в т.ч. недостроенных.
         UnitDef meanUnitDef=findUnitDefByHumanQuery(message,parsingParam,new ArrayList(udSet)); // кого строить
 
         ArrayList<Integer> countRaw=parsingIntArr(message,parsingParam);
@@ -276,7 +276,7 @@ protected void onNewPoint(Point msgPoint) {
         } else {
             TBase baseForBuild=null; // ближайшая к точке что может это строить!
             float nearL=0.0f;
-            for (TBase base:owner.bases) {
+            for (TBase base:owner.selectTBasesList()) {
                 float L=MathPoints.getDistanceBetweenFlat(base.center, msgPoint.getPosition())-base.radius;
                 if (baseForBuild==null || L<nearL) // первая и ближайшая
                   if (base.canBuildOnBase(meanUnitDef, false) && base.getBuildList(true).contains(meanUnitDef)) // которая реально может это построить
@@ -358,7 +358,7 @@ public void message(int player, String message) {
         }
         
         if (message.contains("show") && message.contains("level")) {
-            for (TBase base:owner.bases) {
+            for (TBase base:owner.selectTBasesList()) {
                 // TODO print "On base NAME:"
                 ArrayList<TTechLevel> allTLvls=new ArrayList<TTechLevel>();
                 
@@ -387,7 +387,7 @@ public void message(int player, String message) {
                 float bestEco[]=TTechLevel.getMaxResProduct(base.getBuildList(true), owner); // текущий уровень
                 float currentRes[][];
                 if (owner.ecoStrategy.useOptimisticResourceCalc) currentRes= owner.avgEco.getSmartAVGResourceToArr();
-                else currentRes= owner.avgEco.getAVGResourceToArr();
+                  else currentRes= owner.avgEco.getAVGResourceToArr();
                 float bestBuilderF=TTechLevel.getMaxBuildPower(base.getBuildList(true));
                 TTechLevel bestLvl = owner.ecoStrategy.selectLvl_bestForNow(allTLvls, base, bestEco, bestBuilderF, currentRes);
                 if (bestLvl!=null) owner.sendTextMsg("BEST TLevel="+bestLvl, FieldBOT.MSG_DLG);
@@ -414,7 +414,7 @@ public void message(int player, String message) {
             final String parsingParam[]={"unit","units"};
 
             HashSet<UnitDef> udSet=new HashSet<UnitDef>();
-            for (TBase base:owner.bases) udSet.addAll(base.getContainUnitDefsList(false)); // всех, в т.ч. недостроенных.
+            for (AGroupManager sGroup:owner.smartGroups) udSet.addAll(sGroup.getContainUnitDefsList(false)); // всех, в т.ч. недостроенных.
             UnitDef meanUnitDef=findUnitDefByHumanQuery(message,parsingParam,new ArrayList(udSet)); // кого передать.
             // TODO список из существующих сейчас юнитов !!!
             ArrayList<Integer> countRaw=parsingIntArr(message,parsingParam);
@@ -427,11 +427,11 @@ public void message(int player, String message) {
             
             boolean getUnitNow=message.contains(" now")||message.contains("now!");
             
-            for (TBase base:owner.bases) {
-                for (Unit u:base.getAllUnits(getUnitNow)) if (u.getDef().equals(meanUnitDef) && n<count) {
+            for (AGroupManager sGroup:owner.smartGroups) {
+                for (Unit u:sGroup.getAllUnits(getUnitNow)) if (u.getDef().equals(meanUnitDef) && n<count) {
                     lstToShare.add(u);
                     n++;
-                    // TODO выход из цыкла быстрее
+                    // TODO return from cicle faster, break
                 }
             }
             if (lstToShare.isEmpty()) {
@@ -444,7 +444,15 @@ public void message(int player, String message) {
             //if (player==-1) owner.sendTextMsg("Can not share to spectator.", FieldBOT.MSG_DLG);
             //else {
                 if (lstToShare==null) lstToShare=new ArrayList<Unit>();
-                for (TBase base:owner.bases) lstToShare.addAll(base.army);
+                for (AGroupManager sGroup:owner.smartGroups) {
+                    if (sGroup instanceof TBase) {
+                        TBase base=(TBase)sGroup;
+                        lstToShare.addAll(base.army);
+                    } else if (sGroup.baseType>0){
+                        //FIXME !!!
+                        lstToShare.addAll(sGroup.getAllUnits(true));
+                    }
+                }
                 if (lstToShare.isEmpty()) {
                     owner.sendTextMsg("No army unit for sharing.", FieldBOT.MSG_DLG);
                     lstToShare=null;
@@ -454,7 +462,7 @@ public void message(int player, String message) {
 
         if (message.contains(" stop") && message.contains(" work")) {
             boolean estChtoOstanovit=false;
-            for (TBase base:owner.bases) {
+            for (TBase base:owner.selectTBasesList()) { // FIXME what do with army?
                 estChtoOstanovit = estChtoOstanovit || base.currentBaseTarget.currentBuildLst.isEmpty();
                 base.currentBaseTarget.removeAllBuildingTarget();
             }
@@ -467,9 +475,9 @@ public void message(int player, String message) {
             owner.sendTextMsg("Have tech levels: "+owner.techLevels.keySet().toString(), FieldBOT.MSG_DLG);
             owner.sendTextMsg("Avg resources: "+owner.avgEco.toString(), FieldBOT.MSG_DLG);
             owner.sendTextMsg("BOT CPU usage: "+owner.cpuTimer.toString(), FieldBOT.MSG_DLG);
-            owner.sendTextMsg("Num of bases "+owner.bases.size(), FieldBOT.MSG_DLG);
-            for (TBase base:owner.bases) {
-                owner.sendTextMsg(base.toString(), FieldBOT.MSG_DLG);
+            owner.sendTextMsg("Num of groups "+owner.smartGroups.size(), FieldBOT.MSG_DLG);
+            for (AGroupManager sGroup:owner.smartGroups) {
+                owner.sendTextMsg(sGroup.toString(), FieldBOT.MSG_DLG);
             }
             owner.cpuTimer.reset();// !!!!
         }
@@ -502,7 +510,7 @@ public void message(int player, String message) {
             if (intRaw.size()==2) {
                 bX=intRaw.get(0); bY=intRaw.get(1); // получение координат
                 TBase newB=new TBase(owner, new AIFloat3(bX, 0, bY), 1000);
-                owner.bases.add(newB);
+                owner.addSmartGroup(newB);
                 owner.sendTextMsg("New base created "+newB.toString(), FieldBOT.MSG_DLG);
             } else owner.sendTextMsg("New base COORN DNT FOUND! "+message, FieldBOT.MSG_DLG);
         }
@@ -511,16 +519,25 @@ public void message(int player, String message) {
             boolean doNow=message.contains(" now");
             // TODO only constructor or army too?
             if (!message.contains("all")) {
-                for (TBase base:owner.bases) {
+                for (AGroupManager sGroup:owner.smartGroups) {
                     Unit u=null;
-                    for (Unit unit:base.idleCons) {
-                        List<CommandDescription> l=owner.modSpecific.getMorphCmdList(unit,false);
-                        if (!l.isEmpty()) u=unit;
-                    }
-                    if (u!=null) base.setAsWorking(u);
-                    else if (doNow) for (Unit unit:base.workingCons) {
-                        List<CommandDescription> l=owner.modSpecific.getMorphCmdList(unit,false);
-                        if (!l.isEmpty()) u=unit;
+                    if (sGroup instanceof TBase) {
+                        TBase base=(TBase)sGroup;
+                        for (Unit unit:base.idleCons) {
+                            List<CommandDescription> l=owner.modSpecific.getMorphCmdList(unit,false);
+                            if (!l.isEmpty()) u=unit;
+                        }
+                        if (u!=null) base.setAsWorking(u);
+                        else if (doNow) for (Unit unit:base.workingCons) {
+                            List<CommandDescription> l=owner.modSpecific.getMorphCmdList(unit,false);
+                            if (!l.isEmpty()) u=unit;
+                        }
+                    } else {
+                        // FIXME makr as work unit for other group
+                        for (Unit unit:sGroup.getAllUnits(!doNow)) {
+                            List<CommandDescription> l=owner.modSpecific.getMorphCmdList(unit,false);
+                            if (!l.isEmpty()) u=unit;
+                        }
                     }
                     if (u!=null) {
                         List<CommandDescription> l=owner.modSpecific.getMorphCmdList(u,false);
@@ -536,11 +553,13 @@ public void message(int player, String message) {
 
                 }
             } else { // Morph all
-                for (TBase base:owner.bases) {
+                for (AGroupManager sGroup:owner.smartGroups) {
                     ArrayList<Unit> toMorphLst=new ArrayList<Unit>(); // потом всех чтобы сделать рабочими
                     List<Unit> toMorphUnits=null;
-                    if (!doNow) toMorphUnits=base.idleCons;
-                           else toMorphUnits=base.getAllUnits(true);
+                    if (!doNow || !(sGroup instanceof TBase)) {
+                        TBase base=(TBase)sGroup; // TODO test!!!!
+                        toMorphUnits=base.idleCons;
+                    } else toMorphUnits=sGroup.getAllUnits(true);
                     for (Unit unit:toMorphUnits) { // !!! Unit unit:base.workingCons
                         List<CommandDescription> l=owner.modSpecific.getMorphCmdList(unit,false);
                         if (!l.isEmpty()) {
@@ -556,15 +575,18 @@ public void message(int player, String message) {
                             }
                         }
                     }
-                    base.setAllAsWorking(toMorphLst);//!!!!!
+                    if (sGroup instanceof TBase) {
+                        TBase base=(TBase)sGroup; // TODO test!!!!
+                        base.setAllAsWorking(toMorphLst);//!!!!!
+                    }
                 }
             }
         }
         if (message.contains("stop") && message.contains("morph")) { // TODO кого конкретно.
             boolean existForStop=false;
-            for (TBase base:owner.bases) {
+            for (AGroupManager sGroup:owner.smartGroups) {
                 //ArrayList<Unit> morphLst=new ArrayList<Unit>(); // потом всех чтобы сделать рабочими
-                for (Unit unit:base.getAllUnits(false)) { // !!! Unit unit:base.workingCons
+                for (Unit unit:sGroup.getAllUnits(false)) { // !!! Unit unit:base.workingCons
                     boolean isMopring=false;
                     for (Command cmd: unit.getCurrentCommands())
                      if (ModSpecification.isMorphCMD(cmd))
@@ -660,7 +682,7 @@ public void message(int player, String message) {
             
             // 2. Вычисление оптимальной комбинации и кол-во юнитов
             TBase bestBase=null; HashSet<UnitDef> lstOfUDefs=new HashSet<UnitDef>();
-            for (TBase base:owner.bases) {
+            for (TBase base:owner.selectTBasesList()) {
                 HashSet<UnitDef> tmpUDefs=base.getBuildList(true);
                 if (tmpUDefs.size()>lstOfUDefs.size()) {
                     bestBase=base;
@@ -668,7 +690,7 @@ public void message(int player, String message) {
                 }
             }
             
-            HashMap<UnitDef,Integer> armyUnits=owner.warStrategy.shooseArmy(bestBase,new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva);
+            HashMap<UnitDef,Integer> armyUnits=owner.warStrategy.shooseArmy(bestBase, false, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva);
             
             // TODO ТОлько те ктороые может строить (без лаборатории или с ней!!!!!!!!!!!!!!!!!!!)
             
@@ -689,7 +711,7 @@ public void message(int player, String message) {
             final String parsingParam[]={"build","make","unit"};
             
             HashSet<UnitDef> udSet=new HashSet<UnitDef>();
-            for (TBase base:owner.bases) udSet.addAll(base.getBuildList(true)); // всех, в т.ч. недостроенных.
+            for (TBase base:owner.selectTBasesList()) udSet.addAll(base.getBuildList(true)); // всех, в т.ч. недостроенных.
             UnitDef meanUnitDef=findUnitDefByHumanQuery(message,parsingParam,new ArrayList(udSet)); // кого строить
             
             ArrayList<Integer> countRaw=parsingIntArr(message,parsingParam);
@@ -700,7 +722,7 @@ public void message(int player, String message) {
                 //for (String t:unitNameElement) un +=" " + t;
                 owner.sendTextMsg("Unit type not found: "+un, FieldBOT.MSG_DLG);
             } else {
-                for (TBase base:owner.bases) {
+                for (TBase base:owner.selectTBasesList()) { // FIXME other groups?
                     if (base.canBuildOnBase(meanUnitDef, false) && base.getBuildList(true).contains(meanUnitDef))
                     { // Только те, которые способны это сделать
                         base.currentBaseTarget.add(meanUnitDef, count);
@@ -727,7 +749,7 @@ public void message(int player, String message) {
             }
             if ( message.contains(" eco"))
             {
-                for (TBase base:owner.bases) base.currentBaseTarget.makeEco=true;
+                owner.ecoStrategy.makeEco=true;
                 cmdAcepted=true;
             }
             if (cmdAcepted) owner.sendTextMsg("Command acepted.", FieldBOT.MSG_DLG);
@@ -747,7 +769,7 @@ public void message(int player, String message) {
             }
             if ( message.contains(" eco"))
             {
-                for (TBase base:owner.bases) base.currentBaseTarget.makeEco=false;
+                owner.ecoStrategy.makeEco=false;
                 cmdAcepted=true;
             }
             if (cmdAcepted) owner.sendTextMsg("Command acepted.", FieldBOT.MSG_DLG);

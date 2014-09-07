@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 user2
+ * Copyright (C) 2014 PlayerO1
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,11 +23,12 @@ import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.WeaponDef;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 
 /**
  *
- * @author user2
+ * @author PlayerO1
  */
 public abstract class AGroupManager {
 
@@ -35,57 +36,90 @@ public abstract class AGroupManager {
     
     
    /**
-    * Тип базы
-    * 0 основная, эконоимка
-    * 1 боевая защитная или разведывательная(укреп район)
+    * Base type
+    * 0 - main, economic
+    * 1 - war group, army or war base
     */
-   public int baseType=0; // TODO...
+   public int baseType=0; // TODO specification
     
     /**
-     * Добавить юнита в базу
+     * Add unit in group
      * @param unit
-     * @return принят или нет (может уже есть)
+     * @return acepted or no acepted
      */
     public abstract boolean addUnit(Unit unit);
     
+    public boolean addAllUnits(Collection<Unit> units) {
+        boolean modifed=false;
+        for (Unit u:units) {
+            boolean m=addUnit(u);
+            modifed = modifed || m;
+        }
+        return modifed;
+    }
+    
     /**
-     * Убрать юнита из базы
+     * Remove unit from this group
      * @param unit
-     * @return убран или нет (например не был приписан)
+     * @return removed or no removed
      */
     public abstract boolean removeUnit(Unit unit);
 
+    public boolean removeAllUnits(Collection<Unit> units) {
+        boolean modifed=false;
+        for (Unit u:units) {
+            boolean m=removeUnit(u);
+            modifed = modifed || m;
+        }
+        return modifed;
+    }
+
     /**
-     * Содержит ли юнита в списках?
+     * Do contain this unit in list
      * @param unit
      * @return 
      */
     public abstract boolean contains(Unit unit);
     
     /**
-     * На сколько нужен этот юнит данной группе
+     * Do this unit need to this group
      * @return 
      */
     public abstract float doYouNeedUnit(Unit unit);
     
     /**
-     * Возвращает всех юнитов приписанных к базе
-     * @param selectWhoCanNow - true = выбирает только тех, кто может сейчас строить (достроенных, и не paralyzed)
+     * Return all units that contain this group
+     * @param selectWhoCanNow - true = select only non working buidlers, no paralyzed and no in behin building.
      * @return 
      */
     public abstract ArrayList<Unit> getAllUnits(boolean selectWhoCanNow);
    
     /**
-     * Возвращает перечень всех типов юнитов на базе
-     * @param onlyWhatIdle только тех, кто не занят и не строится.
+     * Do contain some units or no
      * @return 
      */
-//    public abstract HashSet<UnitDef> getContainUnitDefsList(boolean onlyWhatIdle);
+    public boolean isEmpty() {
+        return getAllUnits(false).isEmpty();
+    }
+    
+    /**
+     * Return list of all unit type of all unit in group
+     * @param onlyWhatIdle only what not work and not behin build
+     * @return 
+     */
+    public HashSet<UnitDef> getContainUnitDefsList(boolean onlyWhatIdle) {
+        HashSet<UnitDef> currentUnitTypesSet=new HashSet<UnitDef>(); // Unit types
+        for (Unit builder:getAllUnits(onlyWhatIdle)) currentUnitTypesSet.add(builder.getDef());
+        
+        return currentUnitTypesSet;
+        // TODO кэшировать вывод
+        
+    }
     
 
     
     
-    // Команды, переадрисуемые ботом.
+    // Command, sending from bot, from Spring.
     
     //@Override
     public int update(int frame) {

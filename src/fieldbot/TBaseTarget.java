@@ -13,30 +13,28 @@ import java.util.ArrayList;
 
 /**
  * 
- * @author user2
+ * @author PlayerO1
  */
 public class TBaseTarget {
-    public ArrayList<com.springrts.ai.oo.clb.UnitDef> currentBuildLst; // Что строить сейчас
-    public ArrayList<Integer> currentBuildCount; // сколько строить
-    public ArrayList<AIFloat3> currentBuildPos; // принудительные позиции строительства
+    public ArrayList<com.springrts.ai.oo.clb.UnitDef> currentBuildLst; // What build for now
+    public ArrayList<Integer> currentBuildCount; // How many build
+    public ArrayList<AIFloat3> currentBuildPos; // predefine position, or null
     
-    private ArrayList<UnitDef> inProgressBuildLst; // Что уже заложено
-    private ArrayList<Integer> inProgressBuildCount; // сколько строить
-    private ArrayList<Integer> inProgressBuildTime; // время ожидания (frame)
+    private ArrayList<UnitDef> inProgressBuildLst; // What connamd send to build
+    private ArrayList<Integer> inProgressBuildCount; // how many command to build send
+    private ArrayList<Integer> inProgressBuildTime; // wait time for start build (frame)
     
-    private ArrayList<Unit> inBuildingBuildLst; // Что уже строится
+    private ArrayList<Unit> inBuildingBuildLst; // What start building now, and not finished
 
-    // цепочка объектов
+    // Ligic object trajectory:
     // currentBuildLst -> inProgressBuildLst -> inBuildingBuildLst -> (done! or goto currentBuildLst)
     
-    public boolean makeEco;
-    public boolean targetHaveComplite;
-    public boolean commandNow; // Выполнить немедленно.
-    public boolean needPrecissionRes; // Нужно соблюдать точность ресурсов - ничего лишнего кроме этого списка не будет строится, пока он не закончится.
+    public boolean targetHaveComplite; // signalized about last list of target complited or no
+    public boolean commandNow; // for base, execute emidetly
+    public boolean needPrecissionRes; // for base, do not economic when this target is not complited.
     
     
     public TBaseTarget() {
-        makeEco=true;
         targetHaveComplite=false;
         commandNow=false;
         needPrecissionRes=false;
@@ -53,9 +51,9 @@ public class TBaseTarget {
     
     private int lastFrame=0;
     /**
-     * Обновить список постройки (для timeout).
-     * Срабатывает, при разницы во времени >10
-     * @param frame текущее время
+     * For update list (for timeout).
+     * Checl only when frame delta >10
+     * @param frame current frame
      */
     public void update(int frame) {
         int frameD=frame-lastFrame;
@@ -74,14 +72,24 @@ public class TBaseTarget {
             
             lastFrame=frame;
         }
-        // TODO test it.
     }
     
     /**
-     * Добавить цель постройки
-     * @param def что строить
-     * @param count сколько
-     * @param buildPos позицию, где строить эти юниты
+     * On all target finished.
+     */
+    private void onFinishTarget() {
+        // disable special option.
+        commandNow=false;
+        needPrecissionRes=false;
+        targetHaveComplite=true;
+        // TODO call to owner
+    }
+    
+    /**
+     * Add build target
+     * @param def what build
+     * @param count count of build def
+     * @param buildPos position for build it
      */
     public void add(UnitDef def,int count,AIFloat3 buildPos) {
         // TODO при сбое строительства позиция теряется. При создании группы юнитов и последущего добавления позиция может не сбросится.
@@ -95,9 +103,9 @@ public class TBaseTarget {
         //TODO if (count>1) owner.basePlaning,prepareFor()...
     }
     /**
-     * Добавить цель постройки
-     * @param def что строить
-     * @param count сколько
+     * Add build target
+     * @param def what build
+     * @param count count of build def
      */
     public void add(UnitDef def,int count) {
         int p=currentBuildLst.indexOf(def);
@@ -115,7 +123,7 @@ public class TBaseTarget {
     }
     
     /**
-     * Очистить список целей постройки
+     * Clear target list
      */
     public void removeAllBuildingTarget() {
         currentBuildLst.clear();
@@ -136,31 +144,31 @@ public class TBaseTarget {
     }
     
     /**
-     * Запланированна постройка юнита
-     * @param def кого заложили
-     * @param timeout время ожидания до unitCreated, если превысит, то считается что отменилось и добавляется в currentBuildLst
+     * Call this on unit planned to start building
+     * @param def who add to build
+     * @param timeout time (frames) for waiting unitCreated, if time will be pass then think that error build and add to currentBuildLst again.
      */
     public void unitPlanedToBuild(UnitDef def, int timeout) {
-        // TODO timeout какой нужен???
+        // TODO what best timeout?
         int p=currentBuildLst.indexOf(def);
-        if (p==-1) { // нет элемента
-            // не учитывать другие планы и юниты...
-        } else { // элемент по плану.
+        if (p==-1) { // if not in plan?
+            // do nothing
+        } else { // element by plan
             int c=currentBuildCount.get(p);
             c--;
-            if (c<=0) { // если последний по колличеству.
+            if (c<=0) { // if last
                 currentBuildLst.remove(p);
                 currentBuildCount.remove(p); // !!!!!!
                 currentBuildPos.remove(p);
             } else currentBuildCount.set(p, c);
-            // Добавить в inProgress
+            // add to inProgress
             p=inProgressBuildLst.indexOf(def);
-            if (p==-1) { // нет элемента
+            if (p==-1) { // no element
                 p=inProgressBuildLst.size();
                 inProgressBuildLst.add(p,def);
                 inProgressBuildCount.add(p, 1);
                 inProgressBuildTime.add(p, timeout);
-            } else { // элемент по плану.
+            } else { // element by plan
                 c=inProgressBuildCount.get(p);
                 c++;
                 inProgressBuildCount.set(p, c);
@@ -170,7 +178,7 @@ public class TBaseTarget {
     }
     
     /**
-     * Вызывается, если unit принадлежит текущей базе.
+     * Call this only if unit register on current base.
      * @param unit
      * @param builder 
      */
@@ -189,13 +197,12 @@ public class TBaseTarget {
                 inProgressBuildTime.remove(p);
             } else inProgressBuildCount.set(p, c);
             //inProgressBuildTime.set(p, timeout); // TODO ???
-        } else { // истекло время ожидания, но объект заложен?!!!!
+        } else { // it is lost timeout, but object was created?
             p=currentBuildLst.indexOf(unit.getDef());
             if (p!=-1) {
-                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 int c=currentBuildCount.get(p);
                 c--;
-                if (c<=0) { // если последний по колличеству.
+                if (c<=0) { // if last
                     currentBuildLst.remove(p);
                     currentBuildCount.remove(p); // !!!!!!
                     currentBuildPos.remove(p);
@@ -208,7 +215,7 @@ public class TBaseTarget {
     public void unitFinished(Unit unit) {
         //if (currentBuildLst.contains(unit.getDef())) currentBuildLst.remove(unit.getDef()); // !!!!!!
         int p=inBuildingBuildLst.indexOf(unit);
-        if (p!=-1) { // если достроен, то убрать из целей.
+        if (p!=-1) { // if finished then remove from list
             inBuildingBuildLst.remove(p);
         } else {
             p=inProgressBuildLst.indexOf(unit.getDef());
@@ -224,17 +231,13 @@ public class TBaseTarget {
         }
         
         // TODO if (currentBuildLst.contains(unit.getDef()))  ?????
-        if (isEmpty()) {
-            commandNow=false;// отключить срочное выполнение.
-            needPrecissionRes=false; // откл. спец. опции.
-            targetHaveComplite=true;
-        }
+        if (isEmpty()) onFinishTarget(); // signalize about target complited
     }
     
     public void unitDestroyed(Unit unit, Unit attacker) {
         // TODO
         int p=inBuildingBuildLst.indexOf(unit);
-        if (p!=-1) { // если уничтожен во время постройки
+        if (p!=-1) { // if destroy when behin building
             add(unit.getDef(), 1);
             inBuildingBuildLst.remove(p);
         }

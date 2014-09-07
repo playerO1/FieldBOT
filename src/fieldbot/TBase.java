@@ -14,6 +14,7 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.*;
 import fieldbot.AIUtil.MathPoints;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -21,7 +22,7 @@ import java.util.List;
 
 /**
  * Модель базы. Содержит юниты, постройки, локальную экономику. Представляет собой самостоятельный ИИ выполняющий стратегические команды развития.
- * @author user2
+ * @author PlayerO1
  */
 public class TBase extends AGroupManager{
    protected static final boolean ENABLE_CASHING=true; // вкл/выкл кэш.
@@ -47,28 +48,25 @@ public class TBase extends AGroupManager{
            buildLst, buildLst_noAssistable; // buildLst - строющиеся юниты.
    
    /**
-    * Что делать, какие постройки строить (приоритетные)
+    * Hight priority building work list
     */
-   //public ArrayList<com.springrts.ai.oo.clb.UnitDef> currentBuildLst;
    public TBaseTarget currentBaseTarget;
-   
    public ABasePlaning stroyPlaning;
    
    protected static final int DEFAULT_TIMEOUT = Integer.MAX_VALUE;
-   public int BUILD_FACING = 0; // направление постройки зданий.
+   public int BUILD_FACING = 0; // stump, TODO
    
    /**
-    * Тип базы
-    * 0 основная, эконоимка
-    * 1 боевая защитная или разведывательная(укреп район)
+    * Base stupid protected system. TODO.
+    * if enemy come near to base (check every 100 update frame), this variable set to near enemy position, then send owner army with fight to this point and set null to this variable.
     */
-   public int baseType=0; // TODO...
-    
+   protected AIFloat3 lastAgressorPoint;
+   
     /**
-     * Создать базу. Не забудьте добавить строителей!!!
-     * @param owner ссылка на БОТа
-     * @param center центр базы
-     * @param radius радиус базы (может меняться... как?доделать!)
+     * Create empty base. Dont forget add builder unit!
+     * @param owner link to AI
+     * @param center init base center
+     * @param radius base radius (size)
      */
     public TBase(FieldBOT owner, AIFloat3 center, float radius)
     {
@@ -77,6 +75,8 @@ public class TBase extends AGroupManager{
         
         if (radius<=0) radius=1000.0f; // !!!!
         this.radius=radius;
+        
+        this.baseType=0; // !!!
         
         idleCons=new ArrayList<Unit>();
         workingCons=new ArrayList<Unit>();
@@ -109,6 +109,8 @@ public class TBase extends AGroupManager{
         }
         // // TODO Test разные планирования.
         
+        lastAgressorPoint=null;
+        
         //if (ENABLE_CASHING) dropCashe();// Init cashes.
     }
     
@@ -134,18 +136,15 @@ public class TBase extends AGroupManager{
         mz=mz/(double)n;
         //center=new AIFloat3((float)mx,(float)my,(float)mz);
         moveTo(new AIFloat3((float)mx,(float)my,(float)mz));
-        
-        // TODO drop cashe canBuild!
-        //...dropAllCashe();
     }
     
     /**
-     * Переместить центр базы
+     * Moving base center, and drop cashe.
      * @param newCenter 
      */
     public void moveTo(AIFloat3 newCenter) {
         center=newCenter;
-        dropAllCashe();// обновить что можно строить тут.
+        dropAllCashe();// update canBuildOnBaseSurface cashe
         stroyPlaning.onBaseMoving();
     }
     
@@ -191,9 +190,9 @@ public class TBase extends AGroupManager{
     // Команды по распределению юнитов
 
     /**
-     * Добавить юнита в базу
+     * Add unit into base
      * @param unit
-     * @return принят или нет (может уже есть)
+     * @return modifed
      */
    @Override
     public boolean addUnit(Unit unit) {
@@ -212,7 +211,7 @@ public class TBase extends AGroupManager{
             if (ENABLE_CASHING) dropCashe();
             return true;
         }
-        // TODO с нано-строит башнями как!?!
+        // TODO what doing with nano-tower builders!?!
         
         if (!ut.isAbleToMove()) {
             if (!building.contains(unit)) building.add(unit);
@@ -229,13 +228,13 @@ public class TBase extends AGroupManager{
     }
     
     /**
-     * Убрать юнита из базы
+     * Remove unit from base
      * @param unit
-     * @return убран или нет (например не был приписан)
+     * @return modifed
      */
    @Override
     public boolean removeUnit(Unit unit) {
-        stroyPlaning.onRemove(unit);// TODO !!! может вместо этого target... ???
+        stroyPlaning.onRemove(unit);
         boolean found=false;
         int dbgNumR=0;
         if (idleCons.contains(unit)) {
@@ -274,7 +273,17 @@ public class TBase extends AGroupManager{
         owner.sendTextMsg(" call removeUnit result="+found+" num of removing list="+dbgNumR+" test contain (false-no error)="+contains(unit) , FieldBOT.MSG_DBG_SHORT );
         return found;
     }
-
+    
+   @Override
+    public boolean removeAllUnits(Collection<Unit> units) {
+        boolean modifed = idleCons.removeAll(units) || workingCons.removeAll(units) || building.removeAll(units) || army.removeAll(units) || buildLst.removeAll(units) || buildLst_noAssistable.removeAll(units);
+        if (modifed) {
+            if (ENABLE_CASHING) dropCashe();
+            for (Unit u:units) stroyPlaning.onRemove(u);
+        }
+        return modifed;
+    }
+    
     /**
      * Содержит ли юнита в списках?
      * @param unit
@@ -370,13 +379,17 @@ public class TBase extends AGroupManager{
         return unitLst;
     }
     
+   @Override
+    public boolean isEmpty() {
+        return idleCons.isEmpty() && workingCons.isEmpty() && building.isEmpty() && army.isEmpty() && buildLst.isEmpty() && buildLst_noAssistable.isEmpty();
+    }
     /**
      * Возвращает перечень всех типов юнитов на базе
      * @param onlyWhatIdle только тех, кто не занят и не строится.
      * @return 
      */
+   @Override
     public HashSet<UnitDef> getContainUnitDefsList(boolean onlyWhatIdle) {
-       //TODO +@Override
         // -- кэш --
         if (ENABLE_CASHING) if (!onlyWhatIdle && cashe_getContainUnitDefsList_false!=null) return cashe_getContainUnitDefsList_false;
         // -- --
@@ -719,27 +732,27 @@ public class TBase extends AGroupManager{
     
     
     /**
-     * Возвращает мощность (скорость) постройки всех строителей.
-     * @param onlyIdle считать только свободных строителей
-     * @param noFactory если true, то не будут учтены заводы
-     * @return скорость строительства
+     * Return build power of all builders.
+     * @param onlyIdle only from idle
+     * @param noFactory if true then do not check factory as builders
+     * @return BuildPower
      */
     public float getBuildPower(boolean onlyIdle,boolean noFactory) { // TODO boolean onlyWhoCanAssist ... или для одного
+        //FIXME MAKE CASHE!!!!!!!!!!!!!
+        
         float p=0.0f;
         for (Unit u:idleCons) if (!u.isParalyzed() && (!noFactory || !ModSpecification.isStationarFactory(u.getDef()))) p+= u.getDef().getBuildSpeed();
         if (!onlyIdle) for (Unit u:workingCons) if (!u.isParalyzed() && (!noFactory || !ModSpecification.isStationarFactory(u.getDef()))) p+= u.getDef().getBuildSpeed();
-        // TODO здания, башни!!!
-        // TODO noAssistable() ??!!!!!
-        // TODO isAbletoAssist
+        // TODO noAssistable(), isAbletoAssist ?
         return p;
     }
     
     
     protected boolean sendIdleConsToAssist()
     {
-        if (!buildLst.isEmpty()) {// Достроить недостроенные объекты // !idleCons.isEmpty() && 
+        if (!buildLst.isEmpty()) {// Finish buildings
             boolean someAssistSending=false;
-            Iterator<Unit> itr1 = idleCons.iterator(); // Цикл...
+            Iterator<Unit> itr1 = idleCons.iterator(); // Cicle
             while (itr1.hasNext()) {
                Unit u = itr1.next();
                 if (ModSpecification.isRealyAbleToAssist(u.getDef()) && !u.isParalyzed()) { // было .isAbleToAssist()
@@ -747,11 +760,11 @@ public class TBase extends AGroupManager{
                     for (Unit uBld:buildLst) {
                         float lt=MathPoints.getDistanceBetweenFlat(uBld.getPos(), u.getPos()); // ближайщый
                         lt -= u.getDef().getBuildDistance(); // сократить на расстояние строителя.
-                        if (lt>=0) { // надо дойти
+                        if (lt>=0) { // need walk
                             if (ModSpecification.isRealyAbleToMove(u.getDef())) { // если может ходить
                                 lt = lt/u.getMaxSpeed(); // время, за которое он подберётся на расстояние постройки.
                                 //lt = getAvgBuildTime(uBld.getDef(),u.getDef().getBuildSpeed()) / lt; // TODO ЭТО НЕ ПРАВИЛЬНО. коэффициент нужности ускорения.
-                                // TODO время постройки учесть if (lt>1.8f*getAvgBuildTime(blbUnit.getDef(),u.getDef().getBuildSpeed())) {
+                                // TODO check lost build time if (lt>1.8f*getAvgBuildTime(blbUnit.getDef(),u.getDef().getBuildSpeed())) {
                                 if (minDist<lt || bestToAssist==null) {
                                     minDist=lt;
                                     bestToAssist=uBld;
@@ -764,10 +777,10 @@ public class TBase extends AGroupManager{
                         }
                     }
                     if (bestToAssist!=null) {
-                        u.repair(bestToAssist, (short)0, DEFAULT_TIMEOUT); // это работает
-                        // TODO надо isAbletoRepair?
-                        workingCons.add(u);
-                        itr1.remove(); // удалить из бездействующих юнитов
+                        u.repair(bestToAssist, (short)0, DEFAULT_TIMEOUT); // it is work
+                        // TODO do is need isAbletoRepair?
+                        workingCons.add(u); // FIXME add message to refresh cashe, if cash will be to do.
+                        itr1.remove(); // Set as no idle.
                         someAssistSending=true;
                     }
                 }
@@ -776,23 +789,23 @@ public class TBase extends AGroupManager{
         } else return false; 
     }
     
-    // Команды, переадрисуемые ботом.
+    // Command from bot
    @Override
     public int update(int frame)
     {
-        // TODO распределить нагрузку по времени  if (frame % 8 == 0)
+        // TODO optimized CPU usage  if (frame % 8 == 0)
 
         
-        if (frame % 8 == 1) currentBaseTarget.update(frame);// ... не часто?
+        if (frame % 8 == 1) currentBaseTarget.update(frame);// ... not often?
         
       if (frame % 8 == 0) {
           
         // Если есть свободные рабочие
         if (!idleCons.isEmpty()) {
 
-            sendIdleConsToAssist(); // достроить.
+            sendIdleConsToAssist(); // TO do no finish build
             
-            if (!idleCons.isEmpty() && (currentBaseTarget.makeEco || !currentBaseTarget.isEmpty())) { // Построить
+            if (!idleCons.isEmpty() && (owner.ecoStrategy.makeEco || !currentBaseTarget.isEmpty())) { // Построить
                 List<UnitDef> buildVariants = new ArrayList<UnitDef>(getBuildList(true));
                 if (buildVariants.isEmpty()) owner.sendTextMsg(" buildVariants = empty!!!!!!!!" , FieldBOT.MSG_DBG_SHORT); // DEBUG !!!!
                 
@@ -842,7 +855,7 @@ public class TBase extends AGroupManager{
                 } else owner.sendTextMsg("build target NULL" , FieldBOT.MSG_DBG_SHORT);// DEBUG!
             }
 
-            // если нет работы то бродить.
+            // if not work, then moving walking, for save factory from stay work blocking.
             if (!idleCons.isEmpty()) for (Unit u:idleCons) if (u.getCurrentCommands().isEmpty() && !u.isParalyzed()) {
                 if (!ModSpecification.isStationarFactory(u.getDef())) {
                     if (ModSpecification.isRealyAbleToMove(u.getDef())) u.moveTo(MathPoints.getNearRandomPoint(u), (short)0, DEFAULT_TIMEOUT); // было isAbleToMove
@@ -852,8 +865,8 @@ public class TBase extends AGroupManager{
         }
       }
         
-    // --- Поиск простаивающих юнитов ---
-      if (frame % 120 == 2) { // 8*15=120 + 2...
+    // --- Find idle unit ---
+      if (frame % 120 == 2) { // tick N= 8*15=120 + 2
           // TODO переделать на Iterator
         for (int i=workingCons.size()-1; i>=0; i--) if (workingCons.get(i).getCurrentCommands().size()<1) {
             owner.sendTextMsg("Found no working unit (idle) in working list! "+workingCons.get(i).getDef().getName() , FieldBOT.MSG_DBG_SHORT);// DEBUG
@@ -861,7 +874,27 @@ public class TBase extends AGroupManager{
         } 
       }
     // --------
-        
+      
+      // --- protect base ---
+      if (frame % 100 == 3) { // TODO test it!
+          List<Unit> enemyInBase = owner.clb.getEnemyUnitsIn(center, radius*1.01f);
+          if (!enemyInBase.isEmpty()) {
+              lastAgressorPoint=enemyInBase.get(0).getPos();
+              // TODO near, or average group center
+          }
+      }
+      if (frame % 10 == 3 && lastAgressorPoint!=null) {
+          if (!army.isEmpty()) for (Unit solder:army)
+          { // Send army to fight to agressor position
+              // TODO check solder.getCurrentCommands().isEmpty()
+              UnitDef soldDef=solder.getDef();
+              if (soldDef.isAbleToAttack() && soldDef.isAbleToFight())
+                  solder.fight(lastAgressorPoint, (short)0, DEFAULT_TIMEOUT);
+          }
+          lastAgressorPoint=null; // TODO Register this point where atack on unit...
+      }
+    // --------
+      
         return 0;
     }
     

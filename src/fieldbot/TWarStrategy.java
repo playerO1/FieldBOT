@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 user2
+ * Copyright (C) 2014 PlayerO1
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,38 +18,21 @@
 
 package fieldbot;
 
+import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.WeaponDef;
 import com.springrts.ai.oo.clb.WeaponMount;
 import fieldbot.AIUtil.MathOptimizationMethods;
+import fieldbot.AIUtil.MathPoints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import org.apache.commons.math3.optim.MaxIter;
-import org.apache.commons.math3.optim.PointValuePair;
-import org.apache.commons.math3.optim.linear.LinearConstraint;
-import org.apache.commons.math3.optim.linear.LinearConstraintSet;
-import org.apache.commons.math3.optim.linear.LinearObjectiveFunction;
-import org.apache.commons.math3.optim.linear.NonNegativeConstraint;
-import org.apache.commons.math3.optim.linear.Relationship;
-import org.apache.commons.math3.optim.linear.SimplexSolver;
-import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
-
-/*
-import org.apache.commons.math3.optim.MaxIter;
-import org.apache.commons.math3.optim.PointValuePair;
-import org.apache.commons.math3.optim.linear.LinearConstraint;
-import org.apache.commons.math3.optim.linear.LinearConstraintSet;
-import org.apache.commons.math3.optim.linear.LinearObjectiveFunction;
-import org.apache.commons.math3.optim.linear.NonNegativeConstraint;
-import org.apache.commons.math3.optim.linear.Relationship;
-import org.apache.commons.math3.optim.linear.SimplexSolver;
-import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
-*/
+import java.util.HashSet;
+import java.util.Map;
 
 /**
  *
- * @author user2
+ * @author PlayerO1
  */
 public class TWarStrategy {
     
@@ -67,21 +50,53 @@ public class TWarStrategy {
     public final static String P_NAMES[]={"spam", "speed", "health", "atack", "range", "radar", "stealth","constructor"};
     public final static String P_NAMES_forParsing[][]={{"spam"}, {"speed","fast"}, {"health","HP"}, {"atack","weapon","damage"}, {"range","distance","long"}, {"radar"}, {"stealth","hidde"},{"constructor","work"}};
     
-    public final FieldBOT owner;
+    private final FieldBOT owner;
     
     private final boolean USE_MULTIPLY=true; // Использовать мультипликативную модель для оценки качеств юнитов (иначе адитивная модель)
     private final boolean USE_SMART_MULTIPLY=true; // Использовать сглаженную мультипликативную модель (при перемножении с нулями не нулём будет)
     
+    /**
+     * Enable army control
+     */
+    public boolean makeArmy;
     
     public TWarStrategy(FieldBOT owner) {
         this.owner=owner;
+        makeArmy=false; // TODO set true by default
     }
     
     
-    private double[] getZeroVector(int size) {
+    private static double[] getZeroVector(int size) {
         double v[] = new double[size];
         Arrays.fill(v, 0.0); //for (int j=0;j<size;j++) v[j]=0.0; // zero vector
         return v;
+    }
+
+    /**
+     * Summ damage from all unit weapon.
+     * @param unit
+     * @return summ of damage + some bonus for area of effect
+     */
+    public static final float[] getSumWeaponDamage(UnitDef unit) {
+        float[] wDmg=null;
+        for (WeaponMount weaponMount:unit.getWeaponMounts()) {
+            WeaponDef weapon=weaponMount.getWeaponDef();
+            if (!weapon.isParalyzer()
+                && weapon.isAbleToAttackGround() && !weapon.isShield()) {
+                if (wDmg==null) { // init array
+                    wDmg=new float[weapon.getDamage().getTypes().size()];
+                    Arrays.fill(wDmg, 0);
+                }
+                float dMultipler=weapon.getSalvoSize()*weapon.getProjectilesPerShot();
+                float areaOfEffect=weapon.getAreaOfEffect();
+                for (int i=0;i<wDmg.length;i++) {
+                    float dmg= weapon.getDamage().getTypes().get(i); // get(0) - default damage
+                    dmg = 0.8f*dmg + 0.2f*dmg*areaOfEffect;// как повреждения распространяются по площади.
+                    wDmg[i] += dmg*dMultipler;
+                }
+            }
+        }
+        return wDmg;
     }
     
     private double[] getUnitKachestva(UnitDef unit) {
@@ -128,7 +143,7 @@ public class TWarStrategy {
         kachestva[P_ATACK_POWER]=damage; // за оружие
         kachestva[P_ATACK_DISTANCE]=range; // за расстояние
         
-        kachestva[P_RADAR]=unit.getRadarRadius(); // за радиус радара
+        kachestva[P_RADAR]=Math.max(unit.getRadarRadius() , unit.getLosRadius()); // за радиус радара
         if (unit.isStealth()) kachestva[P_RADAR]=1.0f; else kachestva[P_RADAR]=0.0f; // за скрытность
         if (unit.isAbleToAssist()) kachestva[P_CONSTRUCTOR]=unit.getBuildSpeed(); else kachestva[P_CONSTRUCTOR]=0.0; // за строительства
         
@@ -146,23 +161,28 @@ public class TWarStrategy {
     }
 
     /**
-     * Вычислить оптимальные типы и колличество военных юнитов для постройки
-     * @param onBase на какой базе (для определения силы строителей и возможности строить здесь)
-     * @param buildVariants список всех вариантов, из которых нужно выбрать
-     * @param timeLimit лимит времени на постройку всей армии в секундах
-     * @param unitLimit ограничение колличества юнитов
-     * @param kachestva какие качества нужны (от 0 - не нужно до 1 - нужно)
-     * @return список (кого,сколько) или null!
+     * Math optimal build plan for army to maximize query properties.
+     * @param onBase base for product army (for check build power, and non-assistable build power depends TODO)
+     * @param chooseBuilding false - select only from moving unit, true - only non-moving (stationar) unit.
+     * @param buildVariants list of all variants for selected
+     * @param timeLimit time linit for build all army
+     * @param unitLimit unit limit, or Integer.MAX_VALUE for unlimited.
+     * @param kachestva specific unit selected properties (from 0 - not select up to 1 - best required)
+     * @return list of [unit type, count] or null.
      */
-    public HashMap<UnitDef,Integer> shooseArmy(TBase onBase, ArrayList<UnitDef> buildVariants, float timeLimit, int unitLimit, float kachestva[])
+    public HashMap<UnitDef,Integer> shooseArmy(TBase onBase, boolean chooseBuilding, ArrayList<UnitDef> buildVariants, float timeLimit, int unitLimit, float kachestva[])
     {
         if (kachestva.length!=NUM_P) throw new ArrayIndexOutOfBoundsException();// !!!
         if (buildVariants.isEmpty()) throw new ArrayIndexOutOfBoundsException();// !!!        
         
-        // 1. Выбрать все движущиеся юниты, которые можно строить на поверхности базы
+        // 1. Select all moving/no-moving unit on this base surface
         ArrayList<UnitDef> buildVars=new ArrayList<UnitDef>();
-        for (UnitDef def:buildVariants) if (ModSpecification.isRealyAbleToMove(def) && onBase.canBuildOnBase(def, false)) {
-            // так же убрать с нулевыми коэффициентами
+        for (UnitDef def:buildVariants)
+          if (ModSpecification.isRealyAbleToMove(def)!=chooseBuilding
+                  && onBase.canBuildOnBase(def, false) // TODO <- this check was realy required?
+                  )
+          {
+            // filter that realy can not pass for kachestva[].
             double current_k[]=getUnitKachestva(def);
             boolean check=false;
             for (int i=0;i<NUM_P;i++) if ((kachestva[i]!=0)&&(current_k[i]!=0)) {
@@ -171,15 +191,14 @@ public class TWarStrategy {
             }
             if (check) buildVars.add(def);
         }
-        // TODO проверка, умеют ли строить строители
         
-        if (buildVars.isEmpty()) return null; // !!! Если не из чего выбирать!!!
+        if (buildVars.isEmpty()) return null; // !!! If not variant to choose.
 
-        //2. Назначение коэффициентов выгодности
+        //2. Select profit coast
         double min_k[]=new double[NUM_P];
         double max_k[]=new double[NUM_P];
         
-        // 2.1 Вычисление максимальных и минимальных значений
+        // 2.1 Get max, min for normalization vector
         min_k=getUnitKachestva(buildVariants.get(0));
         max_k=getUnitKachestva(buildVariants.get(0));
         for (UnitDef unit: buildVariants) {
@@ -191,17 +210,18 @@ public class TWarStrategy {
         }
         for (int i=0;i<NUM_P;i++) if (max_k[i]==0) max_k[i]=1.0f; // !!!!
         
-        noramilzeVector(kachestva); // нормализация вектора параметров к: от 0 до 1.
+        noramilzeVector(kachestva); // normalize vector: from 0 up to 1.0.
         
 // x * 1/max_k[i];// !!!! нормализация значений (далее)
         
         // 2.2 Назначение таблицы коэффициентов и матрицы стоимости
         
-        // Определение кто кого может строить и кому помогать...
+        // Определение кто кого может строить и кому помогать.
+        // TODO check: builder realy can build it
         //!!!!
         // TODO 2.2 !!
         
-        // Определение сколько ресурсов...
+        // Resource limit borders.
         int numRes=owner.avgEco.resName.length;
         int numTimeRes=1;//!!!
         int posTimeRes=numRes;//!!!
@@ -212,7 +232,7 @@ public class TWarStrategy {
         
         
         double M_k[]=new double[buildVars.size()];
-        double M_res[][]=new double[numAllRes][buildVars.size()]; // было [buildVars.size()][numRes+1];
+        double M_res[][]=new double[numAllRes][buildVars.size()];
         
         double K_PRECISSION=1.0e+4; // !!! TODO пока это для лучшего значения!!!! если расчёты не в плавающих а в целых числах.
         if (USE_MULTIPLY) K_PRECISSION*=1e+6;// !!!
@@ -221,28 +241,28 @@ public class TWarStrategy {
             UnitDef unit = buildVars.get(i);
                     
             double unitK[]=getUnitKachestva(unit);
-            double k; // + или *  , 0 или 1  ??? выбрать!
+            double k; // + or *  , 0 or 1  ? choose best formul!
             if (USE_MULTIPLY) k=1; else k=0;
             for (int j=0;j<NUM_P;j++) {
                 double x = unitK[j]/max_k[j] * kachestva[j];
                 if (USE_MULTIPLY) { // * or +
                     if (!USE_SMART_MULTIPLY) k *= x;
-                    else k = (0.1*k + 0.9*k*x); // !!!
+                    else k *= (0.1 + x); // !!!
                 } else k += x;
             }
-            M_k[i]=k * K_PRECISSION;// TODO!!!
+            M_k[i]=k * K_PRECISSION;// test
             
             for (int j=0;j<numRes;j++) M_res[j][i]=unit.getCost(owner.avgEco.resName[j]); //было M_res[i][j]
-            M_res[posTimeRes][i]=unit.getBuildTime(); // время постройки как ресурс. // было M_res[i][numRes]
+            M_res[posTimeRes][i]=unit.getBuildTime(); // build time(required build power) as resource
             // TODO 
-            if (posCountLimit>=0) M_res[posCountLimit][i]=1.0; // колличество, как ресурс
+            if (posCountLimit>=0) M_res[posCountLimit][i]=1.0; // count/unit limit as resource
             
             
             i++;
         }
 
         float tmpEndTRes[]=owner.avgEco.getAvgCurrentFromTime(timeLimit, true); // !!!
-        double V_Res[]=new double[numAllRes]; // Вектор ограничения ресурсов (максимум)
+        double V_Res[]=new double[numAllRes]; // Вектор ограничения ресурсов (max resource)
         for (int i=0;i<numRes;i++) V_Res[i]=tmpEndTRes[i];
 
         V_Res[posTimeRes]=onBase.getBuildPower(false, false) * timeLimit;// TODO OnlyFactory for NO ASSISTABLE (NOTA) !!!
@@ -290,46 +310,11 @@ public class TWarStrategy {
         
         
         double resK=MathOptimizationMethods.simplexDouble(M_res, V_Res, M_k, simplOtvet);
-        if (resK<=0) return null;// Если ни один план не даёт выиграша.
-        
-        // - - -
-        // вынести в класс MathOptimizationMethods
-// describe the optimization problem
-        /*
-        double[] fVector = getZeroVector(V_Res.length);
-        fVector[0]=1.0; // вектор с одной единицей. !!!
-        LinearObjectiveFunction f = new LinearObjectiveFunction(fVector, 0); // !!!
-        
-        ArrayList<LinearConstraint> constraints = new ArrayList<LinearConstraint>();
-        for(int i=0; i<V_Res.length; i++) { // Ограничения
-            double[] _c = getZeroVector(V_Res.length);
-            _c[i]=1.0; // вектор с одной единицей.
-            constraints.add( new LinearConstraint(_c, Relationship.LEQ, V_Res[i]) ); // _c[i]*x[i]<=V_Res[i]
-            
-            //_c = getZeroVector(V_Res.length);
-            //constraints.add( new LinearConstraint(_c, Relationship.GEQ, V_Res[i]) ); // _c[i]*x[i]<=V_Res[i]
-        }
-        // TODO при переработке энергии в металл можно учесть с помощью двух переменных и ограничения!!!
-        
-
-        SimplexSolver solver = new SimplexSolver();
-        PointValuePair optSolution = solver.optimize(new MaxIter(100), f,
-                new LinearConstraintSet(constraints),
-                GoalType.MAXIMIZE,
-                new NonNegativeConstraint(true));
-
-
-        double[] solution;
-        solution = optSolution.getPoint();      
-        //*/
-        // - - -
-        
-        
-        //...
+        if (resK<=0) return null;// If no one plan do not profit
         
         // 4 Обработка результата
         HashMap<UnitDef,Integer> outArmy=new HashMap<UnitDef,Integer>();
-        for (int i=0; i<buildVars.size(); i++) { //!!
+        for (int i=0; i<buildVars.size(); i++) {
             if (simplOtvet[i]!=0) {
                 UnitDef unit = buildVars.get(i);
                 int n=(int)Math.round(simplOtvet[i]); // !!!!!
@@ -340,6 +325,117 @@ public class TWarStrategy {
         return outArmy;
     }
 
-    // hash map http://habrahabr.ru/post/128017/
+    // TODO choose war tech level
+
+    
+    private boolean baseBuildDef=false;
+    
+    /**
+     * Army control tick. TODO
+     * @param frame 
+     */
+    public void update(int frame) {
+        if (!makeArmy) return;
+        
+        // TODO !!!
+        if (frame%500==4) {
+
+            boolean haveRes=true;
+            float eco[][]=owner.avgEco.getAVGResourceToArr();
+            for (int i=0;i<eco[0].length; i++) {
+                if ( !(eco[AdvECO.R_Current][i]/eco[AdvECO.R_Storage][i]>0.5f && 
+                     eco[AdvECO.R_Income][i]*1.1f>eco[AdvECO.R_Usage][i]) )
+                        haveRes=false;
+            }
+
+
+            if (haveRes) {
+                boolean defenceTower=false;
+
+                if (!baseBuildDef) {
+                    defenceTower=true;
+                    baseBuildDef=true;
+                }
+
+                float timeL=3*60;
+                int unitL=5; //Integer.MAX_VALUE;
+                float kachestva[]={ 0.1f, 0.3f, 0.4f, 0.7f, 0.2f, 0.1f,0.1f, 0.0f }; // spam, speed, health, atack, range, radar, stealth
+                if (defenceTower) kachestva[P_SPEED]=0;
+
+                // Choose best base for make army
+                TBase bestBase=null; HashSet<UnitDef> lstOfUDefs=new HashSet<UnitDef>();
+                for (TBase base:owner.selectTBasesList()) {
+                    HashSet<UnitDef> tmpUDefs=base.getBuildList(true);
+                    if (tmpUDefs.size()>lstOfUDefs.size() && bestBase.currentBaseTarget.isEmpty()) { // idle base.
+                        bestBase=base;
+                        lstOfUDefs=tmpUDefs;
+                    }
+                }
+
+                if (bestBase!=null)
+                {
+
+                    HashMap<UnitDef,Integer> armyUnits
+                            =owner.warStrategy.shooseArmy(bestBase, !defenceTower, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva);
+                        // TODO Только те ктороые может строить (без лаборатории или с ней, TA/RD mod!)
+
+                    // Send signal to base for make unit
+                    if (armyUnits!=null) {
+                        for (Map.Entry<UnitDef,Integer> armyItem:armyUnits.entrySet())
+                          if (armyItem.getValue()>0) // !!!!
+                        {
+                          owner.sendTextMsg(" army>"+armyItem.getKey().getHumanName()+" * "+armyItem.getValue(), FieldBOT.MSG_DBG_SHORT);
+                          if (!defenceTower) bestBase.currentBaseTarget.add(armyItem.getKey(), armyItem.getValue());
+                          else {
+                              for (int i=0;i< armyItem.getValue();i++) {
+                                  AIFloat3 defPoint=MathPoints.getRandomPointOnRadius(bestBase.center, bestBase.radius);
+                                  bestBase.currentBaseTarget.add(armyItem.getKey(), 1, defPoint);// TODO test.
+                              }
+                          }
+                        }
+                    } else owner.sendTextMsg("No plan for army!", FieldBOT.MSG_DBG_SHORT);                        
+                }
+            }
+
+            // Make war group
+            boolean needMakeWarGroup=true;
+            if (needMakeWarGroup) {
+                for (TBase base:owner.selectTBasesList()) if (base.currentBaseTarget.isEmpty()) {
+                    if (base.army.size()>2) {
+                        // TODO only movable units!!!
+                        TArmyGroup army=new TArmyGroup(owner);
+                        ArrayList transferUnits=new ArrayList(base.army);
+                        if (base.removeAllUnits(transferUnits)) {
+                            army.addAllUnits(transferUnits);
+                            owner.addSmartGroup(army);
+                        }
+                    }
+                }
+            }
+            
+            // Scout/Atack
+            for (AGroupManager sGroup:owner.smartGroups)
+            {
+                if (sGroup instanceof TArmyGroup) {
+                    TArmyGroup army=(TArmyGroup)sGroup;
+                    if (army.isEmpty()) {
+                        owner.removeSmartGroup(sGroup); // Remove destroyed army.
+                    } else {
+                        if (army.moveTarget==null) {
+                            AIFloat3 p=owner.scoutModule.last_enemyComeWatch;
+                            if (p==null || Math.random()>0.7) {
+                                float x=(float)Math.random() *owner.scoutModule.mapWidth;
+                                float y=(float)Math.random() *owner.scoutModule.mapHeight;
+                                p=new AIFloat3(x, 0, y);
+                            }
+                            army.moveTo(p); // TODO
+                        }
+                    }
+                }
+                // TODO scout group
+            }
+        }
+    }
+    
     
 }

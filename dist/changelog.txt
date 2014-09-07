@@ -1,5 +1,10 @@
 Changelog of FieldBOT.
 
+=== dev a1.2 ===
+- fix tech-up function (not full fix)
+- army control support: base defence, army group, not work :(
+- support Zero-K metal extractor (no testing, only with Spring 97 engine)
+
 === dev a1.1 ===
 - improvent tech-up function (test: Zero-K can build some factory for product constructor, decrease bugs with wrong tech up time and level choose
 - increase CPU usage :)

@@ -12,50 +12,62 @@ import com.springrts.ai.oo.clb.Map;
 import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
-import fieldbot.ModSpecification;
 import fieldbot.AIUtil.MathPoints;
+import fieldbot.FieldBOT;
+import fieldbot.ModSpecification;
 import fieldbot.TBase;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Обеспечивает размещение зданий на базе, упорядочивает их.
- * @author user2
+ * Planing pfree position on base surface.
+ * @author PlayerO1
  */
 public abstract class ABasePlaning {
     
     public final TBase owner;
     public final Map map;
     
-    protected float containUnitSquare;// площадь стационарных юнитов
-    protected float freeSpaceUsingK; // коэффициент использования свободной площади, для full
+    protected float containUnitSquare;// square of stantionary building unit.
+    protected float freeSpaceUsingK; // percend of square usage
 
     /**
-     * Для ускорения подтверждения возможности строить.
+     * For acseleration canBuildOnBaseSurface()
      * Using in canBuildOnBase()
      */
     protected AIFloat3 cashe_LastCanBuildPoint;
-    protected Resource resMetal;
+    /**
+     * Cashe for building points.
+     */
+    private ArrayList<AIFloat3> cashe_GeoPoints,cashe_MetalPoints;
+
+    protected final Resource resMetal;
+    protected final UnitDef luaMExtractor; // for Zero-K mod
 
     public ABasePlaning(TBase owner) {
         this.owner=owner;
         this.map=owner.owner.clb.getMap();
         this.resMetal=owner.owner.clb.getResourceByName("Metal");
         
+        this.luaMExtractor=owner.owner.modSpecific.luaMetalExtractor;
+        
         freeSpaceUsingK=1.35f;
         containUnitSquare=0.0f;
         
         cashe_LastCanBuildPoint=null;
+        cashe_GeoPoints=null;
+        cashe_MetalPoints=null;
     }
     
     /**
-     * на сколько заполнена база
+     * Percent of base square usage
      * @return 
      */
     public float full() {
         return (containUnitSquare * freeSpaceUsingK) / (2*(float)Math.PI*owner.radius*owner.radius);// TODO test
     }
     /**
-     * Возвращает рекомендованный радиус базы (для расширения)
+     * Return recomended radius for base. TODO!
      * @return 
      */
     public float getRecomendedRadius() {
@@ -68,9 +80,9 @@ public abstract class ABasePlaning {
 //    }
     
     /**
-     * Подготавливает место заранее для юнитов (используется в некоторых планах базы)
-     * @param unitType тип юнита
-     * @param count предполагаемое колличество
+     * Rezerve position for future building (not all BasePlaning support this)
+     * @param unitType unit type
+     * @param count max count for planing
      */
     public void preparePositionFor(UnitDef unitType,int count)
     {
@@ -78,44 +90,77 @@ public abstract class ABasePlaning {
     }
     
     /**
-     * При перемещении центра базы. Улучшает планирование некоторых TBasePlaning.
+     * On move base center. For better base planing and cashe update.
      */
     public void onBaseMoving() {
+        // drop cashe
         cashe_LastCanBuildPoint=null;
+        cashe_GeoPoints=null;
+        cashe_MetalPoints=null;
     }
     
      /**
-     * Возвращает рекомендованную позицию для постройки зданий
-     * @param unitType тип здания (или юнита)
-     * @param mainBuilder строитель, может быть null
-     * @return точка для строительства или null
+     * Return recomended build position for unit
+     * @param unitType unit tupe, or building tupe
+     * @param mainBuilder builder, may be null
+     * @return point for build or null
      */
     abstract public AIFloat3 getRecomendetBuildPosition(UnitDef unitType, Unit mainBuilder);    
     
+    private AIFloat3 findNear_noClosePoint(UnitDef unitType, AIFloat3 buildCenter,float r, List<AIFloat3> points) {
+        float L=-1,l;
+        AIFloat3 nearP=null;
+        for (AIFloat3 p:points) if (map.isPossibleToBuildAt(unitType, p, owner.BUILD_FACING)) 
+        {
+            l=MathPoints.getDistanceBetween3D(p, buildCenter);
+            if (L<0 || l<L) {
+                L=l;
+                nearP=p;
+            }
+            //last: return p;
+        }
+        return nearP; //last: null;
+    }
+    
     private AIFloat3 findFreeGeoPointAt(UnitDef unitType, AIFloat3 buildCenter,float r)
     {
-        //TODO search nearest point.
-        // Если нужна геотермальная точка
-        List<Feature> features=owner.owner.clb.getFeaturesIn(buildCenter, r);
-        for (Feature f:features) if (f.getDef().isGeoThermal())
-        { // TODO можно кэшировать.
-            AIFloat3 buildPos=f.getPosition();
-            if (map.isPossibleToBuildAt(unitType, buildPos, owner.BUILD_FACING))
-                return buildPos;
+        if (buildCenter.equals(owner.center)) // TODO && r==owner.radius
+        {// cahse
+            if (cashe_GeoPoints==null) {
+                cashe_GeoPoints=new ArrayList<AIFloat3>();
+                List<Feature> features=owner.owner.clb.getFeaturesIn(buildCenter, r);
+                for (Feature f:features) if (f.getDef().isGeoThermal()) cashe_GeoPoints.add(f.getPosition());
+            }
+            return findNear_noClosePoint(unitType, buildCenter, r, cashe_GeoPoints);
+        } else {// no cashe
+            ArrayList<AIFloat3> GeoPoints=new ArrayList<AIFloat3>();
+            List<Feature> features=owner.owner.clb.getFeaturesIn(buildCenter, r);
+            for (Feature f:features) if (f.getDef().isGeoThermal()) GeoPoints.add(f.getPosition());
+            return findNear_noClosePoint(unitType, buildCenter, r, GeoPoints);
         }
-        return null;
+    }
+    private AIFloat3 findFreeMetalPointAt(UnitDef unitType, AIFloat3 buildCenter,float r)
+    {
+        if (buildCenter.equals(owner.center)) // TODO && r==owner.radius
+        {// cashe
+            if (cashe_MetalPoints==null) cashe_MetalPoints=owner.owner.getMetalSpotsInRadius(buildCenter, r);
+            if (cashe_MetalPoints!=null) return findNear_noClosePoint(unitType, buildCenter, r, cashe_MetalPoints);
+            else return null;// !!! TODO ?
+        } else { // no cashe
+            ArrayList<AIFloat3> MetalPoints=owner.owner.getMetalSpotsInRadius(buildCenter, r);
+            if (MetalPoints!=null) return findNear_noClosePoint(unitType, buildCenter, r, MetalPoints);
+            else return null;// !!! TODO ?
+        }
     }
     
     /**
-     * Проверяет, нуждается ли постройка в шахтах или нет.
+     * Chech, do unit need for mex point
      * @param unitType
-     * @return 
+     * @return if true then it is metal extractor
      */
     public boolean needMetalPosition(UnitDef unitType) {
-        //boolean needMetalSpots=false;
-        //float extrRadius=0.0f;
-        if (owner.owner.isMetalFieldMap==0) { // постройка шахты на обычной карте
-            if (unitType.getExtractsResource(resMetal)!=0) {
+        if (owner.owner.isMetalFieldMap<=0) { // build metal extractor on normal map, or on non-metal map (TODO test)
+            if (unitType==luaMExtractor || unitType.getExtractsResource(resMetal)!=0.0f) {
                 return true;
                 //extrRadius=map.getExtractorRadius(resMetal);
             }
@@ -124,12 +169,11 @@ public abstract class ABasePlaning {
     }
     
     /**
-     * Проверяет, нуждается ли постройка в специальных точках (шахтах)
+     * Check, do this unit need special point to build (metal extractor, geotermal)
      * @param unitType
      * @return 
      */
     public boolean needSpecialPointPosition(UnitDef unitType) {
-        // TODO можно проверять двигается или нет.
         return unitType.isNeedGeo() || needMetalPosition(unitType);
     }
     
@@ -150,9 +194,9 @@ public abstract class ABasePlaning {
         
         double deltaR=maxR-minR;
         
-        
+        // point depend building
         if (unitType.isNeedGeo()) return findFreeGeoPointAt(unitType, buildCenter, (float)maxR);
-        // TODO test it!
+        if (needMetalSpots) return findFreeMetalPointAt(unitType, buildCenter, (float)maxR);
         
       do {
         buildPos = new AIFloat3(buildCenter);
@@ -161,31 +205,20 @@ public abstract class ABasePlaning {
         double ang=startAng + ((double)NUM_SpiralRot * (double)numOfTry / (double)NUM_APPROX_POINTS * (2*Math.PI));
         buildPos.x+=r*Math.sin(ang);buildPos.z+=r*Math.cos(ang);
 
-        if (needMetalSpots)
-        { // если шахты одиночные.
-            AIFloat3 metalP=map.getResourceMapSpotsNearest(resMetal, buildPos);
-            
-            // correct position - FIX bug on getResourceMapSpotsNearest - по центру шахт. 
-            //metalP=new AIFloat3(metalP.x+map.getExtractorRadius(resMetal)/3, metalP.y, metalP.z+map.getExtractorRadius(resMetal)/3);
-            // TODO test it! плозо работает - шахты плозо строит.
-            
-            if (map.isPossibleToBuildAt(unitType, metalP, owner.BUILD_FACING))
-                buildPos=metalP;
-              else
-                buildPos=null;
-        } else
-        { // простые здания
-            // проверка на возможность строить здание здесь
-            /* Было: без учёта границ между соседними зданиями
-            if (!map.isPossibleToBuildAt(unitType, buildPos, owner.BUILD_FACING)) {
-                AIFloat3 np=map.findClosestBuildSite(unitType, buildPos, FieldBOT.getRadiusFlat(unitType)*3.5f, Math.min(unitType.getXSize(), unitType.getZSize())/2, owner.BUILD_FACING); // TODO test!
-                if (!FieldBOT.isValidPoint(np)) buildPos=null;
-                else buildPos=np;
-            }*/
-            // стало с учётом отступов
+//        if (needMetalSpots) // БЫЛО до получения метал. точек предварительно
+//        { // если шахты одиночные.
+//            AIFloat3 metalP=map.getResourceMapSpotsNearest(resMetal, buildPos);
+//
+//            if (map.isPossibleToBuildAt(unitType, metalP, owner.BUILD_FACING))
+//                buildPos=metalP;
+//              else
+//                buildPos=null;
+//        } else
+//        { // простые здания
+            // проверка на возможность строить здание здесь с учётом отступов
             AIFloat3 np=map.findClosestBuildSite(unitType, buildPos, MathPoints.getRadiusFlat(unitType)*1.8f, Math.min(unitType.getXSize(), unitType.getZSize())/2, owner.BUILD_FACING); // TODO test!
             if (!MathPoints.isValidPoint(np)) buildPos=null; else buildPos=np;
-        }
+//        }
         
         // ---
         if (buildPos!=null) {
@@ -216,18 +249,23 @@ public abstract class ABasePlaning {
         if (unitType.isNeedGeo()) return findFreeGeoPointAt(unitType, owner.center, owner.radius)!=null; // TODO test it!
         
         boolean needMetalSpots=needMetalPosition(unitType);
-        
-        // быстро проверить в центре
+
         if (needMetalSpots) {
-            AIFloat3 metalP=owner.owner.clb.getMap().getResourceMapSpotsNearest(resMetal, owner.center);
-            float l=MathPoints.getDistanceBetweenFlat(metalP, owner.center);
-            if (l<owner.radius ) { //|| l<extrRadius) { // !!!!!
-                if (map.isPossibleToBuildAt(unitType, metalP, buildFacing)) return true;
-            } else {
-                // Если намного превышает радиус базы то НЕ СТРОИТЬ!!!
-                if (l>owner.radius *1.4f) return false;
-            }
-        } else {
+            if (owner.owner.isMetalFieldMap==FieldBOT.IS_NO_METAL) return false; // !!!
+            return findFreeMetalPointAt(unitType, owner.center, owner.radius)!=null;
+        }
+
+        // быстро проверить в центре
+//        if (needMetalSpots) {
+//            AIFloat3 metalP=owner.owner.clb.getMap().getResourceMapSpotsNearest(resMetal, owner.center);
+//            float l=MathPoints.getDistanceBetweenFlat(metalP, owner.center);
+//            if (l<owner.radius ) { //|| l<extrRadius) { // !!!!!
+//                if (map.isPossibleToBuildAt(unitType, metalP, buildFacing)) return true;
+//            } else {
+//                // Если намного превышает радиус базы то НЕ СТРОИТЬ!!!
+//                if (l>owner.radius *1.4f) return false;
+//            }
+//        } else {
             if (cashe_LastCanBuildPoint!=null) {
                 if (map.isPossibleToBuildAt(unitType, cashe_LastCanBuildPoint, buildFacing)) return true;
             } else {
@@ -236,7 +274,7 @@ public abstract class ABasePlaning {
                     return true;
                 }
             }
-        }
+//        }
         // FIXME если центр застроен возвращает FALSE !!!!! иногда
         
         // или обход по спирали до края базы...
@@ -251,13 +289,13 @@ public abstract class ABasePlaning {
             double ang=startAng + ((double)NUM_SpiralRot * ((double)i/(2*Math.PI)));
             buildPos.x+=r*Math.sin(ang);buildPos.z+=r*Math.cos(ang);
 
-            if (needMetalSpots) {
-                AIFloat3 metalP=owner.owner.clb.getMap().getResourceMapSpotsNearest(resMetal, buildPos);
-                float l=MathPoints.getDistanceBetweenFlat(metalP, buildPos);
-                if (l<owner.radius ) { //|| l<extrRadius) { // !!!!!!!!!
-                    if (map.isPossibleToBuildAt(unitType, metalP, buildFacing)) return true;
-                }
-            } else {
+//            if (needMetalSpots) {
+//                AIFloat3 metalP=owner.owner.clb.getMap().getResourceMapSpotsNearest(resMetal, buildPos);
+//                float l=MathPoints.getDistanceBetweenFlat(metalP, buildPos);
+//                if (l<owner.radius ) { //|| l<extrRadius) { // !!!!!!!!!
+//                    if (map.isPossibleToBuildAt(unitType, metalP, buildFacing)) return true;
+//                }
+//            } else {
                 if (map.isPossibleToBuildAt(unitType, buildPos, buildFacing)) {
                     cashe_LastCanBuildPoint=buildPos;
                     return true;
@@ -269,7 +307,7 @@ public abstract class ABasePlaning {
                         return true;
                     }
                 }
-            }
+//            }
         }
         
         return false;

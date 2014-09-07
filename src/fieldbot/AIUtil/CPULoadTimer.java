@@ -1,7 +1,6 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * (C) PlayerO1, 2014. GNU GPL v2 or above license.
+ * This class could be used in the past did not GNU programs by PlayerO1.
  */
 
 package fieldbot.AIUtil;
@@ -10,7 +9,7 @@ import java.util.Date;
 
 /**
  *
- * @author user2
+ * @author PlayerO1
  */
 public class CPULoadTimer {
     
@@ -20,8 +19,7 @@ public class CPULoadTimer {
 	
     
     /**
-     * Проверка включённости таймера...
-     * @return работает или приостановлен
+     * Check timer state
      */
     public boolean isActivated() {
     	return timerStartAt!=null;
@@ -30,12 +28,12 @@ public class CPULoadTimer {
     public CPULoadTimer()
     {
         timerStartAt=timerStopAt=null; //...
-        timerGameTime=new Date(0); // время игры - 0 милисекунд...
-        timeFirstStart=new Date(); // время начала...
+        timerGameTime=new Date(0); // set game time = 0 milisecond
+        timeFirstStart=new Date(); // time of init
     }
     
     /**
-     * Запуск/возобновление счётчика
+     * Start clock
      */
     public void start()
     {
@@ -44,7 +42,7 @@ public class CPULoadTimer {
     }
     
     /**
-     * Сбросить счётчик
+     * Clear contain time, reset clock.
      */
     public void reset() {
         timerStartAt=timerStopAt=null;
@@ -53,7 +51,7 @@ public class CPULoadTimer {
     }
     
     /**
-     * Остановка счётчика
+     * Stop clock
      */
     public void stop()
     {
@@ -65,8 +63,8 @@ public class CPULoadTimer {
     }
     
     /**
-     * Сколько времени насчитал счётчик всего.
-     * @return время работы.
+     * Get clock time
+     * @return work time
      */
     public Date getTime() {
     	if (timerStartAt==null) {
@@ -78,8 +76,8 @@ public class CPULoadTimer {
 
     
     /**
-     * Возвращает время в таймете в формате минуты:секунды.
-     * @return строка с милисекундами
+     * Return time milisec (CPU % loar)
+     * @return human readable time
      */
     @Override
     public String toString() {

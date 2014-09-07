@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 user2
+ * Copyright (C) 2014 PlayerO1
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,7 +19,6 @@
 package fieldbot.baseplaning;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import fieldbot.FieldBOT;
@@ -31,7 +30,7 @@ import java.util.Iterator;
 
 /**
  *
- * @author user2
+ * @author PlayerO1
  */
 public class TBasePlaning_tetris extends ABasePlaning{
 
@@ -45,7 +44,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
         
         cells=new ArrayList<TPlanCell>();
         
-        // TODO заранее под шахты и геотермальные...
+        // TODO заранее место под шахты и геотермальные...
         
         TPlanCell.clb=owner.owner;// DEBUG !!!!!!!!
         
@@ -53,10 +52,10 @@ public class TBasePlaning_tetris extends ABasePlaning{
     }
     
     /**
-     * Поиск свободной зоны для этого типа юнитов
+     * Find cell for unit type
      * @param def
      * @param count
-     * @return 
+     * @return cell with free position or null
      */
     private TPlanCell findFreeCell(UnitDef def,int count) {
         for (TPlanCell cell:cells) if (cell.forUnitType==def && cell.getNumFreePos()>=count) return cell;
@@ -73,12 +72,12 @@ public class TBasePlaning_tetris extends ABasePlaning{
     }
     
     /**
-     * Создать пустую новую зону
-     * @param def для кого
-     * @param count сколько планируется
-     * @param center откуда начинать поиск
-     * @param maxR ограничение радиуса
-     * @return ссылка на клетку
+     * Create empty new cell
+     * @param def for this unit
+     * @param count planing count of contain units
+     * @param center start search point
+     * @param maxR bound radius
+     * @return link to new cell, or null
      */
     private TPlanCell createCell(UnitDef def,int count, AIFloat3 center,float maxR, int buildFacing) {
         // 1. Создать площадь
@@ -88,7 +87,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
         if (ModSpecification.isStationarFactory(def)) cellPadding+=def.getRadius()/2;//TODO base planing: радиус вокруг заводов
         TPlanCell newCell=new TPlanCell(def, count, cellPadding, DEFAULT_CELL_SPACING);
         // 2. Подобрать место
-        AIFloat3 p=MathPoints.getRandomPointInRadius(center,maxR/10); // что лучше? !!! было new AIFloat3(center);
+        AIFloat3 p=MathPoints.getRandomPointOnRadius(center,maxR/10); // что лучше? !!! было new AIFloat3(center);
         
         TPlanCell collisionCell=null;
         final int MAX_COUNT_ITER=50;
@@ -133,16 +132,14 @@ public class TBasePlaning_tetris extends ABasePlaning{
                     double r=maxR*((double)numOfTry/(double)MAX_COUNT_ITER*0.8+0.2);
                     p.x += r * Math.sin(ang);
                     p.z += r * Math.cos(ang);
-                    //p=MathPoints.getRandomPointInRadius(center,maxR); // было
+                    //p=MathPoints.getRandomPointOnRadius(center,maxR); // было
                 }
             } else {
                 //newCell.moveTo(p.x, p.z);
                 newCell.updateZanatoPoz(map, buildFacing);
             } //!!!
             
-            
             numOfTry++;
-            // FIXME проверить условие выхода из цикла!!!
         } while ((collisionCell!=null || newCell.getNumFreePos()==0) && numOfTry<MAX_COUNT_ITER);// !!!
         
         if (numOfTry>=MAX_COUNT_ITER) makeClearing();// TODO улучшить.
@@ -157,7 +154,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
             }
         }
 
-        // 3. Применить и сохранить.
+        // 3. Apply and save
         if (newCell!=null) cells.add(newCell);
         return newCell;
     }
@@ -198,7 +195,6 @@ public class TBasePlaning_tetris extends ABasePlaning{
                 needNew/=2;
                 cell=createCell(unitType, needNew, owner.center,owner.radius, owner.BUILD_FACING);
                 if (cell!=null) cell=createCell(unitType, needNew, owner.center,owner.radius, owner.BUILD_FACING);
-                //...
             }
            
         }
@@ -212,8 +208,8 @@ public class TBasePlaning_tetris extends ABasePlaning{
     }
     
     /**
-     * Очищает неиспользуемые площади
-     * @return были изменения, или нет
+     * Delete no using cell for free position
+     * @return modifed
      */
     private boolean clearFreeCell() {
         if (cells.isEmpty()) return false; // ???!!!
@@ -230,8 +226,8 @@ public class TBasePlaning_tetris extends ABasePlaning{
     }
     
     /**
-     * Освобождает пространство от неиспользуемых ячеек.
-     * @return 
+     * Clear planing space from no using position
+     * @return modifed
      */
     private boolean makeClearing() {
         if (clearFreeCell()) return true;
@@ -241,16 +237,14 @@ public class TBasePlaning_tetris extends ABasePlaning{
         }
     }
      /**
-     * Возвращает рекомендованную позицию для постройки зданий
-     * @param unitType тип здания (или юнита)
-     * @param mainBuilder строитель, может быть null
-     * @return точка для строительства или null
+     * Return position for build unit
+     * @param unitType unit or building type
+     * @param mainBuilder builder, can be null
+     * @return point for build or null
      */
     @Override
     public AIFloat3 getRecomendetBuildPosition(UnitDef unitType, Unit mainBuilder) {
-        
         boolean needSpecialPoint=needSpecialPointPosition(unitType);
-
         AIFloat3 buildPos = null;
         
         double startAng = 0.0;
@@ -259,11 +253,9 @@ public class TBasePlaning_tetris extends ABasePlaning{
         float maxR = owner.radius;//unitType.getRadius();
         //double minR = Math.max(maxR*0.10, FieldBOT.getRadiusFlat(unitType));//unitType.getRadius(); // минимальный радиус
         
-        
         AIFloat3 buildCenter;
         
         boolean etoStroenie=!ModSpecification.isRealyAbleToMove(unitType);
-        //TODO !!!!!!!!!!!
         
         if (etoStroenie) { // это здание
             // 1. Определится с масштабом зоны
@@ -288,7 +280,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
                 if (cell==null) { // Если нет, то создать зону
                     int count=4; // TODO колличество ?
                     // TODO группы больше 4-х...
-                    //if ((unitType.getXSize()+unitType.getZSize())/2*8<70) count=6; // for Wind spam
+                    //if ((unitType.getXSize()*8+unitType.getZSize()*8)/2*8<70) count=6; // for Wind spam
                     //FIXME ошибка с height или с позицией по вертикали когда больше 2-х в высоту а в ширину 2.... может в ширину тоже.
                     
                     if (ModSpecification.isStationarFactory(unitType)) count=1; // !!!!!
@@ -299,15 +291,14 @@ public class TBasePlaning_tetris extends ABasePlaning{
                 if (buildPos==null) {
                     if (cell!=null)
                       owner.owner.sendTextMsg(" ERROR (tetris base planing) Free cell is not free!", FieldBOT.MSG_ERR);
-                    // TODO !!!!! если ошибка и нет свободных позиций!
                 }
             }
             // 3. TODO!!!
             
             return buildPos;
             
-        } else { // это юнит
-            // 1. зона строительства: построить ближе к строителю
+        } else { // It is unit
+            // 1. Build zone: near for main builder
             if (mainBuilder!=null) //&& !ModSpecification.isRealyAbleToMove(mainBuilder.getDef())) // если строитель неподвижный
             {
                 buildCenter = new AIFloat3(mainBuilder.getPos());
@@ -316,7 +307,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
                 buildCenter=owner.center;
                 maxR=owner.radius;
             }
-            // 2. Построить рядом
+            // 2. build near
             buildPos=new AIFloat3(buildCenter);
             double r=1.6*MathPoints.getRadiusFlat(unitType), a=2*Math.PI*Math.random();
             buildPos.x+=r*Math.cos(a);  buildPos.z+=r*Math.sin(a);
@@ -344,19 +335,11 @@ public class TBasePlaning_tetris extends ABasePlaning{
     @Override
     public void onRemove(Unit unit) {
         super.onRemove(unit);
-        if (ModSpecification.isRealyAbleToMove(unit.getDef())) return; // только неподвижных
+        if (ModSpecification.isRealyAbleToMove(unit.getDef())) return; // only no moving
         AIFloat3 p=unit.getPos();
         //TODO use this.findCollisionCell(p)
-        /* // Было
-        for (TPlanCell cell:cells) if (cell.collision(p))
-            if (cell.forUnitType==unit.getDef() && cell.zanato>0) {
-                cell.zanato--;//!!!
-                if (cell.zanato<0) owner.owner.sendTextMsg(" WARNING (tetris base planing) cell zanato="+cell.zanato+"!", FieldBOT.MSG_ERR);
-                //cell.updateZanatoPoz(map, owner.BUILD_FACING);
-                // TODO if (cell.zanato==0) clear!!!
-            }
-        */
-        Iterator<TPlanCell> itr1 = cells.iterator(); // Цикл...
+
+        Iterator<TPlanCell> itr1 = cells.iterator(); // Clear. TODO using call clear function.
         while (itr1.hasNext()) {
             TPlanCell cell = itr1.next();
             if (cell.collision(p))
@@ -370,6 +353,5 @@ public class TBasePlaning_tetris extends ABasePlaning{
             }
             if (cell.zanato<0) owner.owner.sendTextMsg(" WARNING (tetris base planing) cell zanato="+cell.zanato+"!", FieldBOT.MSG_ERR);
         }
-
     }
 }

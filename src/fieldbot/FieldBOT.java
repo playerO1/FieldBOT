@@ -40,10 +40,14 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.*;
 
+
+import com.json.parsers.JSONParser; // For ZeroK LUA message
+import com.json.parsers.JsonParserFactory;
+
 /**
 * Serves as Interface for a Java Skirmish AIs for the Spring engine.
 *
-* @author hoijui
+* @author hoijui, rewrite to FieldBOT PlayerO1
 */
 public class FieldBOT extends OOAI implements AI {
 
@@ -132,7 +136,9 @@ public boolean isDebugging() {
 // ---------
 
 public String botShortName;
-protected ArrayList<TBase> bases; // TODO ПЕРЕДЕЛАТЬ в AGroupManager. Было: Список баз.
+//protected ArrayList<TBase> bases; // TODO ПЕРЕДЕЛАТЬ в AGroupManager. Было: Список баз.
+protected ArrayList<AGroupManager> smartGroups;
+private ArrayList<AGroupManager> smartGroupsToRemove; // temp list for remove from cycle.
 
 /**
  * Average resource info
@@ -143,6 +149,7 @@ public TEcoStrategy ecoStrategy;
 public TWarStrategy warStrategy;
 public ModSpecification modSpecific;
 public TBOTTalking talkingDialogModule;
+public TScoutModule scoutModule;
 
 /**
  * List of dead or sharing to other team units. Bot do not action with this list.
@@ -216,6 +223,7 @@ for (int i = 0; i < numInfo; i++) {
 }
 
 short opt_talkingDialogModule_allowEnemyTeamCommand=0;
+short opt_armyControl=0;
 
 optionValues = new Properties();
 OptionValues opVals = clb.getSkirmishAI().getOptionValues();
@@ -238,6 +246,10 @@ for (int i = 0; i < numOpVals; i++) {
   if (key.equals("smarttechup")) {
       if (value.equals("1")) useSmartTechUp=true;
       if (value.equals("0")) useSmartTechUp=false;
+  }
+  if (key.equals("usearmy")) {
+      if (value.equals("1")) opt_armyControl=1;
+      if (value.equals("0")) opt_armyControl=-1;
   }
   if (key.equals("messagelevel")) {
       try {
@@ -301,8 +313,9 @@ try {
  
  //----
     try {
-        bases = new ArrayList<TBase>();
-        bases.add(new TBase(this, clb.getMap().getStartPos(), 1000)); // !!!!!!!
+        //bases = new ArrayList<TBase>();
+        smartGroups=new ArrayList<AGroupManager>();
+        smartGroupsToRemove = new ArrayList<AGroupManager>();
         commanders=new ArrayList<Unit>();
         techLevels=new HashMap<Integer, Integer>();
         // TODO maybe same final?
@@ -310,11 +323,14 @@ try {
   
         modSpecific = new ModSpecification(this);
         avgEco = new AdvECO(14, clb, modSpecific); // TODO подобрать лучшее время сбора информ.
+        scoutModule = new TScoutModule(this);
         ecoStrategy = new TEcoStrategy(this);
         warStrategy = new TWarStrategy(this);
         talkingDialogModule = new TBOTTalking(this);
          if (opt_talkingDialogModule_allowEnemyTeamCommand==1) talkingDialogModule.allowEnemyTeamCommand=true;
          if (opt_talkingDialogModule_allowEnemyTeamCommand==-1) talkingDialogModule.allowEnemyTeamCommand=false;
+         if (opt_armyControl==1) warStrategy.makeArmy=true;
+         if (opt_armyControl==-1) warStrategy.makeArmy=false;
         
         deadLstUnit=new ArrayList<Unit>();
         techUpTrigger=null;
@@ -327,11 +343,16 @@ try {
             // TODO FIXME НЕ РАБОТАЕТ!!!!!! Команду принимает, но стартует в другом месте! Spring 94.1
         }
         
+        //bases.add(new TBase(this, clb.getMap().getStartPos(), 1000)); // Init first base
+        addSmartGroup(new TBase(this, clb.getMap().getStartPos(), 1000));  // Init first base
         
     } catch (Exception e) {
         ret=-4;
         sendTextMsg("ERROR init, exception: "+e.toString(), MSG_ERR);
-        e.printStackTrace();
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
     }
 
  //----
@@ -398,8 +419,42 @@ public void checkForMetal()
         
         //for (AIFloat3 metalspot : availablemetalspots) sendTextMsg("Metal Spot at X: "+metalspot.x + ", Y: "+metalspot.y +", Z: "+metalspot.z); // DEBUG
     }
+    
+    // Init metal points
+    if (isMetalFieldMap==IS_METAL_FIELD || isMetalFieldMap==-2) allMetallSpots=null;
+    else {
+        if (allMetallSpots!=null) allMetallSpots=new ArrayList<AIFloat3>();
+        if (isMetalFieldMap==IS_NORMAL_METAL && (allMetallSpots==null || allMetallSpots.isEmpty())) {
+            String modName = modSpecific.modName; // last: clb.getMod().getShortName()
+            boolean isZKmod=modName.equals("ZK");
+            if (!isZKmod) {
+            // -- by engine --
+                allMetallSpots=clb.getMap().getResourceMapSpotsPositions(metal);
+              sendTextMsg("Num of metal point: "+allMetallSpots.size(), MSG_DLG);
+            // -----
+            } else { // MOD SPECIFED FOR Zero-K!
+                //!!! TODO
+            }
+        }
+    }
 }
 
+private List<AIFloat3> allMetallSpots;
+/**
+ * return point for metal spots in radius.
+ * @param center
+ * @param r radius for search
+ * @return list with metal spots, or empty list if non-metal map or not have metal. Null if it is metal map (-1), or map type is not set (-2).
+ */
+public ArrayList<AIFloat3> getMetalSpotsInRadius(AIFloat3 center, float r) {
+    if (isMetalFieldMap==IS_METAL_FIELD || isMetalFieldMap==-2 || allMetallSpots==null) return null;
+    ArrayList<AIFloat3> mPoints=new ArrayList<AIFloat3>();
+    if (isMetalFieldMap==IS_NO_METAL) return mPoints;
+    
+    for (AIFloat3 p:allMetallSpots) if (MathPoints.getDistanceBetweenFlat(center, p)<=r) mPoints.add(p);
+    
+    return mPoints;
+}
    
     /**
      * Get unit resource income-usage (can work with LUA metal maker by using modSpecific.getResourceConversionFor(...)).
@@ -435,8 +490,8 @@ public void checkForMetal()
 //            sendTextMsg("Extract calc for "+def.getName()+" extr square="+metalExSquare+" map avg res income="+mapResAvgExtract+" def extract res gen="+defExtractRes+ " resProduct+="+resProduct, MSG_DBG_ALL);
         }
 
-        // - - Зависимая от мода часть! Банки! MMaker - -
-        float modSpecRes[]=modSpecific.getResourceConversionFor(def.getName());
+        // - - Зависимая от мода часть! MMaker - -
+        float modSpecRes[]=modSpecific.getResourceConversionFor(def);
         if (modSpecRes!=null) {
             if (res.getName().equals("Metal")) resProduct += modSpecRes[0];
             if (res.getName().equals("Energy")) resProduct +=modSpecRes[1];
@@ -461,7 +516,7 @@ public boolean doTechUpToLevel(TTechLevel bestLvl, TBase onBase) {
     //float t=ecoStrategy.getRashotBuildTimeLst(bestLvl.needBaseBuilders, avgEco.getAVGResourceToArr(), base.getBuildPower(false, true));
     //sendTextMsg("Start tech Up from to > time="+t+" level="+bestLvl.toString(), FieldBOT.MSG_DBG_SHORT);
     if (onBase==null) { // search base
-        for (TBase base:bases) {
+        for (TBase base:selectTBasesList()) {
             if (bestLvl.byMorph()) {
               if (base.contains(bestLvl.byMorph)) onBase=base;
             } else {
@@ -510,7 +565,7 @@ public boolean checkAndTechUp(boolean doEmidetly, boolean test) { // TODO ПЕР
     else currentRes= avgEco.getAVGResourceToArr();
     // TODO test. Было getAVGResourceToArr()
     
-    for (TBase base:bases) if (base.currentBaseTarget.isEmpty()) {
+    for (TBase base:selectTBasesList()) if (base.currentBaseTarget.isEmpty()) {
         
         HashSet<UnitDef> onBaseBuildLst=base.getBuildList(true);
         
@@ -564,7 +619,7 @@ public boolean checkAndTechUp(boolean doEmidetly, boolean test) { // TODO ПЕР
 public TBase getNearBase(AIFloat3 nearTo) {
     TBase nearB=null;
     float minL=Float.POSITIVE_INFINITY;
-    for (TBase base:bases) {
+    for (TBase base:selectTBasesList()) {
         float l=MathPoints.getDistanceBetweenFlat(base.center, nearTo)-base.radius;
         if (nearB==null || l<minL) {
             minL=l;
@@ -573,6 +628,7 @@ public TBase getNearBase(AIFloat3 nearTo) {
     }
     return nearB;
 }
+// TODO getNearGroup
 
 /**
  * Create new base and send to new base constructor unit from all other base.
@@ -582,7 +638,7 @@ public TBase getNearBase(AIFloat3 nearTo) {
 public TBase spawnNewBase(AIFloat3 newBasePoint)
 {
     ArrayList<Unit> shareWorker= new ArrayList<Unit>();
-    for (TBase base:bases) {
+    for (TBase base:selectTBasesList()) { // TODO only from bases? Maybe from other group too?
         // TODO ...
         ArrayList<Unit> baseCons=new ArrayList<Unit>(base.idleCons);
         baseCons.addAll(base.workingCons);
@@ -591,9 +647,9 @@ public TBase spawnNewBase(AIFloat3 newBasePoint)
             Unit aCons = itr1.next();
             UnitDef cDef=aCons.getDef();
             if (!ModSpecification.isRealyAbleToMove(cDef)
-                || cDef.isCommander() // ? !!! главного не трогать
+                || cDef.isCommander() // ? !!! No using commander! FIXME!!!!!
                 || aCons.isParalyzed()
-                || !ModSpecification.isAbleToBuildBase(cDef) // И вообще он сможет заложить новую базу?
+                || !ModSpecification.isAbleToBuildBase(cDef) // So, they can build new base?
                 ) itr1.remove(); // Если нельзя переместить на новую базу
         }
         // TODO select only fast unit
@@ -612,10 +668,10 @@ public TBase spawnNewBase(AIFloat3 newBasePoint)
     }
     if (!shareWorker.isEmpty()) {
         TBase newB=new TBase(this, newBasePoint, 1000);
-        bases.add(newB);
+        addSmartGroup(newB);
         for (Unit u:shareWorker) { // !!!
             newB.addUnit(u); // Добавить и пойти на базу
-            u.moveTo(MathPoints.getRandomPointInRadius(newB.center, newB.radius/2), (short)0, Integer.MAX_VALUE); //, DEFAULT_TIMEOUT);
+            u.moveTo(MathPoints.getRandomPointOnRadius(newB.center, newB.radius/2), (short)0, Integer.MAX_VALUE); //, DEFAULT_TIMEOUT);
         }
         newB.setAllAsWorking(shareWorker); // Пока не дойдут пометить как работающих
         //sendTextMsg("New base created "+newB.toString()+", "+shareWorker+" units sending to new base.", FieldBOT.MSG_DBG_SHORT);
@@ -626,14 +682,34 @@ public TBase spawnNewBase(AIFloat3 newBasePoint)
     }            
 }
 
+public void removeSmartGroup(AGroupManager group) {
+    if (!smartGroupsToRemove.contains(group)) smartGroupsToRemove.add(group);
+}
+public void addSmartGroup(AGroupManager group) {
+    //if (!smartGroupsToRemove.contains(group)) smartGroupsToRemove.add(group);
+    smartGroups.add(group);
+    //bases.add(group);
+}
+/**
+ * Select TBase list from smartGroup list
+ */
+public ArrayList<TBase> selectTBasesList() {
+    ArrayList<TBase> basesList=new ArrayList<TBase>();
+    for (AGroupManager sGroup:smartGroups) 
+        if (sGroup instanceof TBase) basesList.add((TBase)sGroup);
+    return basesList;
+}
+
 @Override
 public int update(int frame) {
   try {
   cpuTimer.start();
 //    sendTextMsg("update frame="+frame, MSG_DBG_ALL);
       
-    if (!deadLstUnit.isEmpty()) {
-        deadLstUnit.clear();// TODO test.
+    if (!deadLstUnit.isEmpty()) deadLstUnit.clear();
+    if (!smartGroupsToRemove.isEmpty()) { // TODO test.
+        if (smartGroups.removeAll(smartGroupsToRemove)) smartGroupsToRemove.clear();
+        //TODO don't forget call removeSmartGroup(null) if add some methods/cashes for calling on this function;
     }
       
     avgEco.update(frame);
@@ -646,7 +722,7 @@ public int update(int frame) {
         sendTextMsg("MOD info. Name: "+mod.getHumanName()+" short name:"+mod.getShortName()+" version:"+mod.getVersion()+" description:"+mod.getDescription(), MSG_DBG_SHORT);
         sendTextMsg("ENGINE: "+clb.getEngine().getVersion().getFull(), MSG_DBG_SHORT);
         
-        for (TBase base:bases) base.reinitCenter(); // !!! устраняет ошибки позиции при старте с start boxes
+        for (TBase base:selectTBasesList()) base.reinitCenter(); // !!! bug fix with start position for start boxes
 
   // DEBUG: SHOW ALL UNITS INFO!
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Печать списка всех юнитов
@@ -668,8 +744,12 @@ public int update(int frame) {
   } else {
 
     talkingDialogModule.update(frame);
+    scoutModule.update(frame);
+    // TODO spawn new base, send group for kame mex point if mapType=normal metal map. ecoStrategy.update(frame);
+    warStrategy.update(frame); // Army control
     
-    for (TBase base:bases) base.update(frame);
+    
+    for (AGroupManager sGroup:smartGroups) sGroup.update(frame);
     
     // ======= Test Tech Up ==========
     if (autoTechUp){
@@ -717,7 +797,7 @@ public int update(int frame) {
  * @param unit unit without owner base
  * @return add to base, or false - not added.
  */
-public boolean addToSameBase(Unit unit) {
+public boolean addToSameGroup(Unit unit) {
     sendTextMsg("Unit from uncknown owner base add to base, ... try...", MSG_DBG_ALL);
     if (unit.getTeam()!=teamId) { // !!! DEBUG!
         sendTextMsg("unit not in AI team!", MSG_DBG_SHORT);
@@ -729,13 +809,13 @@ public boolean addToSameBase(Unit unit) {
     }
     // TODO check on dead/sharing list
     
-   TBase nearBase=null; float bestK=Float.NEGATIVE_INFINITY;//float bestDist=Float.POSITIVE_INFINITY;
-   for (TBase base:bases) {
+   AGroupManager nearBase=null; float bestK=Float.NEGATIVE_INFINITY;//float bestDist=Float.POSITIVE_INFINITY;
+   for (AGroupManager sGroup:smartGroups) {
        //float l = TBase.getDistanceBetween(unit.getPos(), base.center);
-       float k=base.doYouNeedUnit(unit);
+       float k=sGroup.doYouNeedUnit(unit);
        if (k>bestK) {
            bestK=k;
-           nearBase=base;
+           nearBase=sGroup;
        }
    }
    if (nearBase!=null) {
@@ -808,6 +888,42 @@ public int message(int player, String message) {
     return 0; // signaling: OK
 }
 
+
+
+    @Override
+    public int luaMessage(java.lang.String inData){  
+        sendTextMsg("on luaMessage inData="+inData+"", MSG_DBG_ALL);
+// This function was taking and owerwrite from https://github.com/Anarchid/zkgbai/blob/master/src/zkgbai/graph/GraphManager.java#L83 (code from Anarchid)
+        final String DATA_METAL_MAKR="METAL_SPOTS:";
+    	if(inData.startsWith(DATA_METAL_MAKR))
+        {
+            String json = inData.substring(DATA_METAL_MAKR.length());
+            JsonParserFactory factory=JsonParserFactory.getInstance();
+            JSONParser parser=factory.newJsonParser();
+            ArrayList<HashMap> jsonData=(ArrayList)parser.parseJson(json).values().toArray()[0];
+            
+            if (allMetallSpots==null) allMetallSpots=new ArrayList<AIFloat3>();
+            for (HashMap s:jsonData){
+                float x = Float.parseFloat((String)s.get("x"));
+                float y = Float.parseFloat((String)s.get("y"));
+                float z = Float.parseFloat((String)s.get("z"));
+                float m = Float.parseFloat((String)s.get("metal"));
+                AIFloat3 metalP=new AIFloat3(x, y, z); // TODO use m too
+                allMetallSpots.add(metalP);
+            }
+            sendTextMsg("Parsed JSON metalmap with "+allMetallSpots.size()+" spots", MSG_DBG_SHORT);
+            
+            // TODO start boxes
+    	}
+        //*/
+    	return 0; //signaling: OK
+    }
+
+
+
+
+
+
 public void showUnitDefInfoDebug(UnitDef unit){
     sendTextMsg("Unit info: " + unit.getName()+" humanName: "+unit.getHumanName()+" techLevel: "+unit.getTechLevel()+" defID: "+unit.getUnitDefId(), MSG_DBG_SHORT);
     sendTextMsg("Unit is: AbleToAssist " + unit.isAbleToAssist()+" AbleToMove "+unit.isAbleToMove()+" Assistable "+unit.isAssistable(), MSG_DBG_SHORT);
@@ -870,11 +986,11 @@ public int unitCreated(Unit unit, Unit builder) {
     onAddUnit(unit);
     //onFreeBuildingUnit(unit);
     boolean foundHomeBase=false;
-    for (TBase base:bases) {
-        base.unitCreated(unit, builder);
-        if (base.contains(unit)) foundHomeBase=true;
+    for (AGroupManager sGroup:smartGroups) {
+        sGroup.unitCreated(unit, builder);
+        if (sGroup.contains(unit)) foundHomeBase=true;
     }
-    if (!foundHomeBase) addToSameBase(unit);
+    if (!foundHomeBase) addToSameGroup(unit);
     sendTextMsg("done unitCreated.", MSG_DBG_ALL);
    cpuTimer.stop();
   } catch (Exception e) {
@@ -899,11 +1015,11 @@ public int unitFinished(Unit unit) {
     onAddUnit(unit);
     //onFreeBuildingUnit(unit);
     boolean foundHomeBase=false;
-    for (TBase base:bases) {
-        base.unitFinished(unit);
-        if (base.contains(unit)) foundHomeBase=true;
+    for (AGroupManager sGroup:smartGroups) {
+        sGroup.unitFinished(unit);
+        if (sGroup.contains(unit)) foundHomeBase=true;
     }
-    if (!foundHomeBase) addToSameBase(unit);
+    if (!foundHomeBase) addToSameGroup(unit);
     
     sendTextMsg("done unitFinished.", MSG_DBG_ALL);
   } catch (Exception e) {
@@ -928,11 +1044,11 @@ public int unitIdle(Unit unit) {
     }
 
     boolean foundHomeBase=false;
-    for (TBase base:bases) {
-        base.unitIdle(unit);
-        if (base.contains(unit)) foundHomeBase=true; // TODO если ни одна база не приняла его?
+    for (AGroupManager sGroup:smartGroups) {
+        sGroup.unitIdle(unit);
+        if (sGroup.contains(unit)) foundHomeBase=true; // TODO если ни одна база не приняла его?
     }
-    if (!foundHomeBase) addToSameBase(unit);
+    if (!foundHomeBase) addToSameGroup(unit);
     
     sendTextMsg("done unitIdle.", MSG_DBG_ALL);
   } catch (Exception e) {
@@ -957,11 +1073,11 @@ public int unitMoveFailed(Unit unit) {
     }
     
     boolean foundHomeBase=false;
-    for (TBase base:bases) {
-        base.unitMoveFailed(unit);
-        if (base.contains(unit)) foundHomeBase=true;
+    for (AGroupManager sGroup:smartGroups) {
+        sGroup.unitMoveFailed(unit);
+        if (sGroup.contains(unit)) foundHomeBase=true;
     }
-    if (!foundHomeBase) addToSameBase(unit);
+    if (!foundHomeBase) addToSameGroup(unit);
     sendTextMsg("done unitMoveFailed.", MSG_DBG_ALL);
   } catch (Exception e) {
       sendTextMsg("ERROR unitMoveFailed, exception: "+e.toString(), MSG_ERR);
@@ -986,9 +1102,9 @@ public int unitDestroyed(Unit unit, Unit attacker) {
     deadLstUnit.add(unit);// TODO !!!Test
     onLostUnit(unit);
     boolean foundHomeBase=false;
-    for (TBase base:bases) { // send signal
-        if (base.contains(unit)) foundHomeBase=true;
-        base.unitDestroyed(unit,attacker);
+    for (AGroupManager sGroup:smartGroups) { // send signal
+        if (sGroup.contains(unit)) foundHomeBase=true;
+        sGroup.unitDestroyed(unit,attacker);
         // TODO break?
     }
     sendTextMsg("done unitDestroyed.", MSG_DBG_ALL);
@@ -1012,22 +1128,22 @@ public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
     // TODO do need  onLostUnit(unit) ?
 
     boolean foundHomeBase=false;
-    for (TBase base:bases) { // send signal
+    for (AGroupManager sGroup:smartGroups) { // send signal
         //if (base.contains(unit)) foundHomeBase=true; // TODO ...
-        boolean baseR=base.unitGiven(unit, oldTeamId, newTeamId);
+        boolean baseR=sGroup.unitGiven(unit, oldTeamId, newTeamId);
         if (baseR) foundHomeBase=true;
         //if (base.contains(unit)) foundHomeBase=true; // TODO ...
     }
 
     if (oldTeamId==teamId && newTeamId!=teamId) { // out from AI
         deadLstUnit.add(unit);// TODO !!!Test
-        for (TBase base:bases) base.removeUnit(unit); // remove from all list...
+        for (AGroupManager sGroup:smartGroups) sGroup.removeUnit(unit); // remove from all list...
     }
     
     if (oldTeamId!=teamId && newTeamId==teamId) { // come to AI
         if (!foundHomeBase) {
             //if (newTeamId==this.teamId) 
-            addToSameBase(unit);
+            addToSameGroup(unit);
         }
 
         onAddUnit(unit);
@@ -1052,7 +1168,7 @@ public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {
     if (oldTeamId==teamId && newTeamId!=teamId) { // out from AI control
         deadLstUnit.add(unit);
         onLostUnit(unit);
-        for (TBase base:bases) base.removeUnit(unit); // remove from all list.
+        for (AGroupManager sGroup:smartGroups) sGroup.removeUnit(unit); // remove from all list.
     }
     // TODO captured to AI.
     sendTextMsg("done unitCaptured.", MSG_DBG_ALL);
@@ -1068,31 +1184,125 @@ public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {
 
 @Override
 public int enemyEnterLOS(Unit enemy) {
+  try {
+  cpuTimer.start();
+        if (enemy==null) sendTextMsg("WTF ETTOR: enemyEnterLOS enemy==null", FieldBOT.MSG_ERR);
+        else {
+            scoutModule.enemyEnterLOS(enemy);
+        }
+   cpuTimer.stop();
+  } catch (Exception e) {
+      sendTextMsg("ERROR enemyEnterLOS, exception: "+e.toString(), MSG_ERR);
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     cpuTimer.stop();
+      return -1;
+  }
     return 0; // signaling: OK
 }
 
 @Override
 public int enemyLeaveLOS(Unit enemy) {
-    return 0; // signaling: OK
+  try {
+  cpuTimer.start();
+        if (enemy==null) sendTextMsg("WTF ETTOR: enemyLeaveLOS enemy==null", FieldBOT.MSG_ERR);
+        else {
+            scoutModule.enemyLeaveLOS(enemy);
+        }
+   cpuTimer.stop();
+  } catch (Exception e) {
+      sendTextMsg("ERROR enemyLeaveLOS, exception: "+e.toString(), MSG_ERR);
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     cpuTimer.stop();
+      return -1;
+  }    return 0; // signaling: OK
 }
 
 @Override
 public int enemyEnterRadar(Unit enemy) {
+  try {
+  cpuTimer.start();
+        if (enemy==null) sendTextMsg("WTF ETTOR: enemyEnterRadar enemy==null", FieldBOT.MSG_ERR);
+        else {
+            scoutModule.enemyEnterRadar(enemy);
+        }
+   cpuTimer.stop();
+  } catch (Exception e) {
+      sendTextMsg("ERROR enemyEnterRadar, exception: "+e.toString(), MSG_ERR);
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     cpuTimer.stop();
+      return -1;
+  }
     return 0; // signaling: OK
 }
 
 @Override
 public int enemyLeaveRadar(Unit enemy) {
-    return 0; // signaling: OK
+  try {
+  cpuTimer.start();
+        if (enemy==null) sendTextMsg("WTF ETTOR: enemyLeaveRadar enemy==null", FieldBOT.MSG_ERR);
+        else {
+            scoutModule.enemyLeaveRadar(enemy);
+        }
+   cpuTimer.stop();
+  } catch (Exception e) {
+      sendTextMsg("ERROR enemyLeaveRadar, exception: "+e.toString(), MSG_ERR);
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     cpuTimer.stop();
+      return -1;
+  }
+  return 0; // signaling: OK
 }
 
 @Override
 public int enemyDamaged(Unit enemy, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {
-    return 0; // signaling: OK
+ try {
+  cpuTimer.start();
+        if (enemy==null) sendTextMsg("WTF ETTOR: enemyDamaged enemy==null, attacker=="+attacker, FieldBOT.MSG_ERR);
+        else {
+            scoutModule.enemyDamaged(enemy, attacker, damage, dir, weaponDef, paralyzed);
+        }
+   cpuTimer.stop();
+  } catch (Exception e) {
+      sendTextMsg("ERROR enemyDamaged, exception: "+e.toString(), MSG_ERR);
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     cpuTimer.stop();
+      return -1;
+  }    return 0; // signaling: OK
 }
 
 @Override
 public int enemyDestroyed(Unit enemy, Unit attacker) {
+ try {
+  cpuTimer.start();
+        if (enemy==null) sendTextMsg("WTF ETTOR: enemyDestroyed enemy==null, attacker=="+attacker, FieldBOT.MSG_ERR);
+        else {
+            scoutModule.enemyDestroyed(enemy, attacker);
+        }
+   cpuTimer.stop();
+  } catch (Exception e) {
+      sendTextMsg("ERROR enemyDestroyed, exception: "+e.toString(), MSG_ERR);
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     cpuTimer.stop();
+      return -1;
+  }
     return 0; // signaling: OK
 }
 
@@ -1117,12 +1327,12 @@ public int commandFinished(Unit unit, int commandId, int commandTopicId) {
     }
     
     boolean foundHomeBase=false;
-    for (TBase base:bases) {
-        base.commandFinished(unit, commandId, commandTopicId);
-        if (base.contains(unit)) foundHomeBase=true;
+    for (AGroupManager sGroup:smartGroups) {
+        sGroup.commandFinished(unit, commandId, commandTopicId);
+        if (sGroup.contains(unit)) foundHomeBase=true;
     }
     if (!foundHomeBase) {
-        addToSameBase(unit);
+        addToSameGroup(unit);
         sendTextMsg("On cmdFinish unit without base. ", MSG_DBG_SHORT);
     }
     sendTextMsg("done commandFinished.", MSG_DBG_ALL);
@@ -1138,6 +1348,19 @@ public int commandFinished(Unit unit, int commandId, int commandTopicId) {
 
 @Override
 public int seismicPing(AIFloat3 pos, float strength) {
+ try {
+  cpuTimer.start();
+    scoutModule.seismicPing(pos, strength);
+   cpuTimer.stop();
+  } catch (Exception e) {
+      sendTextMsg("ERROR seismicPing, exception: "+e.toString(), MSG_ERR);
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     cpuTimer.stop();
+      return -1;
+  }
     return 0; // signaling: OK
 }
 

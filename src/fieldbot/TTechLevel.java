@@ -25,18 +25,18 @@ import java.util.List;
 /**
  * TechLevel определяет что нового можно строить и средную выгоду от этого.
  * Что нужно построить чтобы достичь этого уровня. Сколько это будет стоить.
- * @author user2
+ * @author PlayerO1
  */
 public class TTechLevel {
-    public final FieldBOT botClb;// для расчётов только
+    private final FieldBOT botClb;// for call
     
     /**
-     * список того, что нужно построить для перехода на уровень (что не хватает)
+     * list of main builders for pass this tech level
      */
     public final ArrayList<UnitDef> needBaseBuilders;
     
     /**
-     * Поддержка перехода через morph
+     * morph tech up support
      */
     public final Unit byMorph;
     public final CommandDescription morphCMD;
@@ -44,24 +44,35 @@ public class TTechLevel {
     
     
     /**
-     * Список того, что нового даёт этот уровень
+     * What new building can build on this new level
      */
     public final ArrayList<UnitDef> levelNewDef;
     
     /**
-     * Системный уровень построек (максимальный) для needBaseBuilders.
+     * List of Spring "techLevel" for this level UnitDefs
      */
-    public final int techLevelNumbet[]; // список "techLevel" уровней
+    public final int[] techLevelNumber;
     
+    // Economic info
     /**
-     * Показывает максимальные параметры экономики...
+     * Max economic 1 building profit
      * см. FieldBOT.advEco.resName
      */
     public final float ecoK[];
+    /**
+     * Max build power by 1 best constructor
+     */
     public final float builderK;
     
+    // War info
+    public final float maxAtackRange;
+    public final float[] maxAtackPower;
+    public final float maxUnitSpeed;
+    
+    
+    
     /**
-     * Убирает из списка всех, кого нельзя построить на поверхности базы
+     * Remove all that can not build on base surface from list
      * @param lstDef
      * @param onBase 
      */
@@ -69,7 +80,7 @@ public class TTechLevel {
         Iterator<UnitDef> itr1 = lstDef.iterator(); // Цикл...
         while (itr1.hasNext()) {
             UnitDef def = itr1.next();
-            if (!onBase.canBuildOnBase(def, false)) itr1.remove(); // убрать из списка
+            if (!onBase.canBuildOnBase(def, false)) itr1.remove(); // remove from list
         }
     }
     
@@ -126,7 +137,7 @@ public class TTechLevel {
                 newWorkerUnitDefs.addAll(bestWorker.getBuildOptions());//!!! unitCanBuild.clone();
                 newWorkerUnitDefs.removeAll(unitOldBuild);
 
-                tmpTechLevels.add( bestWorker.getTechLevel() ); // было techLevelNumbet=Math.max(techLevelNumbet,bestWorker.getTechLevel());
+                tmpTechLevels.add( bestWorker.getTechLevel() ); // было techLevelNumber=Math.max(techLevelNumber,bestWorker.getTechLevel());
 
                 if (botClb.modSpecific.specificUnitEnabled)
                     botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newUnitDefs, tmpTechLevels);// TODO Test it! Проверка на возможность зависимости от тех. уровней.
@@ -145,10 +156,10 @@ public class TTechLevel {
         
         for (UnitDef def:levelNewDef) tmpTechLevels.add( def.getTechLevel() );
         // Перечень всех тех. уровней
-        techLevelNumbet = new int[tmpTechLevels.size()];
+        techLevelNumber = new int[tmpTechLevels.size()];
         int i=0;
         for (Integer iLvl:tmpTechLevels) {
-            techLevelNumbet[i]=iLvl.intValue();
+            techLevelNumber[i]=iLvl.intValue();
             i++;
         }
         
@@ -156,6 +167,9 @@ public class TTechLevel {
         ecoK = getMaxResProduct(levelNewDef, botClb);
         builderK= getMaxBuildPower(levelNewDef);
         
+        maxAtackRange=getMaxAtackRange(levelNewDef);
+        maxAtackPower=getMaxAtackDamage(levelNewDef);
+        maxUnitSpeed=getMaxSpeed(levelNewDef);
     }
     
     /**
@@ -188,14 +202,66 @@ public class TTechLevel {
         for (UnitDef def:ecoUnits) 
         {
           float r;
-          // TODO assistable or factory ?
-          if (def.isBuilder() || def.isAbleToAssist()) r=def.getBuildSpeed();
+          if (def.isBuilder() || def.isAbleToAssist()) r=def.getBuildSpeed(); // TODO assistable or factory ?
           else r=0;
-          if (r>maxB) maxB= r;// !!!!
+          if (r>maxB) maxB= r;
         }
         return maxB;
     }
     
+    /**
+     * Get max atack range from 1 best unit
+     * @param warUnits
+     * @return 
+     */
+    public static float getMaxAtackRange(Collection<UnitDef> warUnits)
+    {
+        float maxR=0;
+        for (UnitDef def:warUnits) 
+        {
+          float r;
+          if (def.isAbleToAttack()) r=def.getMaxWeaponRange();
+          else r=0;
+          if (r>maxR) maxR= r;
+        }
+        return maxR;
+    }
+    
+    /**
+     * Get max weapon damage by damage type.
+     * @param warUnits
+     * @return max damage of [unit weapon damage summ], or null if not weapon on this list, or all weapon is were specifed.
+     */
+    public static float[] getMaxAtackDamage(Collection<UnitDef> warUnits)
+    {
+        float[] maxDmg=null;
+        for (UnitDef def:warUnits) 
+        {
+          if (def.isAbleToAttack()) {
+              float[] tmpDmg=TWarStrategy.getSumWeaponDamage(def); // TODO isParalyzed, isAbleToGround/air...
+              if (tmpDmg!=null) {
+                if (maxDmg==null) maxDmg=tmpDmg;
+                else
+                  for (int i=0; i<tmpDmg.length;i++) if (tmpDmg[i]>maxDmg[i]) maxDmg[i]=tmpDmg[i];
+              }
+          }
+        }
+        return maxDmg;
+    }    
+    
+    public static float getMaxSpeed(Collection<UnitDef> warUnits)
+    {
+        float maxS=0;
+        for (UnitDef def:warUnits) 
+        {
+          float s;
+          if (def.isAbleToMove()) s=def.getSpeed(); // !!!
+          else s=0;
+          if (s>maxS) maxS= s;
+        }
+        return maxS;
+    }
+            
     /**
      * Создаёт новый тех. уровень на основе апгрейда (morphing unit).
      * @param morphUnit юнит для апгрейда (to morphing)
@@ -215,7 +281,7 @@ public class TTechLevel {
         needBaseBuilders=new ArrayList<UnitDef>();
         needBaseBuilders.add(morphTo);
         
-        // было techLevelNumbet=morphTo.getTechLevel(); //!!!
+        // было techLevelNumber=morphTo.getTechLevel(); //!!!
         HashSet<Integer> tmpTechLevels=new HashSet<Integer>();
         tmpTechLevels.add( morphTo.getTechLevel() ); // TODO check is null !!!
         
@@ -248,7 +314,7 @@ public class TTechLevel {
                 newWorkerUnitDefs.addAll(bestWorker.getBuildOptions());//!!! unitCanBuild.clone();
                 newWorkerUnitDefs.removeAll(unitOldBuild);
 
-                // было techLevelNumbet=Math.max(techLevelNumbet,bestWorker.getTechLevel());
+                // было techLevelNumber=Math.max(techLevelNumber,bestWorker.getTechLevel());
                 tmpTechLevels.add( bestWorker.getTechLevel() );
 
                 if (botClb.modSpecific.specificUnitEnabled)
@@ -269,10 +335,10 @@ public class TTechLevel {
         
         for (UnitDef def:levelNewDef) tmpTechLevels.add( def.getTechLevel() );
         // Перечень всех тех. уровней
-        techLevelNumbet = new int[tmpTechLevels.size()];
+        techLevelNumber = new int[tmpTechLevels.size()];
         int i=0;
         for (Integer iLvl:tmpTechLevels) {
-            techLevelNumbet[i]=iLvl.intValue();
+            techLevelNumber[i]=iLvl.intValue();
             i++;
         }
 
@@ -280,6 +346,9 @@ public class TTechLevel {
         ecoK = getMaxResProduct(levelNewDef, botClb);
         builderK=getMaxBuildPower(levelNewDef);
         
+        maxAtackRange=getMaxAtackRange(levelNewDef);
+        maxAtackPower=getMaxAtackDamage(levelNewDef);
+        maxUnitSpeed=getMaxSpeed(levelNewDef);
     }
     
     /**
@@ -549,7 +618,7 @@ public class TTechLevel {
     
     @Override
     public String toString() {
-        String s="level="+Arrays.toString(techLevelNumbet)+" byMorph="+byMorph()+" ecoK="+Arrays.toString(ecoK)+" need build:(";
+        String s="level="+Arrays.toString(techLevelNumber)+" byMorph="+byMorph()+" ecoK="+Arrays.toString(ecoK)+" build power="+builderK+" need build:(";
         for (UnitDef def:needBaseBuilders) s+=" "+def.getName()+" -tlvl"+def.getTechLevel()+"- "+def.getHumanName()+",";
         s+=") new:(";
         for (UnitDef def:levelNewDef) s+=" "+def.getName()+",";

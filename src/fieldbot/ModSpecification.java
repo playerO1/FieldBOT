@@ -18,24 +18,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 
 /**
- * Особенности модов.
- * @author user2
+ * Specific for different mods
+ * @author PlayerO1
  */
 public class ModSpecification {
-    //private String ecoName[]; было
-    //private float eco_res[][];
-
-    //TreeMap<String,float[]> treeMap_Eco; // параметры банок
-    private final HashMap<String,float[]> treeMap_Eco; // параметры банок !!!!!!!! TEST!!!!!!!
+    private final HashMap<String,float[]> treeMap_Eco; // metal makers info
     // TODO можно ли использовать HashMap для этого? !!!! см. хэш Стринг...
     
     private final FieldBOT owner;
-    private final List<UnitDef> allUnitDefs; // для ассоциации с Morph...
+    protected final List<UnitDef> allUnitDefs; // для ассоциации с Morph...
     
     private final HashMap<UnitDef,Integer> specialTLevelRequired;//!!! Для TA и RD, смотри specificUnitEnabled
     
@@ -66,11 +59,21 @@ public class ModSpecification {
      */
     public final boolean exist_MetalMaker_lua;
     
+    /**
+     * Если есть скриптовый metal extractor
+     */
+    public final UnitDef luaMetalExtractor;
+    
+    /**
+     * MOD short name
+     */
+    public final String modName;
+    
     public ModSpecification(FieldBOT owner) {
         this.owner=owner;
         allUnitDefs=owner.clb.getUnitDefs(); // !!! получение большого списка.
         
-        String modName = owner.clb.getMod().getShortName();
+        modName = owner.clb.getMod().getShortName();
         
         //TODO в XML...
         
@@ -78,7 +81,6 @@ public class ModSpecification {
         // Robot Defence MOD short name: RD
         
         specificUnitEnabled = modName.equals("TA") || modName.equals("RD"); // TODO specificUnitEnabled !
-        
         
         if (modName.equals("EvoRTS")) {
             metal_maker_workZone=0.012f;
@@ -137,8 +139,11 @@ public class ModSpecification {
 
         // ZeroK
         if (modName.equals("ZK")) {
-            treeMap_Eco.put("cormex", new float[] { 1.0f, 0.0f } ); // Metal Extractor
+            treeMap_Eco.put("cormex", new float[] { 2.0f, 0.0f } ); // Metal Extractor
             // TODO !!!!!!!!!!!!!!!!!!! extractor metal multiplier = sqrt(1+energy/4)) 
+            luaMetalExtractor=owner.clb.getUnitDefByName("cormex");
+        } else {
+            luaMetalExtractor=null;
         }
 
         exist_MetalMaker_lua=treeMap_Eco.isEmpty();
@@ -162,11 +167,11 @@ public class ModSpecification {
     
     /**
      * Сведения о Metal Maker
-     * @param defName название банки
+     * @param def metal maker
      * @return что вырабатывает, или null если нет спецификаций.
      */
-    public float[] getResourceConversionFor(String defName) {
-        return treeMap_Eco.get(defName);
+    public float[] getResourceConversionFor(UnitDef def) {
+        return treeMap_Eco.get(def.getName());
         /* было
         for (int i=0;i<ecoName.length;i++) {
             if (defName.contains(ecoName[i])) return eco_res[i];
@@ -179,21 +184,21 @@ public class ModSpecification {
     
     /**
      * Если это специальный MMaker управляемый скриптами, то можно использовать getConversionKMetalMaker()
-     * @param defName
+     * @param def
      * @return это ммакер (если это "нативный" метал макер (resourceMake) то не возвращает истинну)
      */
-    public boolean isMetalMaker(String defName) {
-        return treeMap_Eco.containsKey(defName);
+    public boolean isMetalMaker(UnitDef def) {
+        return treeMap_Eco.containsKey(def.getName());
     }
     /**
      * Возвращает коэффициент конверсии для "LUA" метал мейкера
-     * @param defName
+     * @param def
      * @return коэффициент, чем > тем лучше. Или Float.POSITIVE_INFINITY.
      */
-    public float getConversionKMetalMaker(String defName) {
-        float[] val=treeMap_Eco.get(defName);
+    public float getConversionKMetalMaker(UnitDef def) {
+        float[] val=treeMap_Eco.get(def.getName());
         if (val==null) return 1.0f;
-        if (val[1]==0) return Float.POSITIVE_INFINITY;// !!!!
+        if (val[1]<=0) return Float.POSITIVE_INFINITY;// !!!!
         return val[0]/val[1]; // TODO check!!! зависит от порядка...
     }
     

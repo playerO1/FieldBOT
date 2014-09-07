@@ -63,17 +63,23 @@ public class TEcoStrategy {
      * If true - using only incoming, if false - using incoming-usage resource.
      */
     public boolean useOptimisticResourceCalc;
+
+    /**
+     * Enable economic control
+     */
+    public boolean makeEco;
     
     private static final boolean USE_STATIONAR_BUILDER=true; // Строить или нет NANO башни?
     private static final float MINIMAL_BUILD_TIME=2.6f; // !!! ничего быстрее 2-х секунд не построится.
-    private static final float MAX_TECHUP_BUILD_TIME=7*60; // время, дольше которого нельзя делать переход на новый уровень
-    private static final float MAX_BUILD_TIME_FOR_GENERATORRES=6*60; // не выбирать здания, которые строятся дольше.
+    private static final float MAX_TECHUP_BUILD_TIME=6*60; // время, дольше которого нельзя делать переход на новый уровень
+    private static final float MAX_BUILD_TIME_FOR_GENERATORRES=4*60; // не выбирать здания, которые строятся дольше.
   
     
     
     public TEcoStrategy(FieldBOT owner) {
         this.owner=owner;
         useOptimisticResourceCalc=true;
+        makeEco=true;
     }
     
     
@@ -143,17 +149,17 @@ public class TEcoStrategy {
 
                 // Учёт выгодности Metal Makers
                 if (owner.modSpecific.exist_MetalMaker_lua)
-                 if (owner.modSpecific.isMetalMaker(ud.getName())) // TODO test it
+                 if (owner.modSpecific.isMetalMaker(ud)) // TODO test it
                 {
-                    float makerK=owner.modSpecific.getConversionKMetalMaker(ud.getName());
-                    if (makerK!=Float.POSITIVE_INFINITY) k = (0.5f*k)+(0.5f * k * makerK );
+                    float makerK=owner.modSpecific.getConversionKMetalMaker(ud);
+                    if (makerK!=Float.POSITIVE_INFINITY) k = (0.4f*k)+(0.6f * k * makerK );
                 }
                 // учёт выгодности Metal Makers в Evo RTS (там коэффициэнт по другим функциям считается)
                 if (owner.modSpecific.exist_MetalMaker_native)
                  if (owner.modSpecific.isNativeMetalMaker(ud)) // TODO test it
                 {
                     float makerK=owner.modSpecific.getNativeConversionKMetalMaker(ud);
-                    if (makerK!=Float.POSITIVE_INFINITY) k = (0.5f*k)+(0.5f * k * makerK );
+                    if (makerK!=Float.POSITIVE_INFINITY) k = (0.4f*k)+(0.6f * k * makerK );
                 }
     //     owner.sendTextMsg(" >item "+ud.getName()+" k="+k+" =r/t, r="+r+" t="+t , FieldBOT.MSG_DBG_ALL);
 
@@ -258,8 +264,8 @@ public class TEcoStrategy {
     }
     
     /**
-     * Оценка времени постройки цепочки юнитов подряд.
-     * @param builds что строить
+     * Check time for build list of units
+     * @param builds unit to build
      * @param startRes текущие ресурсы
      * @param buildSpeed текущая мощность строительства
      * @return время постройки всех зданий
@@ -278,7 +284,7 @@ public class TEcoStrategy {
                 if (deltaRes>0.0f)
                     currentRes[AdvECO.R_Income][i] += deltaRes;
                 else if ((deltaRes<0.0f))
-                    currentRes[AdvECO.R_Usage][i] -= deltaRes;
+                    currentRes[AdvECO.R_Usage][i] += deltaRes;
 
                 currentRes[AdvECO.R_Storage][i]+= def.getStorage(owner.avgEco.resName[i]); // TODO где используется storage при расчётах?
             }
@@ -288,10 +294,10 @@ public class TEcoStrategy {
     }
     
     /**
-     * Вычисляет, сколько надо ждать до достижения такого колличества ресурсов
-     * @param currentRes текущее состояние экономики
-     * @param toRes ожидаемые запасы, выше или равно
-     * @return время ожидания.
+     * How many time need wait for store resource level (don't build, only wait)
+     * @param currentRes current economic state
+     * @param toRes target resource have
+     * @return wait time
      */
     protected float getWaitTimeForProductResource(float[][] currentRes, float toRes[]) { // TODO use int at all
         final Resource resName[]=owner.avgEco.resName; // !!! test
@@ -318,16 +324,16 @@ public class TEcoStrategy {
     
     
     /**
-     * Оценить время постройки.
-     * @param build что строить
-     * @param currentRes текущие ресурсы (запасы+поступление)
-     * @param buildSpeed мощность (скорость) строителей (buildPower)
-     * @param resCurrentMultipler 1.0 - учитывать текущие ресурсы, 0.0 - учитывать как будто запасов нет.
-     * @return время для постройки
+     * Math build time
+     * @param build build time for
+     * @param currentRes current resources
+     * @param buildSpeed build power of worker
+     * @param resCurrentMultipler 1.0 - use current res and incoming, 0.0 - only incoming without current.
+     * @return time for build (second)
      */
     protected float getRashotBuildTime(UnitDef build,float[][] currentRes,float buildSpeed, float resCurrentMultipler) {
         final Resource resName[]=owner.avgEco.resName; // !!! test
-        float T=MINIMAL_BUILD_TIME;  // !!! ничего быстрее 2-х секунд не построится.
+        float T=0.0f;
         // TODO сделать boolean mojetVliatNaPosleduyshie=false;... если критич. ресурсы не меняются, то нет и зависимость линейна.
         // TODO use getWaitTimeForProductResource. часть кода отсюда уже скопированно в getWaitTimeForProductResource()
         for (int rN=0; rN<currentRes[resName.length].length;rN++) {
@@ -352,7 +358,7 @@ public class TEcoStrategy {
         }
         
         if (buildSpeed>0.0f) T=Math.max(T, build.getBuildTime()/buildSpeed);
-        
+        T+=MINIMAL_BUILD_TIME;  // "fuzzy" limit: ничего быстрее 2-х секунд не построится.
         return T;
     }
     
@@ -361,14 +367,92 @@ public class TEcoStrategy {
      * Dynamic modeling of one economic building when time may have recursion depends of build.
      * @param build what build
      * @param startRes start economic info
-     * @param buildSpeed start build speed
+     * @param startBuildSpeed start build power
      * @param maxItr iteration limit
      * @param maxTime time limit
      * @return array contain 2 float: [0] - total time [1] num of iter (building count)
      */
-    private float[] getDynamicRashotBuildInfo(UnitDef build,float[][] startRes,float buildSpeed,int maxItr,float maxTime) {
+    private float[] getDynamicRashotBuildInfo(UnitDef build,float[][] startRes,float startBuildSpeed,int maxItr,float maxTime) {
         //TODO !доделать!: Если дальше последовательность будет тормозить себя, то возвращает только ближайщую, не считает ухудшение. !!! или не надо?...)
         //TODO Remove recursion, exchange to cycle FOR.
+        
+        // ----- NEW ------
+        // TODO test!
+        int bestI=0;
+        float bestT=0;
+        float bestK=0;
+        
+        // cashe for unit economic change, for more faster work
+        final float[][] unitEffectEco=new float[startRes.length][startRes[0].length];
+        final int numRes=owner.avgEco.resName.length;
+        for (int i=0;i<numRes;i++) {
+            Resource res=owner.avgEco.resName[i];
+            unitEffectEco[AdvECO.R_Current][i] = -build.getCost(res); // decrease current res
+            float deltaRes=owner.getUnitResoureProduct(build, res);
+            unitEffectEco[AdvECO.R_Income][i]=Math.max(0,deltaRes);
+            unitEffectEco[AdvECO.R_Usage][i]=Math.max(0,-deltaRes); // increase usage
+            unitEffectEco[AdvECO.R_Storage][i]=build.getStorage(res);
+        }
+        final float deltaBPower; // cashe for Puild Power effect
+        if (build.isAbleToAssist()) deltaBPower = build.getBuildSpeed();
+                               else deltaBPower = 0.0f;
+        
+        float buildPower=startBuildSpeed;
+        float[][] curRes=AdvECO.cloneFloatMatrix(startRes);
+        float timeLost=0;
+        int itrN;
+        for (itrN=1; itrN<=maxItr && (timeLost<maxTime || itrN==1); itrN++)
+        {
+            float t=getRashotBuildTime(build, curRes, buildPower, 1.0f);
+            timeLost+=t;
+            if (timeLost>maxTime && itrN>1) {
+                timeLost-=t;
+                break; // !!!!
+            }
+            //TODO TEST!!!!!
+//            if (timeLost+t<maxTime && maxItr>0) {
+                buildPower += deltaBPower; // учесть строительство
+                //owner.sendTextMsg("dbg: build:"+build.getName()+" t<MaxT: t="+t+" maxTime="+maxTime, FieldBOT.MSG_DBG_ALL);
+                for (int i=0;i<numRes;i++) {
+                    float rNew = t * (curRes[AdvECO.R_Income][i]-curRes[AdvECO.R_Usage][i]);
+                    curRes[AdvECO.R_Current][i]+=unitEffectEco[AdvECO.R_Current][i] + rNew;
+                    curRes[AdvECO.R_Income][i]+=unitEffectEco[AdvECO.R_Income][i];
+                    curRes[AdvECO.R_Usage][i]+=unitEffectEco[AdvECO.R_Usage][i];
+                    curRes[AdvECO.R_Storage][i]+=unitEffectEco[AdvECO.R_Storage][i];
+                    // TODO arrays. matrix add... Maybe faster?
+                }
+                // last
+//                for (int i=0;i<owner.avgEco.resName.length;i++) {
+//                    curRes[AdvECO.R_Current][i]+=
+//                            t * (startRes[AdvECO.R_Income][i]-startRes[AdvECO.R_Usage][i]) // !!!!!!!!! Math.max(startRes[AdvECO.R_Income][i]-startRes[AdvECO.R_Usage][i],startRes[AdvECO.R_Income][i]/2.0f)
+//                            - build.getCost(owner.avgEco.resName[i]);
+//                    float deltaRes=owner.getUnitResoureProduct(build, owner.avgEco.resName[i]);
+//                    if (deltaRes>0.0f) curRes[AdvECO.R_Income][i] += deltaRes;
+//                    else if (deltaRes<0.0f) curRes[AdvECO.R_Usage][i] += deltaRes;
+//                    // TODO где используется storage при расчётах?
+//                    curRes[AdvECO.R_Storage][i]+=build.getStorage(owner.avgEco.resName[i]);
+//                }
+
+                float k=(float)itrN/timeLost;
+                if (k>bestK || itrN==1) {
+                    bestI=itrN;
+                    bestT=timeLost;
+                    bestK=k;
+                }
+//                //if (itrInfo[0]<=t) { // TODO test: если дальше дольше, то не считать что дальше!!!!
+//                    t += itrInfo[0]; // !!!!!!!!!!!!!!!!!!!!!!
+//                    nItrPass += itrInfo[1];
+//                    //TODO !!! если ресурсы сейчас есть, то всегда будет itrInfo[0]>t, если нет - то ???
+//                //}
+                    
+//            }            
+        }
+        int allI=itrN;
+        float allT=timeLost;
+        float allK=(float)allI/timeLost;
+        
+        // ----- OLD ------
+        /*
         maxItr--; // уже виртуально "построили", -1
         float nItrPass=1.0f;
         float t=getRashotBuildTime(build, startRes, buildSpeed, 1.0f);
@@ -386,7 +470,7 @@ public class TEcoStrategy {
                 if (deltaRes>0.0f)
                     currentRes[AdvECO.R_Income][i] += deltaRes;
                 else if ((deltaRes<0.0f))
-                    currentRes[AdvECO.R_Usage][i] -= deltaRes;
+                    currentRes[AdvECO.R_Usage][i] += deltaRes;
                 // TODO где используется storage при расчётах?
                 currentRes[AdvECO.R_Storage][i]=startRes[AdvECO.R_Storage][i] + build.getStorage(owner.avgEco.resName[i]);
             }
@@ -399,7 +483,9 @@ public class TEcoStrategy {
                 //TODO !!! если ресурсы сейчас есть, то всегда будет itrInfo[0]>t, если нет - то ???
             //}
         }
-        float itrInfo[] = {t,nItrPass};
+        */
+        // ------------
+        float itrInfo[] = {bestI, bestT};//old: {t,nItrPass};
         return itrInfo;
     }
     
@@ -451,11 +537,11 @@ public class TEcoStrategy {
         
         if (owner.isMetalFieldMap==FieldBOT.IS_NO_METAL || owner.isMetalFieldMap==FieldBOT.IS_NORMAL_METAL)
         {
-            if ( avg_cur_E/avg_stor_E <= 0.73 || (avg_delta_E<1 && avg_cur_E/avg_stor_E <= 0.97)) {
+            if ( avg_cur_E/avg_stor_E <= EconvertK || (avg_delta_E<1 && avg_cur_E/avg_stor_E <= 0.87)) {
 //                owner.sendTextMsg(" cel->electrostanciya" , FieldBOT.MSG_DBG_SHORT);
                 bestUnit = electrostanciya;
             }
-            if ( avg_cur_M/avg_stor_M < 0.5  &&  avg_cur_E/avg_stor_E >= EconvertK && avg_delta_E>1) {
+            if ( avg_cur_M/avg_stor_M < 0.5  &&  avg_cur_E/avg_stor_E >= EconvertK*0.97 && avg_delta_E>1) {
 //                owner.sendTextMsg(" cel->metal" , FieldBOT.MSG_DBG_SHORT);
                 bestUnit = metalproduct;
             }
@@ -478,7 +564,7 @@ public class TEcoStrategy {
         
         //todt use mod specification
         
-        // нехватка рабочих:
+        // workers:
         if (bestUnit!=null && avg_cur_E/avg_stor_E > 0.60 && avg_cur_M/avg_stor_M >0.55 && avg_delta_M>1 && (avg_delta_E>2 || avg_cur_E/avg_stor_E > EconvertK)) {
 //            float currentRes[][];
 //            if (useOptimisticResourceCalc) currentRes= owner.avgEco.getSmartAVGResourceToArr();
@@ -486,10 +572,10 @@ public class TEcoStrategy {
             float optimalBPower=getOptimalBuildPowerFor(bestUnit, currentRes, 0.20f);
 //            owner.sendTextMsg(" Check rabochih: buildPower="+buildPower+" optimalBPower="+optimalBPower , FieldBOT.MSG_DBG_SHORT); // DEBUG DBG_ALL
             // TODO...
-            if (buildPower*1.02f < optimalBPower) { // нехватает рабочих, они улучшают больше чем в 1,4 раза
+            if (buildPower*0.98f < optimalBPower) { // нехватает рабочих, они улучшают больше чем в 1,4 раза
                 UnitDef worker=getBestGeneratorRes(null,buildVariants,buildPower, currentRes);
                 if (worker!=null)
-                 if (worker.getBuildSpeed() < optimalBPower-buildPower*1.0015f)
+                 if (worker.getBuildSpeed() < optimalBPower-buildPower*0.9915f)
                 {
                     bestUnit=worker;
 //                    owner.sendTextMsg(" Nujni rabochie current buildPower="+buildPower+" optimalBPower="+optimalBPower , FieldBOT.MSG_DBG_SHORT);
@@ -520,17 +606,28 @@ public class TEcoStrategy {
     private ArrayList<TTechLevel> selectLvl_whoBetterThat(ArrayList<TTechLevel> TechLvls, float[] currEcoLvl, float currentMaxBuilder)
     {
         ArrayList<TTechLevel> bestLvls=new ArrayList<TTechLevel>();
+//        float maxNFactor=-1; // choose level with more diffetent factor (metal,energy, build power).
         // Выбор уровня с лучшей экономикой
         for (TTechLevel level:TechLvls) {
             float k=0.0f;
+//            float nFactor=0;
+            
+            float kk[]=new float[currEcoLvl.length];
             for (int i=0;i<currEcoLvl.length;i++) {
                 float delta=level.ecoK[i]-currEcoLvl[i];
-                if (delta>0) k+=delta;
+                if (delta>0) {
+                    kk[i]=delta;
+//                    nFactor++;
+                } else kk[i]=0;
             }
-            
+            k=owner.avgEco.getResourceCoast(kk);
+
             float workK=level.builderK-currentMaxBuilder;
-            if (workK>0) k+=workK/100; // !!!
-            
+            if (workK>0) {
+                k+=owner.avgEco.getBuildPowerCoast(workK)/100; //TODO test it! just multipler.
+//                nFactor++;
+            }
+                    
             if (k>0.0f) bestLvls.add(level);
         }
         return bestLvls;
@@ -549,32 +646,50 @@ public TTechLevel selectLvl_bestForNow(ArrayList<TTechLevel> TechLvls, TBase onB
 {
     TTechLevel bestLvl=null;
     float bestEcoK=0.0f;
+    float maxNFactor=-1; // choose level with more diffetent factor (metal,energy, build power).
     for (TTechLevel level:TechLvls)
     {
         float k=0.0f;
+        float nFactor=0;
+        float kk[]=new float[bestEco.length];
         for (int i=0;i<bestEco.length;i++) {
             float delta=level.ecoK[i]-bestEco[i];
-            if (delta>0) k+=delta;
+            if (delta>0) {
+                kk[i]=delta;
+                nFactor++;
+            } else kk[i]=0; //last: k+=delta;!!!
         }
+        k=owner.avgEco.getResourceCoast(kk);
 
         float workK=level.builderK-currentMaxBuilder;
-        if (workK>0) k+=workK/100; // !!!
+        if (workK>0) {
+            k+=owner.avgEco.getBuildPowerCoast(workK)/100; //TODO test it! just multipler.
+            nFactor++;
+        }
+        k = k * (1+nFactor) ; // For more different resources
 
         float tBuild=level.getTimeForBuildTechLevel(onBase.getBuildPower(false, true), currentRes);
         if (tBuild<10.0f) tBuild=10.0f;// Нельзя построить так быстро...
         k= k / tBuild; // Выгодность / время постройки.
         // TODO учесть + время строительства электростанций
 
+        //TODO check tBuild with MAX_TECHUP_BUILD_TIME
         if (k>0.0f)
         {
-            if (k==bestEcoK) owner.sendTextMsg(" !!! Tech level have equals bestK="+bestEcoK+" K="+k+" level="+level.toString(),FieldBOT.MSG_DBG_SHORT);
-
-            if (k>bestEcoK) { // Лучше. А можно это построить сейчас?
-                owner.sendTextMsg(" >>best level k="+k+" t="+tBuild+" (AssistWorkTime="+level.getAssistWorkTime()+" getBuildPower="+onBase.getBuildPower(false, true)+" NOAssistWorkTime="+level.getNOAssistWorkTime()+" level:"+level.toString(), FieldBOT.MSG_DBG_ALL); //DEBUG !!!
-                //if (canTechUp) {
+            if (nFactor>maxNFactor) { // First by NFactor
+                owner.sendTextMsg(" >>best level by NFactor n="+nFactor+" t="+tBuild+" (AssistWorkTime="+level.getAssistWorkTime()+" getBuildPower="+onBase.getBuildPower(false, true)+" NOAssistWorkTime="+level.getNOAssistWorkTime()+" level:"+level.toString(), FieldBOT.MSG_DBG_ALL); //DEBUG !!!
                 bestEcoK=k;
                 bestLvl=level;
-                //}
+                maxNFactor=nFactor;
+            } else if (nFactor>=maxNFactor)
+            { // Second by K
+                if (k==bestEcoK) owner.sendTextMsg(" !!! Tech level have equals bestK="+bestEcoK+" K="+k+" level="+level.toString(),FieldBOT.MSG_DBG_SHORT);
+
+                if (k>bestEcoK) { // Лучше. А можно это построить сейчас?
+                    owner.sendTextMsg(" >>best level k="+k+" t="+tBuild+" (AssistWorkTime="+level.getAssistWorkTime()+" getBuildPower="+onBase.getBuildPower(false, true)+" NOAssistWorkTime="+level.getNOAssistWorkTime()+" level:"+level.toString(), FieldBOT.MSG_DBG_ALL); //DEBUG !!!
+                    bestEcoK=k;
+                    bestLvl=level;
+                }
             }
         }
     }
@@ -585,6 +700,7 @@ public TTechLevel selectLvl_bestForNow(ArrayList<TTechLevel> TechLvls, TBase onB
 /**
  * Fast check: do need execute tech up now?
  * Not optimized tech up time, only max MAX_TECHUP_BUILD_TIME check.
+ * @param onBase only for getBuildPower TODO replace on buildPower!
  * @param CurrentLevelUnitsCanBuild what current level can build
  * @param toLevel new level
  * @return true - need tech up now, false - do not tech up to this level now.
@@ -595,12 +711,12 @@ public boolean isActualDoTechUp_fastCheck(TBase onBase, HashSet<UnitDef> Current
     futureBuildLst.addAll(toLevel.levelNewDef);
     
     // Проверка по всем ресурсам, чего лучше строить.
-    float buildPower=onBase.getBuildPower(false,true); // !!!
+    float buildPower=onBase.getBuildPower(false,true); //TODO replace on buildPower in argument!
     int toNewLvl=0, toLastLvl=0;
 
     // в ресурсы добавить null для сравнения рабочих
     Resource[] checksRes=new Resource[owner.avgEco.resName.length+1];
-    for (int i=0;i<owner.avgEco.resName.length;i++) checksRes[i]=owner.avgEco.resName[i];
+    System.arraycopy(owner.avgEco.resName, 0, checksRes, 0, owner.avgEco.resName.length); // last: for (int i=0;i<owner.avgEco.resName.length;i++) checksRes[i]=owner.avgEco.resName[i];
     checksRes[checksRes.length-1]=null;// workers
     
     float currentRes[][];
@@ -657,7 +773,7 @@ private EcoStateInfo calcEcoAftherTime(float maxT, EcoStateInfo ecoStart, ArrayL
     final float [][] currentRes=newEcoState.resources;// for fast call?
 //    owner.sendTextMsg(" calcEcoAftherTime ecoBuildWariant size="+ecoBuildWariant.size(), FieldBOT.MSG_DBG_ALL);//!!!
     
-    final int MAX_ITERATION=1000;
+    final int MAX_ITERATION=500; // !!!
     int nItr=0;
     float T=0;
     UnitDef build=null;
@@ -687,7 +803,7 @@ private EcoStateInfo calcEcoAftherTime(float maxT, EcoStateInfo ecoStart, ArrayL
                 if (deltaRes>0.0f)
                     currentRes[AdvECO.R_Income][i] += deltaRes;
                 else if ((deltaRes<0.0f))
-                    currentRes[AdvECO.R_Usage][i] -= deltaRes;
+                    currentRes[AdvECO.R_Usage][i] += deltaRes;
 
                 // storage
                 currentRes[AdvECO.R_Storage][i]+= + build.getStorage(owner.avgEco.resName[i]);

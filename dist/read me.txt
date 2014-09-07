@@ -1,10 +1,12 @@
 Install:
-Copy "FieldBOT" folder into you'r spring folder.
+Extract "FieldBOT *.zip" into you'r spring folder "\AI\Skirmish\" on Spring path.
+This bot has been wrote on Java. So for working required install Java JRE on your PC (Oracle or OpenJDK).
+This bot requires Java AI interface on your Spring folder. It is usually located in a folder "spring/AI/Interfaces/Java". If this folder with files will be not exist then bot will be not showing on bot list.
 
-For Windows: into $mySpringInstallDir/AI/Skirmish/.
+For Windows: into $mySpringInstallDir\AI\Skirmish\.
 For Linux: ~/.config/spring/AI/Skirmish/
 
-If you want run bot under Spring 94.1 and bot don't work, you need change AIInterface.jar file on bot folder. Replace file "FieldBOT\dev *\lib\AIInterface.jar". Copy from you'r spring folder "spring\AI\Interfaces\Java\0.1\AIInterface.jar" into "FieldBOT\dev *\lib\".
+If you want run bot under Spring 97 and bot don't work, you need change AIInterface.jar file on bot folder. Replace file "FieldBOT\dev *\lib\AIInterface.jar". Copy from you'r spring folder "spring\AI\Interfaces\Java\0.1\AIInterface.jar" into "FieldBOT\dev *\lib\".
 
 If you have problem with install this AI, see page http://springrts.com/wiki/AI:Skirmish for more information.
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 user2
+ * Copyright (C) 2014 PlayerO1
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,7 +22,7 @@ import java.util.Arrays;
 
 /**
  *
- * @author user2
+ * @author PlayerO1
  */
 public class TechUpTrigger {
     /**
