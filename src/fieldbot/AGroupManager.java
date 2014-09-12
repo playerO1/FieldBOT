@@ -116,8 +116,25 @@ public abstract class AGroupManager {
         
     }
     
-
-    
+    // TODO Javadoc
+    public AIFloat3 getCenter() {
+        // TODO test
+        ArrayList<Unit> allUnit=getAllUnits(false);
+        if (allUnit.isEmpty()) return null;
+        float x,y,z; int n=0;
+        x=y=z=0;
+        for (Unit u:allUnit) {
+            AIFloat3 up=u.getPos();
+            x+=up.x;
+            y+=up.y;
+            z+=up.z;
+            n++;
+        }
+        x= x/n;
+        y= y/n;
+        z= z/n;
+        return new AIFloat3(x, y, z);
+    }
     
     // Command, sending from bot, from Spring.
     

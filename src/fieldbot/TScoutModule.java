@@ -90,6 +90,23 @@ public class TScoutModule {
     }
     
     /**
+     * get point, recomended for atack
+     * @param nearTo search near from this point, can be null
+     * @param pointID take some random to find, if send scout to different point, default = 0
+     * @return point to send army, can be null
+     */
+    public AIFloat3 getPointForMoveArmy(AIFloat3 nearTo,int pointID) {
+        // TODO army seek point
+        AIFloat3 p=last_enemyComeWatch;
+        if (p==null || Math.random()>0.7) {
+            float x=(float)Math.random() *owner.scoutModule.mapWidth;
+            float y=(float)Math.random() *owner.scoutModule.mapHeight;
+            p=new AIFloat3(x, 0, y);
+        }
+        return p;
+    }
+    
+    /**
      * Find near point with enemy
      * @param nearTo search enemy near this point, if null then get some point.
      * @param inR max radius for point, 0 for all map

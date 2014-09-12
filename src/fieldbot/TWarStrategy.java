@@ -502,7 +502,7 @@ public class TWarStrategy {
 
                     HashMap<UnitDef,Integer> armyUnits
                             =owner.warStrategy.shooseArmy(bestBase, !defenceTower, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva);
-                        // TODO Только те ктороые может строить (без лаборатории или с ней, TA/RD mod!)
+                        // TODO special unit enabled/disabled check (research center depends, TA/RD mod!)
 
                     // Send signal to base for make unit
                     if (armyUnits!=null) {
@@ -547,12 +547,7 @@ public class TWarStrategy {
                         owner.removeSmartGroup(sGroup); // Remove destroyed army.
                     } else {
                         if (army.moveTarget==null) {
-                            AIFloat3 p=owner.scoutModule.last_enemyComeWatch;
-                            if (p==null || Math.random()>0.7) {
-                                float x=(float)Math.random() *owner.scoutModule.mapWidth;
-                                float y=(float)Math.random() *owner.scoutModule.mapHeight;
-                                p=new AIFloat3(x, 0, y);
-                            }
+                            AIFloat3 p=owner.scoutModule.getPointForMoveArmy(army.getCenter(), 0);
                             army.moveTo(p); // TODO
                         }
                     }

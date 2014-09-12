@@ -148,6 +148,12 @@ public class TBase extends AGroupManager{
         stroyPlaning.onBaseMoving();
     }
     
+
+   @Override
+    public AIFloat3 getCenter() {
+        return center;
+    }
+    
     // ----- cashe -----
     private HashSet<UnitDef> cashe_getContainUnitDefsList_false=null;
     private HashSet<UnitDef> cashe_getBuildList_false=null;
