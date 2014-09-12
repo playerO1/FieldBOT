@@ -19,6 +19,7 @@
 package fieldbot;
 
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.WeaponDef;
 import com.springrts.ai.oo.clb.WeaponMount;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -151,7 +153,27 @@ public class TWarStrategy {
     }
     
     /**
-     * Уменьшает пропорционально значения до максимального 1.0.
+     * Return one value from array value
+     * @param unitK unit kachestva
+     * @param normalizeTo_maxK max of all units from selected kachestva
+     * @param kachestva required kachestva
+     * @return summ (or multiply) of unitK[j]/normalizeTo_maxK[j] * kachestva[j]
+     */
+    private double svestiZnacheniyaK(double unitK[], double normalizeTo_maxK[], float kachestva[]) {
+        double k; // + or *  , 0 or 1  ? choose best formul!
+        if (USE_MULTIPLY) k=1; else k=0;
+        for (int j=0;j<NUM_P;j++) {
+            double x = unitK[j]/normalizeTo_maxK[j] * kachestva[j];
+            if (USE_MULTIPLY) { // * or +
+                if (!USE_SMART_MULTIPLY) k *= x;
+                else k *= (0.1 + x); // !!!
+            } else k += x;
+        }
+        return k;
+    }
+    
+    /**
+     * Normalize max value up to 1.0.
      * @param v 
      */
     private void noramilzeVector(float[] v) {
@@ -241,6 +263,8 @@ public class TWarStrategy {
             UnitDef unit = buildVars.get(i);
                     
             double unitK[]=getUnitKachestva(unit);
+            
+            // TODO Use svestiZnacheniyaK()
             double k; // + or *  , 0 or 1  ? choose best formul!
             if (USE_MULTIPLY) k=1; else k=0;
             for (int j=0;j<NUM_P;j++) {
@@ -256,9 +280,7 @@ public class TWarStrategy {
             M_res[posTimeRes][i]=unit.getBuildTime(); // build time(required build power) as resource
             // TODO 
             if (posCountLimit>=0) M_res[posCountLimit][i]=1.0; // count/unit limit as resource
-            
-            
-            i++;
+
         }
 
         float tmpEndTRes[]=owner.avgEco.getAvgCurrentFromTime(timeLimit, true); // !!!
@@ -325,6 +347,109 @@ public class TWarStrategy {
         return outArmy;
     }
 
+    /**
+     * Select one of max better kachestva unit.
+     * @param chooseBuilding
+     * @param buildVariants
+     * @param kachestva
+     * @return best UnitDef with max compare (better) for kachestva. Or null
+     */
+    public UnitDef shooseBestFor(boolean chooseBuilding, ArrayList<UnitDef> buildVariants, float kachestva[])
+    {
+        if (kachestva.length!=NUM_P) throw new ArrayIndexOutOfBoundsException();// !!!
+        if (buildVariants.isEmpty()) throw new ArrayIndexOutOfBoundsException();// !!!        
+        
+        // 1. Select all moving/no-moving unit on this base surface
+        ArrayList<UnitDef> buildVars=new ArrayList<UnitDef>();
+        for (UnitDef def:buildVariants)
+          if (ModSpecification.isRealyAbleToMove(def)!=chooseBuilding)
+          {
+            // filter that realy can not pass for kachestva[].
+            double current_k[]=getUnitKachestva(def);
+            boolean check=false;
+            for (int i=0;i<NUM_P;i++) if ((kachestva[i]!=0)&&(current_k[i]!=0)) {
+                check=true;
+                break;
+            }
+            if (check) buildVars.add(def);
+        }
+        
+        if (buildVars.isEmpty()) return null; // !!! If not variant to choose.
+
+        //2. Select profit coast
+        double min_k[];
+        double max_k[];
+        
+        // 2.1 Get max, min for normalization vector
+        min_k=getUnitKachestva(buildVariants.get(0));
+        max_k=getUnitKachestva(buildVariants.get(0));
+        for (UnitDef unit: buildVariants) {
+            double current_k[]=getUnitKachestva(unit);
+            for (int i=0;i<NUM_P;i++) {
+                if (current_k[i]>max_k[i]) max_k[i]=current_k[i];
+                if (current_k[i]<min_k[i]) min_k[i]=current_k[i];
+            }
+        }
+        for (int i=0;i<NUM_P;i++) if (max_k[i]==0) max_k[i]=1.0f; // !!!!
+        
+        noramilzeVector(kachestva); // normalize vector: from 0 up to 1.0.
+        
+        // 2.2
+        double maxK=0.0;
+        UnitDef bestUnit=null;
+        
+        for (UnitDef unit:buildVariants) {
+            double unitK[]=getUnitKachestva(unit);
+            double k= svestiZnacheniyaK(unitK, max_k, kachestva);
+            
+            if (bestUnit==null || k>maxK) { // TODO if k==maxK
+                maxK=k;
+                bestUnit=unit;
+            }
+        }
+
+        return bestUnit;
+    }
+    
+    /**
+     * Return list of all unit type of all unit in list in argument
+     * This method is copy and modifed from AGroupManager.getContainUnitDefsList() TODO share using!
+     * @param fromUnits select UnitDef from this unit list
+     * @return list of UnitDefs
+     */
+    public static HashSet<UnitDef> getUnitDefsFromUnitList(List<Unit> fromUnits) {
+        HashSet<UnitDef> currentUnitTypesSet=new HashSet<UnitDef>(); // Unit types
+        for (Unit unit:fromUnits) currentUnitTypesSet.add(unit.getDef());
+        return currentUnitTypesSet;
+    }
+    /**
+     * Select unit from allUnits where unit.getDef()==selectOnly;
+     * @param allUnits list for select
+     * @param selectOnly what unitDef select in list
+     * @return units with selectOnly UnitDef
+     */
+    public static ArrayList<Unit> selectUnitWithDef(ArrayList<Unit> allUnits, UnitDef selectOnly) {
+        ArrayList<Unit> selected=new ArrayList<Unit>();
+        for (Unit unit:allUnits) if (selectOnly.equals(unit.getDef())) selected.add(unit);
+        return selected;
+    }
+    
+    /**
+     * Select units, best for kachestva
+     * @param chooseBuilding select building or moving objects
+     * @param units
+     * @param kachestva
+     * @return units with one UnitDef, better for compare (or max) to kachestva
+     */
+    public ArrayList<Unit> shooseBestFrom(boolean chooseBuilding, ArrayList<Unit> units, float kachestva[])
+    {
+        HashSet<UnitDef> unitDefs=getUnitDefsFromUnitList(units);
+        ArrayList<UnitDef> unitDefLst=new ArrayList<UnitDef>(unitDefs);
+        UnitDef bestUDef= shooseBestFor(chooseBuilding, unitDefLst, kachestva);
+        if (bestUDef==null) return null;
+        return selectUnitWithDef(units, bestUDef);
+    }
+    
     // TODO choose war tech level
 
     

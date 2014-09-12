@@ -58,7 +58,8 @@ public class TBaseTarget {
     public void update(int frame) {
         int frameD=frame-lastFrame;
         
-        if (frameD>10) { // не так часто проверять.
+        if (frameD>10) { // do not using CPU too often.
+           if (!inProgressBuildTime.isEmpty()) // fount and fixed OutOfBoundsException. Don't know how it possible, but I see message of this line with this exception at next line (for).
             for (int i=inProgressBuildLst.size()-1;i>=0;i--) {
                 int c=inProgressBuildTime.get(i);
                 c-=frameD;

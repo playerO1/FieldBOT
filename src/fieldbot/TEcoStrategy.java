@@ -362,6 +362,8 @@ public class TEcoStrategy {
         return T;
     }
     
+    // FIXME !!!!!! getDynamicRashotBuildInfo now have bug - do not using adv solar on T1 level. Whay?!
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
     /**
      * Dynamic modeling of one economic building when time may have recursion depends of build.
