@@ -99,6 +99,21 @@ public class MathPoints {
     }
 
     /**
+     * 
+     * @param center center of circle
+     * @param r max radius
+     * @return 
+     */
+    public static AIFloat3 getRandomPointInCircle(AIFloat3 center,float r) {
+        AIFloat3 p = new AIFloat3(center);
+        double ang = Math.random() * 2 * Math.PI;
+        double rr=r*Math.random();
+        p.x += rr * Math.sin(ang);
+        p.z += rr * Math.cos(ang);
+        return p;
+    }
+
+    /**
      *
      * @param p1 откуда двигаться
      * @param targetPoint куда двигаться

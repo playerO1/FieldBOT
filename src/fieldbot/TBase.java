@@ -858,8 +858,13 @@ public class TBase extends AGroupManager{
             // if not work, then moving walking, for save factory from stay work blocking.
             if (!idleCons.isEmpty()) for (Unit u:idleCons) if (u.getCurrentCommands().isEmpty() && !u.isParalyzed()) {
                 if (!ModSpecification.isStationarFactory(u.getDef())) {
-                    if (ModSpecification.isRealyAbleToMove(u.getDef())) u.moveTo(MathPoints.getNearRandomPoint(u), (short)0, DEFAULT_TIMEOUT); // было isAbleToMove
-                    else if (u.getDef().isAbleToPatrol()) u.patrolTo(MathPoints.getNearRandomPoint(u), (short)0, DEFAULT_TIMEOUT); // !!!!!!!!!!
+                    if (ModSpecification.isRealyAbleToMove(u.getDef())) {
+                        AIFloat3 pp;
+                        if (MathPoints.getDistanceBetweenFlat(u.getPos(), center)>radius) pp=MathPoints.getRandomPointInCircle(center, radius);
+                        else pp=MathPoints.getNearRandomPoint(u); // patrol point
+                        u.moveTo(pp, (short)0, DEFAULT_TIMEOUT);
+                    }
+                    else if (u.getDef().isAbleToPatrol()) u.patrolTo(MathPoints.getNearRandomPoint(u), (short)0, DEFAULT_TIMEOUT); // for nano tower
                 }
             }
         }
