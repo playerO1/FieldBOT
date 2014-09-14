@@ -166,49 +166,41 @@ public class ModSpecification {
     }
     
     /**
-     * Сведения о Metal Maker
+     * Info about LUA Metal Maker
      * @param def metal maker
-     * @return что вырабатывает, или null если нет спецификаций.
+     * @return addition resourse of this unit, or null if not LUA specification.
      */
     public float[] getResourceConversionFor(UnitDef def) {
         return treeMap_Eco.get(def.getName());
-        /* было
-        for (int i=0;i<ecoName.length;i++) {
-            if (defName.contains(ecoName[i])) return eco_res[i];
-        }
-        //float ret0[]=new float[2];
-        //ret0[0]=0.0f; ret0[1]=0.0f;
-        return null;//ret0;
-        */
     }
     
     /**
-     * Если это специальный MMaker управляемый скриптами, то можно использовать getConversionKMetalMaker()
+     * If it is special Metal Maker by LUA script, you can use getConversionKMetalMaker()
      * @param def
-     * @return это ммакер (если это "нативный" метал макер (resourceMake) то не возвращает истинну)
+     * @return true - it is LUA metal maker (can return false for native metal maker), false - no resource maker
      */
     public boolean isMetalMaker(UnitDef def) {
         return treeMap_Eco.containsKey(def.getName());
     }
     /**
-     * Возвращает коэффициент конверсии для "LUA" метал мейкера
+     * Return conversion ratio of "LUA" metal maker
      * @param def
-     * @return коэффициент, чем > тем лучше. Или Float.POSITIVE_INFINITY.
+     * @return value between 1.0 and 0.0. Value 1.0 - is better, for no maker. 0.7 better that 0.01.
      */
     public float getConversionKMetalMaker(UnitDef def) {
         float[] val=treeMap_Eco.get(def.getName());
         if (val==null) return 1.0f;
-        if (val[1]<=0) return Float.POSITIVE_INFINITY;// !!!!
-        return val[0]/val[1]; // TODO check!!! зависит от порядка...
+        if (val[1]<=0) return 1.0f; //Float.POSITIVE_INFINITY;// !!!!
+        return val[0]/(val[0]+val[1]); // TODO check!!! or val[0]/(1.0f+val[1])
     }
     
     /**
-     * Определяет, является ли этот юнит "нативным" конвертером ресурсов
-     * @param def тип юнита
-     * @return true, если является нативным metal maker, или energy maker :) .
+     * Check of native resource maker
+     * @param def unit type
+     * @return true, if this unit is native metal maker, or other resource maker :)
      */
     public boolean isNativeMetalMaker(UnitDef def) {
-        // TODO кэшировать список
+        // TODO make cashe
         float min,max;
         boolean existMakeRes=false;
         min=max=0.0f;
@@ -221,10 +213,10 @@ public class ModSpecification {
         return (min<0.0f)&&(max>0.0f)&& existMakeRes;
     }
     /**
-     * Возвращает коэффициент конверсии для "нативного" метал мейкера
+     * Return conversion ratio of "native" metal maker
      * Вычисляется как: Sum(вырабатываемые)/Sum(потребляемые).
      * @param def тип юнита
-     * @return коэффициэнт >0.0, чем больше тем эффективнее, или Float.POSITIVE_INFINITY.
+     * @return return value between 1.0 and 0.0. Value 1.0 - better
      */
     public float getNativeConversionKMetalMaker(UnitDef def) {
         float sMin,sMax;
@@ -234,16 +226,16 @@ public class ModSpecification {
             if (x<0.0f) sMin+=x;
             else sMax+=x;
         }
-        if (sMin<0.0) return sMax/(-sMin);
-        else return Float.POSITIVE_INFINITY;
+        if (sMin<0.0) return sMax/(sMax-sMin); // TODO test, or sMax/(1.0f-sMin)
+        else return 1.0f;//Float.POSITIVE_INFINITY;
     }
 
-// работа с TechLevel и особенностями модов, например TA - research center
+// work with TechLevel and mod specification. FOr example on TA - required research center
 
     /**
-     * Для TA/RD некоторые юниты нельзя строить, пока нет лаборатории
+     * For TA/RD mod some units can not build before building Research center
      * @param def
-     * @return true если нужна проверка
+     * @return true if need check of special level
      */
     public boolean requiredSpecialTechLevel(UnitDef def) {
         return (specialTLevelRequired==null) || (specialTLevelRequired.get(def)==null);
@@ -256,15 +248,15 @@ public class ModSpecification {
         Integer reqTL=specialTLevelRequired.get(def);
         if (reqTL==null) return true;
         return owner.techLevels.get(reqTL)!=null;
-        // было:
+        // last:
         //return !requiredSpecialTechLevel(def) ||
         //        (owner.techLevels.get(getRequiredTechLevel(def))!=null);
     }
     /**
-     * Ищет уровень
+     * Seek tech level required
      * @param def
-     * @param techLvl список имеющихся уровней
-     * @return может строить или нет (нехватка тех уровней)
+     * @param techLvl list of have tech level
+     * @return can build, or need to build new tech level before
      */
     public boolean haveTechLevelFor(UnitDef def, HashSet<Integer> techLvl) { //было int haveLevels[]
         if (specialTLevelRequired==null) return true;
@@ -272,22 +264,22 @@ public class ModSpecification {
         if (reqTL==null) return true;
         return techLvl.contains(reqTL);
         //return Arrays.binarySearch(haveLevels, reqTL)!=-1;
-        //было return !requiredSpecialTechLevel(def) ||
+        //last: return !requiredSpecialTechLevel(def) ||
         //        Arrays.binarySearch(haveLevels, getRequiredTechLevel(def))!=-1;
     }
     
     /**
-     * Убирает всех юнитов, которых нельзя построить из-за требования тех. уровня (лаборатории в TA)
+     * Remove all unit with required special tech level and this level not have now
      * @param lstDef
-     * @return список, который может строить при текущих уровнях
+     * @return list with unit that can build now
      */
     public boolean removeUnitWhenCantBuildWithTeclLevel(Collection<UnitDef> lstDef) {
-        Iterator<UnitDef> itr1 = lstDef.iterator(); // Цикл...
+        Iterator<UnitDef> itr1 = lstDef.iterator();
         boolean modifed=false;
         while (itr1.hasNext()) {
             UnitDef def = itr1.next();
             if (!haveTechLevelFor(def)) {
-                itr1.remove(); // убрать из списка
+                itr1.remove();
                 modifed=true;
             }
         }
@@ -295,29 +287,30 @@ public class ModSpecification {
     }
     
     /**
-     * Убирает всех юнитов, которых нельзя построить из-за требования тех. уровня c доп. параметрами (лаборатории в TA)
+     * Remove all unit with required special tech level and this level not have in parameters
      * @param lstDef
-     * @param techLvl2 дополнительные тех. уровни, которые "добавляются" к owner.techLevels
-     * @return список, который может строить при текущих уровнях или при доп. уровнях (techLvl2)
+     * @param techLvl2 add compare with this + owner.techLevels
+     * @return list with unit that can build now or in future with techLvl2 levels
      */
     public boolean removeUnitWhenCantBuildWithTeclLevel(Collection<UnitDef> lstDef, HashSet<Integer> techLvl2) {
-        Iterator<UnitDef> itr1 = lstDef.iterator(); // Цикл...
+        Iterator<UnitDef> itr1 = lstDef.iterator();
         boolean modifed=false;
         while (itr1.hasNext()) {
             UnitDef def = itr1.next();
             if (!haveTechLevelFor(def) && !haveTechLevelFor(def, techLvl2)) {
-                itr1.remove(); // убрать из списка
+                itr1.remove();
                 modifed=true;
             }
         }
         return modifed;
     }
     
+    // TODO create Selector class, then move this into Selector.
     /**
-     * Выборка юнитов нужного уровня
-     * @param defs список для выбора
-     * @param level требуемый тех уровень (равно)
-     * @return отобранный список с заданным тех. уровнем, может быть пустым.
+     * Select units by tech level
+     * @param defs list for select
+     * @param level parameter for select
+     * @return list with units when def.getTechLevel()==level
      */
     public ArrayList<UnitDef> selectDefByTechLevel(ArrayList<UnitDef> defs,int level)
     {
@@ -327,8 +320,8 @@ public class ModSpecification {
     }
     
     /**
-     * Альтернативный метод получения списка возможных построек юнитов. Для особых модов, например TA.
-     * TODO НЕ РАБОТАЕТ правильно!!!!
+     * Return true list of real build options (only where enabled). It is require for TA/RD mod.
+     * TODO DO NOT WORK correct!
      * @param uBuilder
      * @return список того, что может строить этот юнит
      */
@@ -361,10 +354,10 @@ protected static final int CMD_MORPH = 31410;
     }
 
     /**
-     * Возвращает список в чего можно улучшить (morph) юнита.
+     * Return all enabled morph CMD from unit.
      * @param unit
      * @param showDisabledToo
-     * @return 
+     * @return list of morph CMP from unit.getSupportedCommands()
      */
     public static List<CommandDescription> getMorphCmdList(Unit unit,boolean showDisabledToo) { // isAbleToMorph
         List<CommandDescription> cmbList = unit.getSupportedCommands();
@@ -377,12 +370,12 @@ protected static final int CMD_MORPH = 31410;
         return cmdMorphing;
     }
     /**
-     * Возвращает команду отмены улучшения(morph) юнита
-     * @param unit юнит
+     * Return command for stop morph
+     * @param unit
      * @param showDisabledToo
-     * @return команда или null
+     * @return CMD or null
      */
-    public static CommandDescription getStopMorphCmd(Unit unit,boolean showDisabledToo) { // isAbleToMorph
+    public static CommandDescription getStopMorphCmd(Unit unit,boolean showDisabledToo) {
         List<CommandDescription> cmbList = unit.getSupportedCommands();
         for (CommandDescription cmd : cmbList) {
         //sendTextMsg(" command name: " + cmd.getName() + " ToolTip " + cmd.getToolTip() + " ID=" + cmd.getId()+ "\t supportedCommand="+cmd.getSupportedCommandId()+" isDisabled:"+cmd.isDisabled() +" isShowUnique:"+cmd.isShowUnique());
@@ -394,9 +387,9 @@ protected static final int CMD_MORPH = 31410;
     }
     
     /**
-     * Возвращает описание типа юнита после Morph
+     * Return UnitDef after unit will be do Morph
      * @param morphCmd
-     * @return 
+     * @return future UnitDef (or NULL, TODO null value)
      */
     public UnitDef getUnitDefForMprph(CommandDescription morphCmd) {
         /*
@@ -517,8 +510,8 @@ protected static final int CMD_MORPH = 31410;
     }
     
     /**
-     * Может ли юнит построить базу. Прверяет, строит ли юнит строителей
-     * @param def тестируемый юнит
+     * Can unit build new base. Check can this unit build other builder.
+     * @param def builder
      * @return 
      */
     public static boolean isAbleToBuildBase(UnitDef def) {
@@ -533,7 +526,7 @@ protected static final int CMD_MORPH = 31410;
     }
     
     /**
-     * Действительно ли это может двигаться (в некоторых модах не тольео isAbleToMove нужно проверять)
+     * Can this unit realy move (in same mod need addition check, not only isAbleToMove, for example - factory)
      * @param def
      * @return 
      */
@@ -542,7 +535,7 @@ protected static final int CMD_MORPH = 31410;
     }
     
     /**
-     * Действительно ли это может помогать (в некоторых модах не тольео isAbleToAssist нужно проверять)
+     * Do realy this unit can assist (in same mod need addition check, not only isAbleToMove, for example - factory)
      * @param def
      * @return 
      */

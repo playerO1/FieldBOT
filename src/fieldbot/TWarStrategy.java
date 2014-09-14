@@ -55,7 +55,6 @@ public class TWarStrategy {
     private final FieldBOT owner;
     
     private final boolean USE_MULTIPLY=true; // Использовать мультипликативную модель для оценки качеств юнитов (иначе адитивная модель)
-    private final boolean USE_SMART_MULTIPLY=true; // Использовать сглаженную мультипликативную модель (при перемножении с нулями не нулём будет)
     
     /**
      * Enable army control
@@ -165,10 +164,10 @@ public class TWarStrategy {
         for (int j=0;j<NUM_P;j++) {
             double x = unitK[j]/normalizeTo_maxK[j] * kachestva[j];
             if (USE_MULTIPLY) { // * or +
-                if (!USE_SMART_MULTIPLY) k *= x;
-                else k *= (0.1 + x); // !!!
+                k *= (1.0 + x); // !!!
             } else k += x;
         }
+        if (USE_MULTIPLY) k-=1.0;
         return k;
     }
     
@@ -270,10 +269,10 @@ public class TWarStrategy {
             for (int j=0;j<NUM_P;j++) {
                 double x = unitK[j]/max_k[j] * kachestva[j];
                 if (USE_MULTIPLY) { // * or +
-                    if (!USE_SMART_MULTIPLY) k *= x;
-                    else k *= (0.1 + x); // !!!
+                    k *= (1.0 + x); // !!!
                 } else k += x;
             }
+            if (USE_MULTIPLY) k-=1.0;
             M_k[i]=k * K_PRECISSION;// test
             
             for (int j=0;j<numRes;j++) M_res[j][i]=unit.getCost(owner.avgEco.resName[j]); //было M_res[i][j]

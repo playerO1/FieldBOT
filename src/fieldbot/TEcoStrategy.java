@@ -786,7 +786,7 @@ public TechUpTrigger getPrecissionTechUpTimeFor(TBase onBase, HashSet<UnitDef> C
     else startRes= owner.avgEco.getAVGResourceToArr();
     
     final float TEST_TIME=20*60; // 20 min
-    final int N_ITER=12;
+    final int N_ITER=18; // TODO !!! заменить FOR методом дихотомии
 
 owner.sendTextMsg(" <getPrecissionTechUpTimeFor>, workers F: "+currentLvlPower+" N_ITER="+N_ITER, FieldBOT.MSG_DBG_ALL);
     
