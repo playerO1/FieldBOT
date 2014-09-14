@@ -690,6 +690,12 @@ public void addSmartGroup(AGroupManager group) {
     smartGroups.add(group);
     //bases.add(group);
 }
+
+public AGroupManager getOwnerGroup(Unit unit) {
+    for (AGroupManager agm:smartGroups) if (agm.contains(unit)) return agm;
+    return null;
+}
+
 /**
  * Select TBase list from smartGroup list
  */

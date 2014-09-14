@@ -233,6 +233,42 @@ protected void onNewPoint(Point msgPoint) {
         } else sendToTeam=msgTeam;
     }
     
+    if (message.contains("reclime") || message.contains("utilize")) { // TODO TEST!!!!!!!!
+        //boolean getUnitNow=message.contains(" now")||message.contains("now!");
+        boolean reclimeAll=message.contains("all"); // reclime all of this type
+        
+        if (lstToShare==null) lstToShare=new ArrayList<Unit>();
+
+        List<Unit> unitSelect= selectUnitInArea_myOnly(msgPoint.getPosition(), -1, true);//getUnitNow);
+        // TODO only building, no moving!!!!
+        boolean ok=false;
+        for (Unit u:unitSelect) {
+            AGroupManager agm=owner.getOwnerGroup(u);
+            if (agm!=null && agm instanceof TBase) {
+                TBase base=(TBase)agm; 
+                if (reclimeAll) {
+                    UnitDef uDef=u.getDef();
+                    ArrayList<Unit> allUnit=base.getAllUnits(false);
+                    // TODO test!!!
+                    allUnit=TWarStrategy.selectUnitWithDef(allUnit,uDef);
+                    for (Unit u2:allUnit) if (!base.unitToReclime.contains(u2) ) {
+                        base.unitToReclime.add(u2);
+                        ok=true;
+                    }
+                } else {
+                    if (!base.unitToReclime.contains(u) ) {
+                        base.unitToReclime.add(u);
+                        ok=true;
+                    }
+                }
+            }
+        }
+        
+        if (ok) {
+            owner.sendTextMsg("Have add unit to reclime.", FieldBOT.MSG_DLG);
+        } owner.sendTextMsg("No unit for reclime.", FieldBOT.MSG_DLG);;
+    }
+    
     if (message.contains("create") && message.contains("base")){// || message.contains("new"))) {
         if (message.contains("empty")) {
             TBase newB=new TBase(owner, msgPoint.getPosition(), 1000);

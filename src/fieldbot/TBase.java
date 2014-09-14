@@ -27,25 +27,30 @@ import java.util.List;
 public class TBase extends AGroupManager{
    protected static final boolean ENABLE_CASHING=true; // вкл/выкл кэш.
     
-    
+   /**
+    * For callback, utils
+    */
    public final FieldBOT owner;
     
    /**
-    * Центр базы
+    * Base center
     */
    public AIFloat3 center;
    /**
-    * Радиус базы (размер)
+    * Base size
     */
    public float radius;
    
    /**
-    * Юниты принадлежащие базе
+    * Unit in this base
     */
    public final ArrayList<com.springrts.ai.oo.clb.Unit>
            idleCons,workingCons,
-           building,army, // строения, армия
+           building,army, // some buildings, army
            buildLst, buildLst_noAssistable; // buildLst - строющиеся юниты.
+   
+   public final ArrayList<com.springrts.ai.oo.clb.Unit> unitToReclime; // TODO !!!!!!!! Maybe duplicate on other list, maybe not contain on this base.
+   public boolean reclimeTarget=true; // TODO unitToReclime, ?!!!!!!!!!!
    
    /**
     * Hight priority building work list
@@ -86,6 +91,7 @@ public class TBase extends AGroupManager{
         buildLst=new ArrayList<Unit>();
         buildLst_noAssistable=new ArrayList<Unit>();
         
+        unitToReclime=new ArrayList<Unit>(); // TODO test it!
         currentBaseTarget=new TBaseTarget();
 
         // TODO !!!!!!!!!!!
@@ -107,7 +113,6 @@ public class TBase extends AGroupManager{
                 stroyPlaning=new TBasePlaning_spiral(this);
                 // TODO base planing
         }
-        // // TODO Test разные планирования.
         
         lastAgressorPoint=null;
         
@@ -118,6 +123,7 @@ public class TBase extends AGroupManager{
      * Переопределяет центр базы относительно среднего кол-ва построек.
      */
     public void reinitCenter() {
+        // todo use super.getCenter();
         double mx,my,mz;
         //float maxRadius=radius;
         int n;
@@ -275,6 +281,7 @@ public class TBase extends AGroupManager{
         }
 
         if (ENABLE_CASHING) if (found) dropCashe();
+        if (found) unitToReclime.remove(unit); // !!!! add documentation
         // TODO проверить, вдруг в 2-х списках одновременно!!!!
         owner.sendTextMsg(" call removeUnit result="+found+" num of removing list="+dbgNumR+" test contain (false-no error)="+contains(unit) , FieldBOT.MSG_DBG_SHORT );
         return found;
@@ -284,6 +291,7 @@ public class TBase extends AGroupManager{
     public boolean removeAllUnits(Collection<Unit> units) {
         boolean modifed = idleCons.removeAll(units) || workingCons.removeAll(units) || building.removeAll(units) || army.removeAll(units) || buildLst.removeAll(units) || buildLst_noAssistable.removeAll(units);
         if (modifed) {
+            unitToReclime.removeAll(units);// !!! test, add to documentation
             if (ENABLE_CASHING) dropCashe();
             for (Unit u:units) stroyPlaning.onRemove(u);
         }
@@ -769,7 +777,7 @@ public class TBase extends AGroupManager{
                         if (lt>=0) { // need walk
                             if (ModSpecification.isRealyAbleToMove(u.getDef())) { // если может ходить
                                 lt = lt/u.getMaxSpeed(); // время, за которое он подберётся на расстояние постройки.
-                                //lt = getAvgBuildTime(uBld.getDef(),u.getDef().getBuildSpeed()) / lt; // TODO ЭТО НЕ ПРАВИЛЬНО. коэффициент нужности ускорения.
+                                //lt = getAvgBuildTime(uRcl.getDef(),u.getDef().getBuildSpeed()) / lt; // TODO ЭТО НЕ ПРАВИЛЬНО. коэффициент нужности ускорения.
                                 // TODO check lost build time if (lt>1.8f*getAvgBuildTime(blbUnit.getDef(),u.getDef().getBuildSpeed())) {
                                 if (minDist<lt || bestToAssist==null) {
                                     minDist=lt;
@@ -795,6 +803,49 @@ public class TBase extends AGroupManager{
         } else return false; 
     }
     
+    protected boolean sendConsToReclime(boolean onlyIdle, List<Unit> toReclime) {
+        if (!onlyIdle) throw new UnsupportedOperationException(" TODO all worker using!"); // TODO all worker using
+        if (!toReclime.isEmpty()) {// Finish buildings
+            boolean someReclimerSending=false;
+            Iterator<Unit> itr1 = idleCons.iterator(); // Cicle
+            while (itr1.hasNext()) {
+               Unit u = itr1.next();
+                if ( u.getDef().isAbleToReclaim() // TODO ModSpecification.isRealyAbleToReclime(u.getDef())
+                     && !u.isParalyzed()) {
+                    Unit bestToReclime=null; float minDist=1.0f;
+                    for (Unit uRcl:toReclime) {
+                        // TODO FIXME Check uRcl.getDef().isReclaimable() !!!!
+                        float lt=MathPoints.getDistanceBetweenFlat(uRcl.getPos(), u.getPos()); // ближайщый
+                        lt -= u.getDef().getBuildDistance(); // сократить на расстояние строителя.
+                        if (lt>=0) { // need walk
+                            if (ModSpecification.isRealyAbleToMove(u.getDef())) { // если может ходить
+                                lt = lt/u.getMaxSpeed(); // время, за которое он подберётся на расстояние постройки.
+                                //lt = getAvgBuildTime(uRcl.getDef(),u.getDef().getBuildSpeed()) / lt; // TODO ЭТО НЕ ПРАВИЛЬНО. коэффициент нужности ускорения.
+                                // TODO check lost build time if (lt>1.8f*getAvgBuildTime(blbUnit.getDef(),u.getDef().getBuildSpeed())) {
+                                if (minDist<lt || bestToReclime==null) {
+                                    minDist=lt;
+                                    bestToReclime=uRcl;
+                                }
+                            }
+                        } else { // in the area
+                            bestToReclime=uRcl;
+                            minDist=0;
+                            break;
+                        }
+                    }
+                    if (bestToReclime!=null) {
+                        u.reclaimUnit(bestToReclime, (short)0, DEFAULT_TIMEOUT); // it is work
+                        // TODO do is need isReclamable?
+                        workingCons.add(u); // FIXME add message to refresh cashe, if cash will be to do.
+                        itr1.remove(); // Set as no idle.
+                        someReclimerSending=true;
+                    }
+                }
+            }
+            return someReclimerSending;
+        } else return false; 
+    }
+    
     // Command from bot
    @Override
     public int update(int frame)
@@ -809,7 +860,12 @@ public class TBase extends AGroupManager{
         // Если есть свободные рабочие
         if (!idleCons.isEmpty()) {
 
-            sendIdleConsToAssist(); // TO do no finish build
+            sendIdleConsToAssist(); // To do no finish build
+            
+            if (!unitToReclime.isEmpty()) {
+                // TODO if(reclimeTarget) ...
+                sendConsToReclime(true,unitToReclime);
+            }
             
             if (!idleCons.isEmpty() && (owner.ecoStrategy.makeEco || !currentBaseTarget.isEmpty())) { // Построить
                 List<UnitDef> buildVariants = new ArrayList<UnitDef>(getBuildList(true));
@@ -977,6 +1033,7 @@ public int unitDamaged(Unit unit, Unit attacker, float damage, AIFloat3 dir, Wea
 
 @Override
 public boolean unitDestroyed(Unit unit, Unit attacker) {
+    unitToReclime.remove(unit); // !!!!!
     if (contains(unit)) {
         currentBaseTarget.unitDestroyed(unit, attacker);
         return removeUnit(unit);

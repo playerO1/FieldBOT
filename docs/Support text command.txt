@@ -28,9 +28,9 @@ If game contain more that 1 bot, then all command must have prefix «{bot|%botSh
 2. Build unit there «build|make part_of_unit_name»
 3. Create new economic/building base «create [empty] base». Where "empty" — not send unit, this base will be work only if player send constructor to bot on new base position..
 4. Moving center fo near base to new position «move base». If you want that bot will be build new building on other position.
+5. Reclime unit «reclime|utilize [all]», all - reclime all unit of this tupe on this base.
 
 ?. Set start position «start here|this» «start bot» (TODO), см. clb.getMap().getStartPos() и clb.getGame().sendStartPosition(boolean ready, AIFloat3 pos)).
-?. Разобрать это «reclime»(TODO)
 ?. Достроить, помочь построить «help|assist» (TODO)
 ?. Переместить армию «move army» (TODO)
 
