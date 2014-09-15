@@ -490,7 +490,7 @@ public class TWarStrategy {
                 TBase bestBase=null; HashSet<UnitDef> lstOfUDefs=new HashSet<UnitDef>();
                 for (TBase base:owner.selectTBasesList()) {
                     HashSet<UnitDef> tmpUDefs=base.getBuildList(true);
-                    if (tmpUDefs.size()>lstOfUDefs.size() && bestBase.currentBaseTarget.isEmpty()) { // idle base.
+                    if (tmpUDefs.size()>lstOfUDefs.size() && base.currentBaseTarget.isEmpty()) { // idle base.
                         bestBase=base;
                         lstOfUDefs=tmpUDefs;
                     }

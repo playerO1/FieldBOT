@@ -1,5 +1,10 @@
 Changelog of FieldBOT.
 
+=== dev a1.4 ===
+- math fix for metal maker and army
+- add reclime unit (only by human map marck command «reclime|utilize [all]»)
+...
+
 === dev a1.3 ===
 - fix tech-up function (smart tech up)
 - some small bugfix

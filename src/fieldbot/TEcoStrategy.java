@@ -333,7 +333,7 @@ public class TEcoStrategy {
      */
     protected float getRashotBuildTime(UnitDef build,float[][] currentRes,float buildSpeed, float resCurrentMultipler) {
         final Resource resName[]=owner.avgEco.resName; // !!! test
-        float T=0.0f;
+        float T=0.0f;// TODO test with MINIMAL_BUILD_TIME;
         // TODO сделать boolean mojetVliatNaPosleduyshie=false;... если критич. ресурсы не меняются, то нет и зависимость линейна.
         // TODO use getWaitTimeForProductResource. часть кода отсюда уже скопированно в getWaitTimeForProductResource()
         for (int rN=0; rN<currentRes[resName.length].length;rN++) {
@@ -358,7 +358,7 @@ public class TEcoStrategy {
         }
         
         if (buildSpeed>0.0f) T=Math.max(T, build.getBuildTime()/buildSpeed);
-        T+=MINIMAL_BUILD_TIME;  // "fuzzy" limit: ничего быстрее 2-х секунд не построится.
+        T += MINIMAL_BUILD_TIME;  // "fuzzy" limit: nothink faster that 2 second can not build.
         return T;
     }
     
