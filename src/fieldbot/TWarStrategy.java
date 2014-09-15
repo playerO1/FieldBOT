@@ -487,7 +487,8 @@ public class TWarStrategy {
                 if (defenceTower) kachestva[P_SPEED]=0;
 
                 // Choose best base for make army
-                TBase bestBase=null; HashSet<UnitDef> lstOfUDefs=new HashSet<UnitDef>();
+                TBase bestBase=null; // TODO change to owner.getBestBase(false)
+                HashSet<UnitDef> lstOfUDefs=new HashSet<UnitDef>();
                 for (TBase base:owner.selectTBasesList()) {
                     HashSet<UnitDef> tmpUDefs=base.getBuildList(true);
                     if (tmpUDefs.size()>lstOfUDefs.size() && base.currentBaseTarget.isEmpty()) { // idle base.

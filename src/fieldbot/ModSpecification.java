@@ -65,6 +65,11 @@ public class ModSpecification {
     public final UnitDef luaMetalExtractor;
     
     /**
+     * For Zero-K - first factory not need resource and build time, next factoru need.
+     */
+    public boolean firstFactoryIsFree;
+    
+    /**
      * MOD short name
      */
     public final String modName;
@@ -142,8 +147,10 @@ public class ModSpecification {
             treeMap_Eco.put("cormex", new float[] { 2.0f, 0.0f } ); // Metal Extractor
             // TODO !!!!!!!!!!!!!!!!!!! extractor metal multiplier = sqrt(1+energy/4)) 
             luaMetalExtractor=owner.clb.getUnitDefByName("cormex");
+            firstFactoryIsFree=true; // TODO test
         } else {
             luaMetalExtractor=null;
+            firstFactoryIsFree=false;
         }
 
         exist_MetalMaker_lua=treeMap_Eco.isEmpty();

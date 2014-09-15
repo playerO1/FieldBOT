@@ -682,8 +682,25 @@ public TBase spawnNewBase(AIFloat3 newBasePoint)
     }            
 }
 
+public TBase getBestBase(boolean findWithoutBaseTarget) {
+    TBase bestBase=null; HashSet<UnitDef> lstOfUDefs=new HashSet<UnitDef>();
+    for (TBase base:selectTBasesList()) {
+        HashSet<UnitDef> tmpUDefs=base.getBuildList(true);
+        if (tmpUDefs.size()>lstOfUDefs.size() &&
+              (findWithoutBaseTarget || base.currentBaseTarget.isEmpty())) // idle base.
+        {
+            bestBase=base;
+            lstOfUDefs=tmpUDefs;
+        }
+    }
+    return bestBase;
+}
+
 public void removeSmartGroup(AGroupManager group) {
-    if (!smartGroupsToRemove.contains(group)) smartGroupsToRemove.add(group);
+    if (!smartGroupsToRemove.contains(group)) {
+        smartGroupsToRemove.add(group);
+        // TODO what doing with units?
+    }
 }
 public void addSmartGroup(AGroupManager group) {
     //if (!smartGroupsToRemove.contains(group)) smartGroupsToRemove.add(group);
@@ -756,6 +773,23 @@ public int update(int frame) {
     
     
     for (AGroupManager sGroup:smartGroups) sGroup.update(frame);
+    
+    // --- Zero-K special ---
+    if (modSpecific.firstFactoryIsFree && frame>20) {
+        boolean aceptBuildFactory=false;
+        aceptBuildFactory = checkAndTechUp(true, false);
+        if (!aceptBuildFactory) {
+            talkingDialogModule.message(clb.getSkirmishAI().getSkirmishAIId(), "bot make factory");
+            //TODO make better!
+            //TODO checkAntDechUp_armyTechUp()
+//            TBase bestBase=getBestBase(true);
+//            if (bestBase!=null) {
+//                bestBase.
+//            }
+        }
+        if (aceptBuildFactory) modSpecific.firstFactoryIsFree=false;
+    }
+    // --- ---
     
     // ======= Test Tech Up ==========
     if (autoTechUp){
