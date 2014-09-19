@@ -780,6 +780,7 @@ public int update(int frame) {
         aceptBuildFactory = checkAndTechUp(true, false);
         if (!aceptBuildFactory) {
             talkingDialogModule.message(clb.getSkirmishAI().getSkirmishAIId(), "bot make factory");
+            aceptBuildFactory=true;
             //TODO make better!
             //TODO checkAntDechUp_armyTechUp()
 //            TBase bestBase=getBestBase(true);

@@ -169,16 +169,34 @@ private List<Unit> selectUnitInArea_myOnly(AIFloat3 center,float r, boolean getU
     for (AGroupManager sGroup:owner.smartGroups) {
         for (Unit u:sGroup.getAllUnits(getUnitNow))
          if (u!=null)
-         {// !!!!!!!!!!!!!!!!!
+         {
             float maxSearchR;
             if (r>0) maxSearchR=r;
-            else maxSearchR=u.getDef().getRadius()*2; // TODO use X,Z size flat! getRadiusFlat.
+            else maxSearchR=MathPoints.getRadiusFlat(u)*2;
             if (MathPoints.getDistanceBetweenFlat(center, u.getPos())<=maxSearchR) selectLst.add(u);
          }
     }
     return selectLst;
 }
       
+private Unit selectUnitInArea_myOnly_near(AIFloat3 center,float r, boolean getUnitNow) {
+    // TODO быстрее сделать это (owner.clb.getFriendlyUnitsIn())
+    float l=Math.max(r, 200); //!!!
+    Unit selectU=null;
+    for (AGroupManager sGroup:owner.smartGroups) {
+        for (Unit u:sGroup.getAllUnits(getUnitNow))
+         if (u!=null)
+         {
+            float unitR=MathPoints.getRadiusFlat(u);
+            float d=MathPoints.getDistanceBetweenFlat(center, u.getPos())-unitR;
+            if (d<=l) {
+                selectU=u;
+                l=d;
+            }
+         }
+    }
+    return selectU;
+}
 
 
 protected void onNewPoint(Point msgPoint) {
@@ -239,15 +257,15 @@ protected void onNewPoint(Point msgPoint) {
         
         if (lstToShare==null) lstToShare=new ArrayList<Unit>();
 
-        List<Unit> unitSelect= selectUnitInArea_myOnly(msgPoint.getPosition(), -1, true);//getUnitNow);
         // TODO only building, no moving!!!!
+        Unit unitSelect= selectUnitInArea_myOnly_near(msgPoint.getPosition(), -1, true);
         boolean ok=false;
-        for (Unit u:unitSelect) {
-            AGroupManager agm=owner.getOwnerGroup(u);
+        if (unitSelect!=null) {
+            AGroupManager agm=owner.getOwnerGroup(unitSelect);
             if (agm!=null && agm instanceof TBase) {
                 TBase base=(TBase)agm; 
                 if (reclimeAll) {
-                    UnitDef uDef=u.getDef();
+                    UnitDef uDef=unitSelect.getDef();
                     ArrayList<Unit> allUnit=base.getAllUnits(false);
                     // TODO test!!!
                     allUnit=TWarStrategy.selectUnitWithDef(allUnit,uDef);
@@ -256,13 +274,37 @@ protected void onNewPoint(Point msgPoint) {
                         ok=true;
                     }
                 } else {
-                    if (!base.unitToReclime.contains(u) ) {
-                        base.unitToReclime.add(u);
+                    if (!base.unitToReclime.contains(unitSelect) ) {
+                        base.unitToReclime.add(unitSelect);
                         ok=true;
                     }
                 }
             }
         }
+// TODO eclime unit in area
+//        List<Unit> unitSelect= selectUnitInArea_myOnly(msgPoint.getPosition(), -1, true);//getUnitNow);
+//        boolean ok=false;
+//        for (Unit u:unitSelect) {
+//            AGroupManager agm=owner.getOwnerGroup(u);
+//            if (agm!=null && agm instanceof TBase) {
+//                TBase base=(TBase)agm; 
+//                if (reclimeAll) {
+//                    UnitDef uDef=u.getDef();
+//                    ArrayList<Unit> allUnit=base.getAllUnits(false);
+//                    // TODO test!!!
+//                    allUnit=TWarStrategy.selectUnitWithDef(allUnit,uDef);
+//                    for (Unit u2:allUnit) if (!base.unitToReclime.contains(u2) ) {
+//                        base.unitToReclime.add(u2);
+//                        ok=true;
+//                    }
+//                } else {
+//                    if (!base.unitToReclime.contains(u) ) {
+//                        base.unitToReclime.add(u);
+//                        ok=true;
+//                    }
+//                }
+//            }
+//        }
         
         if (ok) {
             owner.sendTextMsg("Have add unit to reclime.", FieldBOT.MSG_DLG);
@@ -499,8 +541,9 @@ public void message(int player, String message) {
         if (message.contains(" stop") && message.contains(" work")) {
             boolean estChtoOstanovit=false;
             for (TBase base:owner.selectTBasesList()) { // FIXME what do with army?
-                estChtoOstanovit = estChtoOstanovit || base.currentBaseTarget.currentBuildLst.isEmpty();
+                estChtoOstanovit = estChtoOstanovit || !base.currentBaseTarget.currentBuildLst.isEmpty() || !base.unitToReclime.isEmpty();
                 base.currentBaseTarget.removeAllBuildingTarget();
+                base.unitToReclime.clear();
             }
             if (estChtoOstanovit) owner.sendTextMsg("All your command rejected & stop.", FieldBOT.MSG_DLG);
             else owner.sendTextMsg("Not special command for rejected.", FieldBOT.MSG_DLG);
