@@ -334,7 +334,7 @@ public class AdvECO {
         // TODO using energy conversion K - metal maker.
         float[][] currIncome=getAVGResourceToArr();
         for (int i=0; i<resName.length; i++) {
-            resK[i] = 1.0f / (2.0f + currIncome[R_Income][i]) // !
+            resK[i] = 1.0f + 1.0f / (2.0f + currIncome[R_Income][i]) // !
                     + (1.0f-currIncome[R_Current][i]/currIncome[R_Storage][i]);
             coast+=(res[R_Current][i] + Math.max(res[R_Income][i]-res[R_Usage][i], 0.0) * 30) * resK[i]; // !!!
         }

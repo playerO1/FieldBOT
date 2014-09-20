@@ -26,10 +26,13 @@ local options = {
 	},
 	{
 		key  = 'smarttechup',
-		name = 'Smart tech up time',
-		desc = 'Use smart algorithm for detect optimal tech up time. Required more CPU time.',
-		type = 'bool',
-		def  = true
+		name = 'Smart tech up',
+		desc = 'Use smart algorithm for detect optimal tech up time. 0-bad precission but fase, 1 - smart, 2 - expert, required more CPU time.',
+		type   = 'number',
+		def    = 1,
+		min    = 0,
+		max    = 2,
+		step   = 1
 	},
 	{
 		key  = 'usearmy',

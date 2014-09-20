@@ -547,8 +547,11 @@ protected static final int CMD_MORPH = 31410;
      * @return 
      */
     public static boolean isRealyAbleToAssist(UnitDef def) {
-        // для фабрик.
-        return def.isAbleToAssist() && !isStationarFactory(def);
+        // for assist, constructor or nano tower
+        boolean isAble = def.isAbleToAssist() && !isStationarFactory(def);
+        if (!isAble) return false;
+        if (def.getHumanName().contains("Air Repair")) return false; // for Air Repair platform - usualy they can not assist, but they have assist option.
+        return true;
     }
     
     public static boolean isStationarFactory(UnitDef def) {

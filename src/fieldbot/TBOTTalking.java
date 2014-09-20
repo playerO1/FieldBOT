@@ -307,13 +307,13 @@ protected void onNewPoint(Point msgPoint) {
 //        }
         
         if (ok) {
-            owner.sendTextMsg("Have add unit to reclime.", FieldBOT.MSG_DLG);
-        } owner.sendTextMsg("No unit for reclime.", FieldBOT.MSG_DLG);;
+            owner.sendTextMsg("Add unit \""+unitSelect.getDef().getHumanName()+"\" to reclime.", FieldBOT.MSG_DLG);
+        } else owner.sendTextMsg("No unit for reclime.", FieldBOT.MSG_DLG);;
     }
     
     if (message.contains("create") && message.contains("base")){// || message.contains("new"))) {
         if (message.contains("empty")) {
-            TBase newB=new TBase(owner, msgPoint.getPosition(), 1000);
+            TBase newB=new TBase(owner, msgPoint.getPosition(), 0);
             owner.addSmartGroup(newB);
             owner.sendTextMsg("New empty base created "+newB.toString(), FieldBOT.MSG_DLG);
         } else {
@@ -588,7 +588,7 @@ public void message(int player, String message) {
             ArrayList<Integer> intRaw=parsingIntArr(message, parsingParam);
             if (intRaw.size()==2) {
                 bX=intRaw.get(0); bY=intRaw.get(1); // получение координат
-                TBase newB=new TBase(owner, new AIFloat3(bX, 0, bY), 1000);
+                TBase newB=new TBase(owner, new AIFloat3(bX, 0, bY), 0);
                 owner.addSmartGroup(newB);
                 owner.sendTextMsg("New base created "+newB.toString(), FieldBOT.MSG_DLG);
             } else owner.sendTextMsg("New base COORN DNT FOUND! "+message, FieldBOT.MSG_DLG);
@@ -769,7 +769,9 @@ public void message(int player, String message) {
                 }
             }
             
-            HashMap<UnitDef,Integer> armyUnits=owner.warStrategy.shooseArmy(bestBase, false, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva);
+            
+            int weaponDamageType=0;// TODO choose weapon damage type. 0 = default
+            HashMap<UnitDef,Integer> armyUnits=owner.warStrategy.shooseArmy(bestBase, false, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva, weaponDamageType);
             
             // TODO ТОлько те ктороые может строить (без лаборатории или с ней!!!!!!!!!!!!!!!!!!!)
             

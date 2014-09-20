@@ -108,12 +108,12 @@ public abstract class ABasePlaning {
     abstract public AIFloat3 getRecomendetBuildPosition(UnitDef unitType, Unit mainBuilder);    
     
     private AIFloat3 findNear_noClosePoint(UnitDef unitType, AIFloat3 buildCenter,float r, List<AIFloat3> points) {
-        float L=-1,l;
+        float L=r,l;
         AIFloat3 nearP=null;
         for (AIFloat3 p:points) if (map.isPossibleToBuildAt(unitType, p, owner.BUILD_FACING)) 
         {
             l=MathPoints.getDistanceBetween3D(p, buildCenter);
-            if (L<0 || l<L) {
+            if (l<L) { // last: (L<0 || l<L)
                 L=l;
                 nearP=p;
             }

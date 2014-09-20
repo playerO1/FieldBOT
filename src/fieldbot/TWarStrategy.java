@@ -100,7 +100,13 @@ public class TWarStrategy {
         return wDmg;
     }
     
-    private double[] getUnitKachestva(UnitDef unit) {
+    /**
+     * 
+     * @param unit
+     * @param weaponDamagType defauld 0, specifed by weapon.getDamage().getTypes().get(weaponDamagType);
+     * @return 
+     */
+    private double[] getUnitKachestva(UnitDef unit, int weaponDamagType) {
         double[] kachestva=new double[NUM_P];
         
         kachestva[P_SPAM]=1.0; // за присутствие
@@ -127,7 +133,7 @@ public class TWarStrategy {
                 owner.sendTextMsg(" Weapon types: "+weapon.getDamage().getTypes().toString(), FieldBOT.MSG_DBG_ALL);
 
                 float dMultipler=weapon.getSalvoSize()*weapon.getProjectilesPerShot();
-                float dmg= weapon.getDamage().getTypes().get(0); // get(0) - default damage
+                float dmg= weapon.getDamage().getTypes().get(weaponDamagType);
                 dmg = 0.8f*dmg + 0.2f*dmg*weapon.getAreaOfEffect();// как повреждения распространяются по площади.
                  //TODO дополнительный параметр по оружию: насколько "массово" должно быть оружие - против толпы мелких, например.
                     //weapon.getDamage().getImpulseBoost();
@@ -191,7 +197,7 @@ public class TWarStrategy {
      * @param kachestva specific unit selected properties (from 0 - not select up to 1 - best required)
      * @return list of [unit type, count] or null.
      */
-    public HashMap<UnitDef,Integer> shooseArmy(TBase onBase, boolean chooseBuilding, ArrayList<UnitDef> buildVariants, float timeLimit, int unitLimit, float kachestva[])
+    public HashMap<UnitDef,Integer> shooseArmy(TBase onBase, boolean chooseBuilding, ArrayList<UnitDef> buildVariants, float timeLimit, int unitLimit, float kachestva[], int weaponDamageType)
     {
         if (kachestva.length!=NUM_P) throw new ArrayIndexOutOfBoundsException();// !!!
         if (buildVariants.isEmpty()) throw new ArrayIndexOutOfBoundsException();// !!!        
@@ -204,7 +210,7 @@ public class TWarStrategy {
                   )
           {
             // filter that realy can not pass for kachestva[].
-            double current_k[]=getUnitKachestva(def);
+            double current_k[]=getUnitKachestva(def, weaponDamageType);
             boolean check=false;
             for (int i=0;i<NUM_P;i++) if ((kachestva[i]!=0)&&(current_k[i]!=0)) {
                 check=true;
@@ -220,10 +226,10 @@ public class TWarStrategy {
         double max_k[]=new double[NUM_P];
         
         // 2.1 Get max, min for normalization vector
-        min_k=getUnitKachestva(buildVariants.get(0));
-        max_k=getUnitKachestva(buildVariants.get(0));
+        min_k=getUnitKachestva(buildVariants.get(0), weaponDamageType);
+        max_k=getUnitKachestva(buildVariants.get(0), weaponDamageType);
         for (UnitDef unit: buildVariants) {
-            double current_k[]=getUnitKachestva(unit);
+            double current_k[]=getUnitKachestva(unit, weaponDamageType);
             for (int i=0;i<NUM_P;i++) {
                 if (current_k[i]>max_k[i]) max_k[i]=current_k[i];
                 if (current_k[i]<min_k[i]) min_k[i]=current_k[i];
@@ -261,7 +267,7 @@ public class TWarStrategy {
         for (int i=0; i<buildVars.size(); i++) { //!!
             UnitDef unit = buildVars.get(i);
                     
-            double unitK[]=getUnitKachestva(unit);
+            double unitK[]=getUnitKachestva(unit, weaponDamageType);
             
             // TODO Use svestiZnacheniyaK()
             double k; // + or *  , 0 or 1  ? choose best formul!
@@ -353,7 +359,7 @@ public class TWarStrategy {
      * @param kachestva
      * @return best UnitDef with max compare (better) for kachestva. Or null
      */
-    public UnitDef shooseBestFor(boolean chooseBuilding, ArrayList<UnitDef> buildVariants, float kachestva[])
+    public UnitDef shooseBestFor(boolean chooseBuilding, ArrayList<UnitDef> buildVariants, float kachestva[], int weaponDamageType)
     {
         if (kachestva.length!=NUM_P) throw new ArrayIndexOutOfBoundsException();// !!!
         if (buildVariants.isEmpty()) throw new ArrayIndexOutOfBoundsException();// !!!        
@@ -364,7 +370,7 @@ public class TWarStrategy {
           if (ModSpecification.isRealyAbleToMove(def)!=chooseBuilding)
           {
             // filter that realy can not pass for kachestva[].
-            double current_k[]=getUnitKachestva(def);
+            double current_k[]=getUnitKachestva(def, weaponDamageType);
             boolean check=false;
             for (int i=0;i<NUM_P;i++) if ((kachestva[i]!=0)&&(current_k[i]!=0)) {
                 check=true;
@@ -380,10 +386,10 @@ public class TWarStrategy {
         double max_k[];
         
         // 2.1 Get max, min for normalization vector
-        min_k=getUnitKachestva(buildVariants.get(0));
-        max_k=getUnitKachestva(buildVariants.get(0));
+        min_k=getUnitKachestva(buildVariants.get(0), weaponDamageType);
+        max_k=getUnitKachestva(buildVariants.get(0), weaponDamageType);
         for (UnitDef unit: buildVariants) {
-            double current_k[]=getUnitKachestva(unit);
+            double current_k[]=getUnitKachestva(unit, weaponDamageType);
             for (int i=0;i<NUM_P;i++) {
                 if (current_k[i]>max_k[i]) max_k[i]=current_k[i];
                 if (current_k[i]<min_k[i]) min_k[i]=current_k[i];
@@ -398,7 +404,7 @@ public class TWarStrategy {
         UnitDef bestUnit=null;
         
         for (UnitDef unit:buildVariants) {
-            double unitK[]=getUnitKachestva(unit);
+            double unitK[]=getUnitKachestva(unit, weaponDamageType);
             double k= svestiZnacheniyaK(unitK, max_k, kachestva);
             
             if (bestUnit==null || k>maxK) { // TODO if k==maxK
@@ -440,11 +446,11 @@ public class TWarStrategy {
      * @param kachestva
      * @return units with one UnitDef, better for compare (or max) to kachestva
      */
-    public ArrayList<Unit> shooseBestFrom(boolean chooseBuilding, ArrayList<Unit> units, float kachestva[])
+    public ArrayList<Unit> shooseBestFrom(boolean chooseBuilding, ArrayList<Unit> units, float kachestva[],int weaponDamageType)
     {
         HashSet<UnitDef> unitDefs=getUnitDefsFromUnitList(units);
         ArrayList<UnitDef> unitDefLst=new ArrayList<UnitDef>(unitDefs);
-        UnitDef bestUDef= shooseBestFor(chooseBuilding, unitDefLst, kachestva);
+        UnitDef bestUDef= shooseBestFor(chooseBuilding, unitDefLst, kachestva, weaponDamageType);
         if (bestUDef==null) return null;
         return selectUnitWithDef(units, bestUDef);
     }
@@ -499,9 +505,9 @@ public class TWarStrategy {
 
                 if (bestBase!=null)
                 {
-
+                    int weaponType=0;//!!! 0 - default. TODO
                     HashMap<UnitDef,Integer> armyUnits
-                            =owner.warStrategy.shooseArmy(bestBase, !defenceTower, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva);
+                            =owner.warStrategy.shooseArmy(bestBase, !defenceTower, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva, weaponType);
                         // TODO special unit enabled/disabled check (research center depends, TA/RD mod!)
 
                     // Send signal to base for make unit

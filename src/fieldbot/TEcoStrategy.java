@@ -132,7 +132,7 @@ public class TEcoStrategy {
             float r=0.0f;
             if (res!=null) r=owner.getUnitResoureProduct(ud,res);
             else { 
-                if (ModSpecification.isRealyAbleToAssist(ud)) { // выбор рабочего...
+                if (ModSpecification.isRealyAbleToAssist(ud)) { // select worker
                     r=ud.getBuildSpeed();
                     if (!USE_STATIONAR_BUILDER && !ModSpecification.isRealyAbleToMove(ud)) r=r/1000.0f; // TODO что лучше: неподвижный или подвижный строитель?
                 }
@@ -148,19 +148,20 @@ public class TEcoStrategy {
                 // !!!!!!!!!!!!!!!!!
 
                 // Учёт выгодности Metal Makers
+                float makerK=1.0f;
                 if (owner.modSpecific.exist_MetalMaker_lua)
                  if (owner.modSpecific.isMetalMaker(ud)) // TODO test it
                 {
-                    float makerK=owner.modSpecific.getConversionKMetalMaker(ud);
-                    if (makerK!=Float.POSITIVE_INFINITY) k = (0.4f*k)+(0.6f * k * makerK );
+                    makerK=owner.modSpecific.getConversionKMetalMaker(ud);
                 }
                 // учёт выгодности Metal Makers в Evo RTS (там коэффициэнт по другим функциям считается)
                 if (owner.modSpecific.exist_MetalMaker_native)
                  if (owner.modSpecific.isNativeMetalMaker(ud)) // TODO test it
                 {
-                    float makerK=owner.modSpecific.getNativeConversionKMetalMaker(ud);
-                    if (makerK!=Float.POSITIVE_INFINITY) k = (0.4f*k)+(0.6f * k * makerK );
+                    makerK=owner.modSpecific.getNativeConversionKMetalMaker(ud);
                 }
+                if (makerK!=1.0f) k = (0.2f*k)+(0.8f * k * makerK );
+                
     //     owner.sendTextMsg(" >item "+ud.getName()+" k="+k+" =r/t, r="+r+" t="+t , FieldBOT.MSG_DBG_ALL);
 
                 if (k>0.0f) { // только для тех, кто производит хоть немного заданный ресурс.
@@ -762,48 +763,27 @@ private EcoStateInfo calcEcoAftherTime(float maxT, EcoStateInfo ecoStart, ArrayL
     return newEcoState;
 }
 
-/**
- * Precission that isActualDoTechUp_fastCheck, required CPU time!
- * @return Tech level trigger with economic state, current level time before tech up.
- * TRIGGER must contain: start tech up time, t=0 - now; trigger resource - ResHave+ResProduct*time_for_tech_up, tech level info
- */
-public TechUpTrigger getPrecissionTechUpTimeFor(TBase onBase, HashSet<UnitDef> CurrentLevelUnitsCanBuild, TTechLevel toLevel)
-{
-    ArrayList<UnitDef> currentLevelDefs=select_EconomicUDefs(CurrentLevelUnitsCanBuild); // убрать лишних юнитов для ускорения расчётов
-    HashSet<UnitDef> hs_futureBuildLst=new HashSet<UnitDef>(toLevel.needBaseBuilders);
-    hs_futureBuildLst.addAll(toLevel.levelNewDef);
-    // TODO check futureBuildLst.isEmpty() - если да, то в уровне нет экономических юнитов.
-    hs_futureBuildLst.addAll(currentLevelDefs);
-    ArrayList<UnitDef> futureBuildLst=select_EconomicUDefs(hs_futureBuildLst); // убрать лишних юнитов для ускорения расчётов
-    
-    //
-    // Проверка по всем ресурсам, чего лучше строить.
-    float currentLvlPower=onBase.getBuildPower(false,true); // !!!
-    
-    // в ресурсы добавить null для сравнения рабочих
-    float startRes[][];
-    if (useOptimisticResourceCalc) startRes= owner.avgEco.getSmartAVGResourceToArr();
-    else startRes= owner.avgEco.getAVGResourceToArr();
+
+// ----------- Smart Tech Up -----------
+
+private float[][] exp_tupTriggerR;
+private float exp_endRes[][];
+private float exp_tupTimeStart;
+private float exp_totalTime;
+private float exp_levelBuildTime;
+private float exp_K;
+
+private boolean techUpVirtualModeling(ArrayList<UnitDef> currentLevelDefs,ArrayList<UnitDef> futureBuildLst,
+                float currentLvlPower, float startRes[][], TTechLevel toLevel ) {
     
     final float TEST_TIME=20*60; // 20 min
     final int N_ITER=18; // TODO !!! заменить FOR методом дихотомии
 
-owner.sendTextMsg(" <getPrecissionTechUpTimeFor>, workers F: "+currentLvlPower+" N_ITER="+N_ITER, FieldBOT.MSG_DBG_ALL);
+// for level - print, owner.sendTextMsg(" <getPrecissionTechUpTimeFor>, workers F: "+currentLvlPower+" N_ITER="+N_ITER, FieldBOT.MSG_DBG_ALL);
     
-    float[][] exp_tupTriggerR=null, tmp_exp_tupTriggerR;// TODO!!!!!
-    float exp_endRes[][];
-    float exp_tupTimeStart=0;
-    float exp_totalTime;
-    float exp_levelBuildTime=0;
-    float exp_K=0.0f;
+    float[][] tmp_exp_tupTriggerR;// TODO!!!!!
     
-    // Economic state without tech up
-    EcoStateInfo noTUp_ecoState=new EcoStateInfo(startRes, currentLvlPower);
-    noTUp_ecoState=calcEcoAftherTime(TEST_TIME,noTUp_ecoState, currentLevelDefs);
-    exp_K=owner.avgEco.getResourceCoast(noTUp_ecoState.resources);
-    exp_K /= noTUp_ecoState.time;
-    boolean exp_no_TechUp=true;
-    
+    boolean TUpModifed=false;
     
     for (int i=0; i<N_ITER; i++)
     {
@@ -876,11 +856,60 @@ owner.sendTextMsg("i="+i+", t3="+t3+" ecoState="+ecoState.toString(), FieldBOT.M
                 exp_tupTimeStart=t1;
                 exp_levelBuildTime=t2;
                 exp_totalTime=ecoState.time;
-                exp_no_TechUp=false;
+                //exp_no_TechUp=false;
+                TUpModifed=true;
             }
         }
     }
-    if (exp_K==0.0f || exp_tupTriggerR==null || exp_no_TechUp) return null; // TODO too many check
+    return TUpModifed;
+}
+
+/**
+ * Precission that isActualDoTechUp_fastCheck, required CPU time!
+ * @return Tech level trigger with economic state, current level time before tech up.
+ * TRIGGER must contain: start tech up time, t=0 - now; trigger resource - ResHave+ResProduct*time_for_tech_up, tech level info
+ */
+public TechUpTrigger getPrecissionTechUpTimeFor(TBase onBase, HashSet<UnitDef> CurrentLevelUnitsCanBuild, TTechLevel toLevel)
+{
+    ArrayList<UnitDef> currentLevelDefs=select_EconomicUDefs(CurrentLevelUnitsCanBuild); // убрать лишних юнитов для ускорения расчётов
+    HashSet<UnitDef> hs_futureBuildLst=new HashSet<UnitDef>(toLevel.needBaseBuilders);
+    hs_futureBuildLst.addAll(toLevel.levelNewDef);
+    // TODO check futureBuildLst.isEmpty() - если да, то в уровне нет экономических юнитов.
+    hs_futureBuildLst.addAll(currentLevelDefs);
+    ArrayList<UnitDef> futureBuildLst=select_EconomicUDefs(hs_futureBuildLst); // убрать лишних юнитов для ускорения расчётов
+    
+    //
+    // Проверка по всем ресурсам, чего лучше строить.
+    float currentLvlPower=onBase.getBuildPower(false,true); // !!!
+    
+    // в ресурсы добавить null для сравнения рабочих
+    float startRes[][];
+    if (useOptimisticResourceCalc) startRes= owner.avgEco.getSmartAVGResourceToArr();
+    else startRes= owner.avgEco.getAVGResourceToArr();
+    
+    final float TEST_TIME=20*60; // 20 min
+    final int N_ITER=18; // TODO !!! заменить FOR методом дихотомии
+
+owner.sendTextMsg(" <getPrecissionTechUpTimeFor>, workers F: "+currentLvlPower+" N_ITER="+N_ITER, FieldBOT.MSG_DBG_ALL);
+    
+    exp_tupTriggerR=null;
+    exp_endRes=null;
+    exp_tupTimeStart=0;
+    exp_totalTime=0;
+    exp_levelBuildTime=0;
+    exp_K=0.0f;
+    
+    // Economic state without tech up
+    EcoStateInfo noTUp_ecoState=new EcoStateInfo(startRes, currentLvlPower);
+    noTUp_ecoState=calcEcoAftherTime(TEST_TIME,noTUp_ecoState, currentLevelDefs);
+    exp_K=owner.avgEco.getResourceCoast(noTUp_ecoState.resources);
+    exp_K /= noTUp_ecoState.time;
+    //TTechLevel exp_betterLvl=null;
+    
+    boolean lvlIsBest;
+    lvlIsBest=techUpVirtualModeling(currentLevelDefs, futureBuildLst, currentLvlPower, startRes, toLevel);
+    
+    if (exp_K==0.0f || exp_tupTriggerR==null || !lvlIsBest) return null; // TODO too many check
     
     float[] triggerRes=new float[exp_tupTriggerR[AdvECO.R_Current].length];
     for (int r=0; r<triggerRes.length; r++) {
@@ -890,6 +919,68 @@ owner.sendTextMsg("i="+i+", t3="+t3+" ecoState="+ecoState.toString(), FieldBOT.M
         // TODO use variable useOptimisticResourceCalc
     }
     TechUpTrigger trigger=new TechUpTrigger(owner, toLevel,
+            exp_tupTimeStart, exp_levelBuildTime,
+            onBase, triggerRes);
+    
+    return trigger;
+}
+
+// Absolute best choose tech level, required too many CPU resource, return realy better level. Modeling all variants on virtual economic for choose - hight CPU loading for it.
+public TechUpTrigger getAbsolutePrecissionTechUpTimeFor(TBase onBase, HashSet<UnitDef> CurrentLevelUnitsCanBuild, List<TTechLevel> newLevels)
+{
+    // TODO TEST!!!!!
+    ArrayList<UnitDef> currentLevelDefs=select_EconomicUDefs(CurrentLevelUnitsCanBuild); // убрать лишних юнитов для ускорения расчётов
+    
+    //
+    // Проверка по всем ресурсам, чего лучше строить.
+    float currentLvlPower=onBase.getBuildPower(false,true); // !!!
+    
+    // в ресурсы добавить null для сравнения рабочих
+    float startRes[][];
+    if (useOptimisticResourceCalc) startRes= owner.avgEco.getSmartAVGResourceToArr();
+    else startRes= owner.avgEco.getAVGResourceToArr();
+    
+    final float TEST_TIME=20*60; // 20 min
+    final int N_ITER=18; // TODO !!! заменить FOR методом дихотомии
+
+owner.sendTextMsg(" <getPrecissionTechUpTimeFor>, workers F: "+currentLvlPower+" N_ITER="+N_ITER, FieldBOT.MSG_DBG_ALL);
+    
+    exp_tupTriggerR=null;
+    exp_endRes=null;
+    exp_tupTimeStart=0;
+    exp_totalTime=0;
+    exp_levelBuildTime=0;
+    exp_K=0.0f;
+    
+    // Economic state without tech up
+    EcoStateInfo noTUp_ecoState=new EcoStateInfo(startRes, currentLvlPower);
+    noTUp_ecoState=calcEcoAftherTime(TEST_TIME,noTUp_ecoState, currentLevelDefs);
+    exp_K=owner.avgEco.getResourceCoast(noTUp_ecoState.resources);
+    exp_K /= noTUp_ecoState.time;
+    TTechLevel exp_betterLvl=null;
+    
+    for (TTechLevel toLevel:newLevels) {
+        HashSet<UnitDef> hs_futureBuildLst=new HashSet<UnitDef>(toLevel.needBaseBuilders);
+        hs_futureBuildLst.addAll(toLevel.levelNewDef);
+        // TODO check futureBuildLst.isEmpty() - если да, то в уровне нет экономических юнитов.
+        hs_futureBuildLst.addAll(currentLevelDefs);
+        ArrayList<UnitDef> futureBuildLst=select_EconomicUDefs(hs_futureBuildLst); // убрать лишних юнитов для ускорения расчётов
+        
+        boolean lvlIsBest=techUpVirtualModeling(currentLevelDefs, futureBuildLst, currentLvlPower, startRes, toLevel);
+        if (lvlIsBest) exp_betterLvl=toLevel;
+    }
+    
+    
+    if (exp_K==0.0f || exp_tupTriggerR==null || exp_betterLvl==null) return null; // TODO too many check
+    
+    float[] triggerRes=new float[exp_tupTriggerR[AdvECO.R_Current].length];
+    for (int r=0; r<triggerRes.length; r++) {
+        triggerRes[r] = exp_tupTriggerR[AdvECO.R_Current][r] 
+                      +
+                ( exp_tupTriggerR[AdvECO.R_Income][r]-exp_tupTriggerR[AdvECO.R_Usage][r] ) * exp_levelBuildTime;
+        // TODO use variable useOptimisticResourceCalc
+    }
+    TechUpTrigger trigger=new TechUpTrigger(owner, exp_betterLvl,
             exp_tupTimeStart, exp_levelBuildTime,
             onBase, triggerRes);
     

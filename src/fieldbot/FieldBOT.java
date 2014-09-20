@@ -181,8 +181,11 @@ public int isMetalFieldMap=-2;
 
 /**
  * Use class TechUpTrigger for smart tech up process.
+ * 0 - fast
+ * 1 - smart, required some CPU time
+ * 2 - expert (better that smart, required more CPU)
  */
-public boolean useSmartTechUp;
+public int useTechUpMode;
 
 private TechUpTrigger techUpTrigger;
 
@@ -242,10 +245,11 @@ for (int i = 0; i < numOpVals; i++) {
       if (value.equals("1")) autoTechUp=true;
       if (value.equals("0")) autoTechUp=false;
   }
-  useSmartTechUp=false; // default
+  useTechUpMode=0; // default
   if (key.equals("smarttechup")) {
-      if (value.equals("1")) useSmartTechUp=true;
-      if (value.equals("0")) useSmartTechUp=false;
+      if (value.equals("2")) useTechUpMode=2;
+      if (value.equals("1")) useTechUpMode=1;
+      if (value.equals("0")) useTechUpMode=0;
   }
   if (key.equals("usearmy")) {
       if (value.equals("1")) opt_armyControl=1;
@@ -344,7 +348,7 @@ try {
         }
         
         //bases.add(new TBase(this, clb.getMap().getStartPos(), 1000)); // Init first base
-        addSmartGroup(new TBase(this, clb.getMap().getStartPos(), 1000));  // Init first base
+        addSmartGroup(new TBase(this, clb.getMap().getStartPos(), 2000));  // Init first base
         
     } catch (Exception e) {
         ret=-4;
@@ -586,17 +590,34 @@ public boolean checkAndTechUp(boolean doEmidetly, boolean test) { // TODO ПЕР
         if (bestLvl!=null) {
             if ( !doEmidetly ) {
                 boolean allowTechUp=true;
-                if (useSmartTechUp) {
-                   techUpTrigger = ecoStrategy.getPrecissionTechUpTimeFor(base, onBaseBuildLst, bestLvl );
-                    if (techUpTrigger!=null) {
-                        sendTextMsg("> "+techUpTrigger.toString(), FieldBOT.MSG_DBG_SHORT);
-                        allowTechUp=techUpTrigger.trigger();
-                        // TODO where remove it tech up was execute?
-                    } else {
-                        sendTextMsg("> tech up trigger is null!", FieldBOT.MSG_DBG_SHORT);
-                        allowTechUp=false;
-                    }
-                } else allowTechUp = ecoStrategy.isActualDoTechUp_fastCheck(base, onBaseBuildLst, bestLvl);
+                switch (useTechUpMode) {
+                    case 0:
+                        allowTechUp = ecoStrategy.isActualDoTechUp_fastCheck(base, onBaseBuildLst, bestLvl);
+                        break;
+                    case 1:
+                        techUpTrigger = ecoStrategy.getPrecissionTechUpTimeFor(base, onBaseBuildLst, bestLvl );
+                         if (techUpTrigger!=null) {
+                             sendTextMsg("> "+techUpTrigger.toString(), FieldBOT.MSG_DBG_SHORT);
+                             allowTechUp=techUpTrigger.trigger();
+                             // TODO where remove it tech up was execute?
+                         } else {
+                             sendTextMsg("> tech up trigger is null!", FieldBOT.MSG_DBG_SHORT);
+                             allowTechUp=false;
+                         }
+                        break;
+                    case 2:
+                        //TODO bestLvl not using in this!
+                        techUpTrigger = ecoStrategy.getAbsolutePrecissionTechUpTimeFor(base, onBaseBuildLst, TechLvls);
+                         if (techUpTrigger!=null) {
+                             sendTextMsg("> "+techUpTrigger.toString(), FieldBOT.MSG_DBG_SHORT);
+                             allowTechUp=techUpTrigger.trigger();
+                             // TODO where remove it tech up was execute?
+                         } else {
+                             sendTextMsg("> tech up trigger is null!", FieldBOT.MSG_DBG_SHORT);
+                             allowTechUp=false;
+                         }
+                        break;
+                }
                 if (!allowTechUp) bestLvl=null;
             }
         }
@@ -667,7 +688,7 @@ public TBase spawnNewBase(AIFloat3 newBasePoint)
         }
     }
     if (!shareWorker.isEmpty()) {
-        TBase newB=new TBase(this, newBasePoint, 1000);
+        TBase newB=new TBase(this, newBasePoint, 0); // 0 - auto size, default = 1000
         addSmartGroup(newB);
         for (Unit u:shareWorker) { // !!!
             newB.addUnit(u); // Добавить и пойти на базу
@@ -794,7 +815,7 @@ public int update(int frame) {
     
     // ======= Test Tech Up ==========
     if (autoTechUp){
-        if (useSmartTechUp) {
+        if (useTechUpMode>0) { // smart tech up
             boolean techUpCheckTick=false;
             if (frame%1500==1200) {
                 checkAndTechUp(false, false);
@@ -805,10 +826,11 @@ public int update(int frame) {
             }
             if ( techUpCheckTick && techUpTrigger!=null ) {
                 if (techUpTrigger.trigger()) {
-                    if (doTechUpToLevel(techUpTrigger.level, techUpTrigger.onBase)) techUpTrigger=null;//!!!
+                    if (doTechUpToLevel(techUpTrigger.level, techUpTrigger.onBase))
+                        techUpTrigger=null;//!!!
                 }
             }
-        } else {
+        } else { // fast check tech up
             if (frame%1000==500)
               checkAndTechUp(false, false); // old tech up method, bad time choose.
         }

@@ -71,7 +71,7 @@ public class TBase extends AGroupManager{
      * Create empty base. Dont forget add builder unit!
      * @param owner link to AI
      * @param center init base center
-     * @param radius base radius (size)
+     * @param radius base radius (size), if value is 0 then set default size (1000)
      */
     public TBase(FieldBOT owner, AIFloat3 center, float radius)
     {
@@ -813,9 +813,10 @@ public class TBase extends AGroupManager{
                 if ( u.getDef().isAbleToReclaim() // TODO ModSpecification.isRealyAbleToReclime(u.getDef())
                      && !u.isParalyzed()) {
                     Unit bestToReclime=null; float minDist=1.0f;
+                    AIFloat3 uPos=u.getPos();
                     for (Unit uRcl:toReclime) {
                         // TODO FIXME Check uRcl.getDef().isReclaimable() !!!!
-                        float lt=MathPoints.getDistanceBetweenFlat(uRcl.getPos(), u.getPos()); // ближайщый
+                        float lt=MathPoints.getDistanceBetweenFlat(uRcl.getPos(), uPos); // ближайщый
                         lt -= u.getDef().getBuildDistance(); // сократить на расстояние строителя.
                         if (lt>=0) { // need walk
                             if (ModSpecification.isRealyAbleToMove(u.getDef())) { // если может ходить

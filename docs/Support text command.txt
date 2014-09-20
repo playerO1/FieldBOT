@@ -42,5 +42,5 @@ This option can be set before game. Some of then can be modifed in game by text 
 "Build decorator type": select choose building position on base surface. Parameters: "random" - as other AI; "spiral" - don't use it, it bad using free space; "circle" - don't use it, not work now; "tetris" - The AI will be smart play on sim-city :)
 "Show message level": debug information level, filter to in-game messages from BOT. All log save to file.
 "Metal detect map": sometime BOT can have bug with map metal type detect (for same metal field). If have bug on some map, you can choose map type manual: -2 autodetect, -1 no metal map, 0 normal map, 1 metal field.
-"Smart tech up time": TEST, use more smart time for tech up.
+"Smart tech up": (TEST), use more smart time for tech up, 0 - fast check and not precission, 1 - smart check, 2 - were smart check and can be make lags.
 
