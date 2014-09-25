@@ -472,7 +472,7 @@ public void message(int player, String message) {
                 else {
                     owner.sendTextMsg("NO BEST LEVEL!", FieldBOT.MSG_DLG);
                 }
-                if (bestLvl!=null) {
+                if (bestLvl!=null) { // TODO if using smart tech up getAbsolutePrecissionTechUpTimeFor()?
                     //owner.sendTextMsg("For TLevel="+bestLvl, FieldBOT.MSG_DLG);                    
                     owner.sendTextMsg("isActualDoTechUp_fastCheck: "+owner.ecoStrategy.isActualDoTechUp_fastCheck(base, base.getBuildList(true), bestLvl), FieldBOT.MSG_DLG);
                     owner.sendTextMsg("-- getPrecissionActualTechUpTimeFor --", FieldBOT.MSG_DLG);                    
@@ -553,7 +553,12 @@ public void message(int player, String message) {
             owner.sendTextMsg("My name allias: "+Arrays.toString(MyNames), FieldBOT.MSG_DLG);
             owner.sendTextMsg("Have tech levels: "+owner.techLevels.keySet().toString(), FieldBOT.MSG_DLG);
             owner.sendTextMsg("Avg resources: "+owner.avgEco.toString(), FieldBOT.MSG_DLG);
-            owner.sendTextMsg("BOT CPU usage: "+owner.cpuTimer.toString(), FieldBOT.MSG_DLG);
+            
+            Runtime rt = Runtime.getRuntime();
+            long maxMemory = rt.maxMemory() /1024/1024;
+            long allocatedMemory = rt.totalMemory() /1024/1024;
+            long freeMemory = rt.freeMemory() /1024/1024;    
+            owner.sendTextMsg("BOT CPU usage: "+owner.cpuTimer.toString()+" memory (Mb): max="+maxMemory+" allocated="+allocatedMemory+" free="+freeMemory, FieldBOT.MSG_DLG);
             owner.sendTextMsg("Num of groups "+owner.smartGroups.size(), FieldBOT.MSG_DLG);
             for (AGroupManager sGroup:owner.smartGroups) {
                 owner.sendTextMsg(sGroup.toString(), FieldBOT.MSG_DLG);

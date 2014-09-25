@@ -282,8 +282,7 @@ public class TBase extends AGroupManager{
 
         if (ENABLE_CASHING) if (found) dropCashe();
         if (found) unitToReclime.remove(unit); // !!!! add documentation
-        // TODO проверить, вдруг в 2-х списках одновременно!!!!
-        owner.sendTextMsg(" call removeUnit result="+found+" num of removing list="+dbgNumR+" test contain (false-no error)="+contains(unit) , FieldBOT.MSG_DBG_SHORT );
+//        owner.sendTextMsg(" call removeUnit result="+found+" num of removing list="+dbgNumR+" test contain: error="+!contains(unit) , FieldBOT.MSG_DBG_SHORT );
         return found;
     }
     
@@ -398,7 +397,7 @@ public class TBase extends AGroupManager{
         return idleCons.isEmpty() && workingCons.isEmpty() && building.isEmpty() && army.isEmpty() && buildLst.isEmpty() && buildLst_noAssistable.isEmpty();
     }
     /**
-     * Возвращает перечень всех типов юнитов на базе
+     * Return all unit tupe def, where base have contain.
      * @param onlyWhatIdle только тех, кто не занят и не строится.
      * @return 
      */
@@ -441,7 +440,10 @@ public class TBase extends AGroupManager{
           currentUnitTypesSet=getContainUnitDefsList(false);
         //for (Unit builder:getAllUnits(false)) currentUnitTypesSet.add(builder.getDef());
         // TODO проверять isParalyzed()
-        for (UnitDef unitType:currentUnitTypesSet) 
+        for (UnitDef unitType:currentUnitTypesSet) {
+          if (unitType==null) {
+              owner.sendTextMsg("WARNING: unitType from currentUnitTypesSet (size="+currentUnitTypesSet.size()+") is NULL!", FieldBOT.MSG_ERR);
+          } else
           for (UnitDef canBuild:unitType.getBuildOptions())
           {
                 if (onlyWhatCanBuildOnBaseSurface) {
@@ -450,7 +452,7 @@ public class TBase extends AGroupManager{
                     lst.add(canBuild); // TODO addAll т.к. HashSet не позволит повторяющиеся. может быть быстреебудет...
                 }
           }
-        
+        }
         // Для проверки возможности построить с лабораторией в TA/RD
         if (owner.modSpecific.specificUnitEnabled)
             owner.modSpecific.removeUnitWhenCantBuildWithTeclLevel(lst);
@@ -871,11 +873,11 @@ public class TBase extends AGroupManager{
             if (!idleCons.isEmpty() && (owner.ecoStrategy.makeEco || !currentBaseTarget.isEmpty())) { // Построить
                 List<UnitDef> buildVariants = new ArrayList<UnitDef>(getBuildList(true));
                 if (buildVariants.isEmpty()) owner.sendTextMsg(" buildVariants = empty!!!!!!!!" , FieldBOT.MSG_DBG_SHORT); // DEBUG !!!!
-                
+                List<UnitDef> buildVariants_first=buildVariants;// remember for build workers before build special.
                 AIFloat3 buildPosOn=null; // принудительная позиция строительства. null - по умолчанию.
                 
                 boolean makeNow=false; // сделать сейчас-же! (даже отвлечь от других работ строителей)
-                boolean estPrinuditPrikaz=false;
+                boolean itisSpecialCommand=false;
                 if (!currentBaseTarget.isEmpty()) { // Выполнить принудительный приказ
                     List<UnitDef> canBuildPrikaz=new ArrayList<UnitDef>(currentBaseTarget.currentBuildLst);
                     canBuildPrikaz.retainAll(buildVariants); // было for (UnitDef def:currentBaseTarget.currentBuildLst) if (buildVariants.contains(def)) canBuildPrikaz.add(def);
@@ -887,11 +889,10 @@ public class TBase extends AGroupManager{
                         //owner.sendTextMsg("Test: before size canBuildNow= "+canBuildNow.size(), FieldBOT.MSG_ERR);
                         canBuildPrikaz.retainAll(canBuildNow);
                         //owner.sendTextMsg("Test: canBuildPrikaz size="+canBuildPrikaz.size(), FieldBOT.MSG_ERR);
-                        // TODO TEST !!!
                     }
                     if (!canBuildPrikaz.isEmpty()) { // если есть что выполнять сейчас
                         buildVariants=canBuildPrikaz;
-                        estPrinuditPrikaz=true;
+                        itisSpecialCommand=true;
                         makeNow=currentBaseTarget.commandNow;
                     } else { // если нет чего сейчас закладывать строить
                         if (currentBaseTarget.needPrecissionRes) {
@@ -903,8 +904,8 @@ public class TBase extends AGroupManager{
 
                 float buildPower=getBuildPower(false,true); // TODO use owner.ecoStrategy.useOptimisticResourceCalc
                 UnitDef makeIt = owner.ecoStrategy.getOptimalBuildingForNow( buildPower ,buildVariants, null); // чего делать, с учётом текущих нужд в ресурсах
-                if (makeIt==null && estPrinuditPrikaz && !buildVariants.isEmpty()) makeIt=buildVariants.get(0); // для исполнения принудительных приказов.
-                if (estPrinuditPrikaz && !buildVariants.isEmpty()) {
+                if (makeIt==null && itisSpecialCommand && !buildVariants.isEmpty()) makeIt=buildVariants.get(0); // для исполнения принудительных приказов.
+                if (itisSpecialCommand && !buildVariants.isEmpty()) {
                     // получить координаты, если есть
                     int pI=currentBaseTarget.currentBuildLst.indexOf(makeIt);
                     if (pI!=-1) {
@@ -913,6 +914,18 @@ public class TBase extends AGroupManager{
                 }
 
                 if (makeIt!=null) {
+                    
+                    // --- test, add noew workers
+                    if (itisSpecialCommand) { // if it is Tech up, and have too many resources and no have workers
+                        UnitDef worker2=owner.ecoStrategy.needBuildWorkerBefore(makeIt, buildPower, buildVariants_first, null);
+                        if (worker2!=null) {
+                            makeIt=worker2;
+                            buildPosOn=null;
+                        }
+                        // TODO TEST!!!!!!!!!
+                    }
+                    // ---
+                    
                     owner.sendTextMsg("build target:"+makeIt.getHumanName() , FieldBOT.MSG_DBG_SHORT);// DEBUG!
                     buildUnit(makeIt, makeNow, buildPosOn);
                 } else owner.sendTextMsg("build target NULL" , FieldBOT.MSG_DBG_SHORT);// DEBUG!

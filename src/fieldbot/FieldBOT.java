@@ -586,40 +586,44 @@ public boolean checkAndTechUp(boolean doEmidetly, boolean test) { // TODO ПЕР
         //float bestEcoK=0.0f;
         float bestBuilderF=TTechLevel.getMaxBuildPower(onBaseBuildLst);
         
-        bestLvl = ecoStrategy.selectLvl_bestForNow(TechLvls, base, bestEco, bestBuilderF, currentRes);
-        if (bestLvl!=null) {
-            if ( !doEmidetly ) {
-                boolean allowTechUp=true;
-                switch (useTechUpMode) {
-                    case 0:
+        bestLvl = null;
+        if ( !doEmidetly ) {
+            boolean allowTechUp=true;
+            switch (useTechUpMode) {
+                case 0:
+                    bestLvl = ecoStrategy.selectLvl_bestForNow(TechLvls, base, bestEco, bestBuilderF, currentRes);
+                    if (bestLvl!=null)
                         allowTechUp = ecoStrategy.isActualDoTechUp_fastCheck(base, onBaseBuildLst, bestLvl);
-                        break;
-                    case 1:
+                    else allowTechUp=false;
+                    break;
+                case 1:
+                    bestLvl = ecoStrategy.selectLvl_bestForNow(TechLvls, base, bestEco, bestBuilderF, currentRes);
+                    if (bestLvl!=null)
                         techUpTrigger = ecoStrategy.getPrecissionTechUpTimeFor(base, onBaseBuildLst, bestLvl );
-                         if (techUpTrigger!=null) {
-                             sendTextMsg("> "+techUpTrigger.toString(), FieldBOT.MSG_DBG_SHORT);
-                             allowTechUp=techUpTrigger.trigger();
-                             // TODO where remove it tech up was execute?
-                         } else {
-                             sendTextMsg("> tech up trigger is null!", FieldBOT.MSG_DBG_SHORT);
-                             allowTechUp=false;
-                         }
-                        break;
-                    case 2:
-                        //TODO bestLvl not using in this!
-                        techUpTrigger = ecoStrategy.getAbsolutePrecissionTechUpTimeFor(base, onBaseBuildLst, TechLvls);
-                         if (techUpTrigger!=null) {
-                             sendTextMsg("> "+techUpTrigger.toString(), FieldBOT.MSG_DBG_SHORT);
-                             allowTechUp=techUpTrigger.trigger();
-                             // TODO where remove it tech up was execute?
-                         } else {
-                             sendTextMsg("> tech up trigger is null!", FieldBOT.MSG_DBG_SHORT);
-                             allowTechUp=false;
-                         }
-                        break;
-                }
-                if (!allowTechUp) bestLvl=null;
+                    else techUpTrigger = null;
+                     if (techUpTrigger!=null) {
+                         sendTextMsg("> "+techUpTrigger.toString(), FieldBOT.MSG_DBG_SHORT);
+                         allowTechUp=techUpTrigger.trigger();
+                         // TODO where remove it tech up was execute?
+                     } else {
+                         sendTextMsg("> tech up trigger is null!", FieldBOT.MSG_DBG_SHORT);
+                         allowTechUp=false;
+                     }
+                    break;
+                case 2:
+                    ArrayList<TTechLevel> TechLvls_eco=ecoStrategy.selectLvl_whoBetterThat(TechLvls, bestEco, bestBuilderF); // TODO test, maybe 'selectLvl_whoBetterThat' remove realy better level.
+                    techUpTrigger = ecoStrategy.getAbsolutePrecissionTechUpTimeFor(base, onBaseBuildLst, TechLvls);
+                     if (techUpTrigger!=null) {
+                         sendTextMsg("> "+techUpTrigger.toString(), FieldBOT.MSG_DBG_SHORT);
+                         allowTechUp=techUpTrigger.trigger();
+                         bestLvl=techUpTrigger.level;
+                     } else {
+                         sendTextMsg("> tech up trigger is null!", FieldBOT.MSG_DBG_SHORT);
+                         allowTechUp=false;
+                     }
+                    break;
             }
+            if (!allowTechUp) bestLvl=null;
         }
 
         if (bestLvl!=null) { // Execute tech up

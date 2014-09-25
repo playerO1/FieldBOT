@@ -319,8 +319,18 @@ public class AdvECO {
         //TODO use TWarStrategy - have funstion normalizeVector.
         return coast;
     }
+    
+    private float builderCoast[]=null;
+    private float builderPower=1;
     public float getBuildPowerCoast(float buildPower) {
-        return buildPower/4500; // !!! TODO BuildPowerCoast
+        if (builderCoast==null) return buildPower/4500; // !!! TODO BuildPowerCoast
+        float bCoast= getResourceCoast(builderCoast) / builderPower;
+        return bCoast/1500;
+    }
+    public void setPuildPowerCoast(UnitDef exampleBuilder) {  // TODO use it
+        builderPower = exampleBuilder.getBuildSpeed();
+        builderCoast = new float[resName.length];
+        for (int i=0; i<resName.length; i++) builderCoast[i]=exampleBuilder.getCost(resName[i]);
     }
     
     /**
@@ -334,8 +344,8 @@ public class AdvECO {
         // TODO using energy conversion K - metal maker.
         float[][] currIncome=getAVGResourceToArr();
         for (int i=0; i<resName.length; i++) {
-            resK[i] = 1.0f + 1.0f / (2.0f + currIncome[R_Income][i]) // !
-                    + (1.0f-currIncome[R_Current][i]/currIncome[R_Storage][i]);
+            resK[i] = 0.0001f + 2.0f / (2.0f + currIncome[R_Income][i]) // !
+                    + 1.5f*(1.0f-currIncome[R_Current][i]/currIncome[R_Storage][i]);
             coast+=(res[R_Current][i] + Math.max(res[R_Income][i]-res[R_Usage][i], 0.0) * 30) * resK[i]; // !!!
         }
         //TODO use TWarStrategy - have funstion normalizeVector.

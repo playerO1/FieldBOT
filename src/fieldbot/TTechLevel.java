@@ -96,18 +96,18 @@ public class TTechLevel {
         this.botClb=botClb;
         
         byMorph=null; morphCMD=null; morphTo=null; // это не morph.
-        
-        // 1. Базовые строители уровня
+        !!! NOTA????
+        // 1. Base level builder
         needBaseBuilders=new ArrayList<UnitDef>();
         needBaseBuilders.add(baseUnit);
         
         HashSet<Integer> tmpTechLevels=new HashSet<Integer>();
         tmpTechLevels.add( baseUnit.getTechLevel() );
         
-        // 2. Ветка до экономики
+        // 2. Way to economic
         
         
-        // 2. Список того, что даёт этот уровень нового
+        // 2. List of new units
         HashSet<UnitDef> newUnitDefs=new HashSet<UnitDef>();
         newUnitDefs.addAll(baseUnit.getBuildOptions());//!!! unitCanBuild.clone();
         newUnitDefs.removeAll(unitOldBuild);
@@ -115,7 +115,7 @@ public class TTechLevel {
         
         if (onBase!=null) removeWhereCantBuildOnBaseSurface(newUnitDefs, onBase); // только то, что можно строить на поверхности базы.
         
-        // учесть особенности мода: если строится только с лабораторией...
+        // Check mod specific: research center on TA, NOTA
         if (botClb.modSpecific.specificUnitEnabled)
             botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newUnitDefs, tmpTechLevels);// TODO Test it! Проверка на возможность зависимости от тех. уровней.
         
@@ -152,7 +152,6 @@ public class TTechLevel {
         }
         
         levelNewDef=new ArrayList<UnitDef>(newUnitDefs);
-        //levelNewDef.addAll(newUnitDefs); //!!!!!!!!!!!!!!!!!!!!!!!
         
         for (UnitDef def:levelNewDef) tmpTechLevels.add( def.getTechLevel() );
         // Перечень всех тех. уровней
