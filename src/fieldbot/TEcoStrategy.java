@@ -142,19 +142,17 @@ public class TEcoStrategy {
                 float t=getRashotBuildTime(ud, currentRes, buildPower, USE_STORAGE_PERCENT);
                 float k=r/t; // make resource per build time
                 if (t>MAX_BUILD_TIME_FOR_GENERATORRES) k=k/(10+t); // do not select long time building.
-                // TODO УЧЕСТЬ НЕХВАТКУ РАЗМЕРА БАЗЫ, стоимость полщади!!!
-                // !!!!!!!!!!!!!!!!!
+                // square coast. TODO more better (at the beginning - 0%, at the end - 70%)
                 if (!ModSpecification.isRealyAbleToMove(ud)) k = 0.8f*k + 0.2f*k/(1+ud.getXSize()*ud.getZSize());
-                // !!!!!!!!!!!!!!!!!
 
-                // Учёт выгодности Metal Makers
+                // better Metal Makers factor
                 float makerK=1.0f;
                 if (owner.modSpecific.exist_MetalMaker_lua)
                  if (owner.modSpecific.isMetalMaker(ud)) // TODO test it
                 {
                     makerK=owner.modSpecific.getConversionKMetalMaker(ud);
                 }
-                // учёт выгодности Metal Makers в Evo RTS (там коэффициэнт по другим функциям считается)
+                // better Metal Makers in Evo RTS (getting convertion factor from other function)
                 if (owner.modSpecific.exist_MetalMaker_native)
                  if (owner.modSpecific.isNativeMetalMaker(ud)) // TODO test it
                 {
@@ -167,7 +165,7 @@ public class TEcoStrategy {
                 if (k>0.0f) { // if this can product some need resource
                     if (minT>t || minT==-1.0f) minT=t; // для статистики
                     if (maxT<t || maxT==-1.0f) maxT=t;
-                    // если разница во времени большая, то зависимость НЕ ЛИНЕЙНАЯ!!!!!!!!!!!!!!!
+                    // если разница во времени большая, то зависимость НЕ ЛИНЕЙНАЯ!
                     // TODO время вычислять не учитывая накопленные запасы, или их часть.
 
                     if (k>=maxK) {
@@ -200,13 +198,39 @@ public class TEcoStrategy {
                if (r>0) {
                 int maxItr=Math.min(150, Math.round(currentT/minT)); // this using constant value!
 
+                // --- from linear code fragment
                 float itrInfo[]=getDynamicRashotBuildInfo(ud, currentRes, buildPower, maxItr, currentT);
                 float t=itrInfo[0];
                 float n=itrInfo[1];
-                r = r * n; // r * кол-во
+                r = r * n; // r * count
+
                 float k=r/t; // отношение выработки ресурса к скорости постройки
 //                owner.sendTextMsg(" >item (itr): "+ud.getName()+" k="+k+"=r*n/t t="+t+" n="+n+" r="+r , FieldBOT.MSG_DBG_ALL);
+
                 if (k>0.0f) { // только для тех, кто производит хоть как-то заданный ресурс.
+
+                if (t>MAX_BUILD_TIME_FOR_GENERATORRES*n) k=k/(10+t/n); // do not select long time building.
+                // square coast
+                if (!ModSpecification.isRealyAbleToMove(ud)) k = 0.8f*k + 0.2f*k/(1+ud.getXSize()*ud.getZSize());
+
+                // better Metal Makers factor
+                float makerK=1.0f;
+                if (owner.modSpecific.exist_MetalMaker_lua)
+                 if (owner.modSpecific.isMetalMaker(ud))
+                {
+                    makerK=owner.modSpecific.getConversionKMetalMaker(ud);
+                }
+                // better Metal Makers in Evo RTS
+                if (owner.modSpecific.exist_MetalMaker_native)
+                 if (owner.modSpecific.isNativeMetalMaker(ud))
+                {
+                    makerK=owner.modSpecific.getNativeConversionKMetalMaker(ud);
+                }
+                if (makerK!=1.0f) k = (0.2f*k)+(0.8f * k * makerK );
+                // --- end from linear code fragment
+                
+    //     owner.sendTextMsg(" >item "+ud.getName()+" k="+k+" =r/t, r="+r+" t="+t , FieldBOT.MSG_DBG_ALL);
+
                     //if (minT>t || minT==-1.0f) minT=t;
                     //if (maxT<t || maxT==-1.0f) maxT=t;
                     if (k>=maxK) {
@@ -409,7 +433,7 @@ public class TEcoStrategy {
                 timeLost-=t;
                 break; // !!
             }
-            buildPower += deltaBPower; // учесть строительство, TODO test with float.INFINITY!!!
+            buildPower += deltaBPower; // check worker build power
             //owner.sendTextMsg("dbg: build:"+build.getName()+" t<MaxT: t="+t+" maxTime="+maxTime, FieldBOT.MSG_DBG_ALL);
             for (int r=0;r<numRes;r++) {
                 float rNew = t * (curRes[AdvECO.R_Income][r]-curRes[AdvECO.R_Usage][r]);
@@ -530,9 +554,7 @@ public class TEcoStrategy {
             
             float optimalBPower=getOptimalBuildPowerFor(bestUnit, currentRes, 0.50f);
 
-            // TODO adv worker check: make fast, test
-            //Float.POSITIVE_INFINITY
-            UnitDef bestUnit_B = getBestGeneratorRes(bestUnitR, buildVariants, 999999999.9f, currentRes); // !!!!!!!
+            UnitDef bestUnit_B = getBestGeneratorRes(bestUnitR, buildVariants, Float.POSITIVE_INFINITY, currentRes); // !!!!!!!
             if (bestUnit_B!=null && bestUnit!=bestUnit_B) {
                 float optimalBPower_B = getOptimalBuildPowerFor(bestUnit_B, currentRes, 0.25f);
                 optimalBPower = Math.max(optimalBPower,optimalBPower_B);
@@ -883,6 +905,7 @@ private boolean techUpVirtualModeling(ArrayList<UnitDef> currentLevelDefs,ArrayL
         
 owner.sendTextMsg("i="+i+", t1="+t1+" ecoState="+ecoState.toString(), FieldBOT.MSG_DBG_ALL);
         // -- TechUP --
+//TODO check do need build worker before: at TBase it have realized now.
         float t2=toLevel.getTimeForBuildTechLevel(ecoState.assistBuildPower, ecoState.resources);
         float tUpRes[]=toLevel.getNeedRes();
         for (int r=0;r<tUpRes.length;r++) {
