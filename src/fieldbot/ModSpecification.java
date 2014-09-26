@@ -131,7 +131,7 @@ public class ModSpecification {
         // NOTA
         if (modName.equals("NOTA")) {
             treeMap_Eco.put("armmakr", new float[] { 0.6f, -60f } ); // Metal Maker (T1)
-            //TODO ecoName[6]="armmmkr"; eco_res[6][E]=-800f; eco_res[6][M]=8.0f?; // Moho Metal Maker
+            treeMap_Eco.put("armmmkr", new float[] { 8.0f, -800f } ); // Moho Metal Maker (T2)
             treeMap_Eco.put("cormakr", new float[] { 0.6f, -60f } ); // Metal Maker (T1)
             treeMap_Eco.put("cormmkr", new float[] { 8.0f, -800f } ); // Moho Metal Maker (T2)
         }
@@ -145,9 +145,9 @@ public class ModSpecification {
         // ZeroK
         if (modName.equals("ZK")) {
             treeMap_Eco.put("cormex", new float[] { 2.0f, 0.0f } ); // Metal Extractor
-            // TODO !!!!!!!!!!!!!!!!!!! extractor metal multiplier = sqrt(1+energy/4)) 
+            // TODO Zero-K extractor metal multiplier = sqrt(1+energy/4)) 
             luaMetalExtractor=owner.clb.getUnitDefByName("cormex");
-            firstFactoryIsFree=true; // TODO test
+            firstFactoryIsFree=true;
         } else {
             luaMetalExtractor=null;
             firstFactoryIsFree=false;
@@ -415,7 +415,6 @@ protected static final int CMD_MORPH = 31410;
         
 //        owner.sendTextMsg("MORPHING CMD ID="+morphCmd.getId()+" supported ID="+morphCmd.getSupportedCommandId(), FieldBOT.MSG_DBG_ALL);
         UnitDef def=allUnitDefs.get(mUnitDefID-1);
-        // FIXME получет не то!
         if (def.getUnitDefId()==mUnitDefID) {
             owner.sendTextMsg("Def detect №"+mUnitDefID , FieldBOT.MSG_DBG_SHORT);
 //             for (int i=-4;i<4;i++) owner.sendTextMsg("Def №"+(mUnitDefID+i)+" is "+allUnitDefs.get(mUnitDefID+i-1).getHumanName() , FieldBOT.MSG_DBG_SHORT); // DEBUG!!!
@@ -550,7 +549,8 @@ protected static final int CMD_MORPH = 31410;
         // for assist, constructor or nano tower
         boolean isAble = def.isAbleToAssist() && !isStationarFactory(def);
         if (!isAble) return false;
-        if (def.getHumanName().contains("Air Repair")) return false; // for Air Repair platform - usualy they can not assist, but they have assist option.
+        String hName=def.getHumanName();
+        if (hName.contains("Air Repair") || hName.contains("Air Support Pad")) return false; // for Air Repair platform - usualy they can not assist, but they have assist option.
         return true;
     }
     

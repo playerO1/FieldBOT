@@ -96,7 +96,7 @@ public class TTechLevel {
         this.botClb=botClb;
         
         byMorph=null; morphCMD=null; morphTo=null; // это не morph.
-        !!! NOTA????
+        
         // 1. Base level builder
         needBaseBuilders=new ArrayList<UnitDef>();
         needBaseBuilders.add(baseUnit);
@@ -124,38 +124,41 @@ public class TTechLevel {
             float lastEcoK=0; //calcEcoK(unitOldBuild,botClb);
             UnitDef bestWorker=null;
             
-            // + рабочего
+            // + worker
+            //FIXME NOTA select builder T2 for mexes.
             for (UnitDef worker:newUnitDefs) if (worker.isBuilder()) {
-                float k=calcEcoK(worker.getBuildOptions(),botClb);
+                HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(worker.getBuildOptions());
+                newWorkerUnitDefs.removeAll(unitOldBuild);
+                newWorkerUnitDefs.removeAll(newUnitDefs); // TODO test it
+                float k=calcEcoK(newWorkerUnitDefs,botClb);
                 if (k>lastEcoK) {
                     lastEcoK=k;
                     bestWorker=worker;
                 }
             }
             if (bestWorker!=null) {
-                HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>();
-                newWorkerUnitDefs.addAll(bestWorker.getBuildOptions());//!!! unitCanBuild.clone();
+                HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(bestWorker.getBuildOptions());
                 newWorkerUnitDefs.removeAll(unitOldBuild);
 
                 tmpTechLevels.add( bestWorker.getTechLevel() ); // было techLevelNumber=Math.max(techLevelNumber,bestWorker.getTechLevel());
 
                 if (botClb.modSpecific.specificUnitEnabled)
-                    botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newUnitDefs, tmpTechLevels);// TODO Test it! Проверка на возможность зависимости от тех. уровней.
+                    botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, tmpTechLevels);
                 
                 if (onBase!=null) removeWhereCantBuildOnBaseSurface(newWorkerUnitDefs, onBase); // только то, что можно строить на поверхности базы.
-                //newWorkerUnitDefs.removeAll(newUnitDefs);
-                //if (newWorkerUnitDefs.isEmpty()) !!!!! 
-                
-                newUnitDefs.addAll(newWorkerUnitDefs);
-                needBaseBuilders.add(bestWorker);
+                newWorkerUnitDefs.removeAll(newUnitDefs);
+                if (!newWorkerUnitDefs.isEmpty()) { // TODO other workers check too
+                    newUnitDefs.addAll(newWorkerUnitDefs);
+                    needBaseBuilders.add(bestWorker);
+                }
             }
         }
         
         levelNewDef=new ArrayList<UnitDef>(newUnitDefs);
         
         for (UnitDef def:levelNewDef) tmpTechLevels.add( def.getTechLevel() );
-        // Перечень всех тех. уровней
-        techLevelNumber = new int[tmpTechLevels.size()];
+        
+        techLevelNumber = new int[tmpTechLevels.size()]; // List of all tech levels
         int i=0;
         for (Integer iLvl:tmpTechLevels) {
             techLevelNumber[i]=iLvl.intValue();
@@ -172,17 +175,17 @@ public class TTechLevel {
     }
     
     /**
-     * Подсчитывает максимальную производительность экономических юнитов.
-     * @param ecoUnits список юнитов для подсчёта
-     * @param botClb для вызова функции getUnitResoureProduct()
-     * @return массив из ресурсов
+     * Max resource product per better units
+     * @param ecoUnits list of units for select
+     * @param botClb for call getUnitResoureProduct()
+     * @return max resources array
      */
     public static float[] getMaxResProduct(Collection<UnitDef> ecoUnits,FieldBOT botClb)
     {
         float[] maxRes=new float[botClb.avgEco.resName.length];
         Arrays.fill(maxRes, 0.0f);
         for (UnitDef def:ecoUnits) 
-          for (int i=0;i<maxRes.length-1;i++)
+          for (int i=0;i<maxRes.length;i++)
           {
             float r=botClb.getUnitResoureProduct(def, botClb.avgEco.resName[i]);
             if (r>maxRes[i]) maxRes[i]=r;
@@ -191,7 +194,7 @@ public class TTechLevel {
     }
     
     /**
-     * Подсчитывает максимальную силу строителей.
+     * Return max build power from better builder
      * @param ecoUnits
      * @return 
      */
@@ -201,7 +204,7 @@ public class TTechLevel {
         for (UnitDef def:ecoUnits) 
         {
           float r;
-          if (def.isBuilder() || def.isAbleToAssist()) r=def.getBuildSpeed(); // TODO assistable or factory ?
+          if (ModSpecification.isRealyAbleToAssist(def)) r=def.getBuildSpeed();
           else r=0;
           if (r>maxB) maxB= r;
         }
@@ -300,17 +303,19 @@ public class TTechLevel {
             float lastEcoK=0; //calcEcoK(unitOldBuild,botClb);
             UnitDef bestWorker=null;
             
-            // + рабочего
+            // + worker
             for (UnitDef worker:newUnitDefs) if (worker.isBuilder()) {
-                float k=calcEcoK(worker.getBuildOptions(),botClb);
+                HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(worker.getBuildOptions());
+                newWorkerUnitDefs.removeAll(unitOldBuild);
+                newWorkerUnitDefs.removeAll(newUnitDefs); // TODO test it
+                float k=calcEcoK(newWorkerUnitDefs,botClb);
                 if (k>lastEcoK) {
                     lastEcoK=k;
                     bestWorker=worker;
                 }
             }
             if (bestWorker!=null) {
-                HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>();
-                newWorkerUnitDefs.addAll(bestWorker.getBuildOptions());//!!! unitCanBuild.clone();
+                HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(bestWorker.getBuildOptions());
                 newWorkerUnitDefs.removeAll(unitOldBuild);
 
                 // было techLevelNumber=Math.max(techLevelNumber,bestWorker.getTechLevel());
@@ -321,11 +326,11 @@ public class TTechLevel {
                 
                 if (onBase!=null) removeWhereCantBuildOnBaseSurface(newWorkerUnitDefs, onBase); // только то, что можно строить на поверхности базы.
                 
-                //newWorkerUnitDefs.removeAll(newUnitDefs);
-                //if (newWorkerUnitDefs.isEmpty()) !!!!! 
-                
-                newUnitDefs.addAll(newWorkerUnitDefs);
-                needBaseBuilders.add(bestWorker);
+                newWorkerUnitDefs.removeAll(newUnitDefs);
+                if (!newWorkerUnitDefs.isEmpty()) {
+                    newUnitDefs.addAll(newWorkerUnitDefs);
+                    needBaseBuilders.add(bestWorker);
+                }
             }
         }
         
@@ -398,7 +403,7 @@ public class TTechLevel {
     }
     /**
      * Часть времени, НЕ ускоряемого другими строителями.
-     * @return уже посчитанное в секундах!
+     * @return time in second.
      */
     public float getNOAssistWorkTime()  {
         float needWork=0.0f;
@@ -415,23 +420,22 @@ public class TTechLevel {
     }
     
     /**
-     * Вычисл. значение экон.
-     * @param unitLst список юнитов для анализа экон. отдачи
-     * @return чем больше тем лучше
+     * Return max economic product values as ResourceCoast
+     * @param unitLst economic units (all units)
+     * @param botClb for call getUnitResoureProduct
+     * @return botClb.avgEco.getResourceCoast(ecoR);
      */
     protected static float calcEcoK(Collection<UnitDef> unitLst,FieldBOT botClb) {
-        float maxEcoR=0.0f;
-        // вычисление прошлых значений экономической отдачи.
+        float ecoR[]=new float[botClb.avgEco.resName.length];
         for (UnitDef def:unitLst) {
             float R=0.0f;
-            for (Resource res:botClb.avgEco.resName) {
+            for (int i=0;i<botClb.avgEco.resName.length;i++) {
+                Resource res=botClb.avgEco.resName[i];
                 float r=botClb.getUnitResoureProduct(def, res);
-                if (r>0.0f) R+=r;
+                if (r>ecoR[i]) ecoR[i]=r;
             }
-            if (R>maxEcoR) maxEcoR=R;
         }
-        // паксимум из ресурсов.
-        return maxEcoR;
+        return botClb.avgEco.getResourceCoast(ecoR);
     }
 
     /**

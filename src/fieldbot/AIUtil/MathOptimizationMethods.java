@@ -64,11 +64,11 @@ public static double simplexDouble(double[][] A, double[] b, double[] c, double[
 
 /**
  * Maybe fast that simplex, but non precission, can not choose more that 1 variant.
- * @param A ресурсы на выпуск всех товаров (юнитов) [номер юнита][номер ресурса] ПЕРЕПУТАНЫ!
- * @param b предел ресурсов (ограничение)
- * @param c выгода
- * @param x out кол-во выпуска (план выпуска, ответ)
- * @return суммарная выгода плана x
+ * @param A resource to build unit [номер юнита][номер ресурса] ПЕРЕПУТАНЫ! TODO check m,n.
+ * @param b resource limit (depends)
+ * @param c profit from unit
+ * @param x out, plan for product (unit count)
+ * @return the profit from x plane
  */
 public static double justOneMaximize(double[][] A, double[] b, double[] c, double[] x) {
     int bestPlanI=-1; // best unit ID on list
@@ -81,7 +81,7 @@ public static double justOneMaximize(double[][] A, double[] b, double[] c, doubl
             N=b[j]/A[j][i];
             minN=Math.min(minN, N);
         }
-        minN=Math.round(minN); // round unit count. TODO Test!
+        minN=Math.round(minN); // round unit count.
         double profit=minN*c[i];
         if (profit>maxF) {
             maxF=profit;

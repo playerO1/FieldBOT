@@ -236,7 +236,6 @@ public class TBaseTarget {
     }
     
     public void unitDestroyed(Unit unit, Unit attacker) {
-        // TODO
         int p=inBuildingBuildLst.indexOf(unit);
         if (p!=-1) { // if destroy when behin building
             add(unit.getDef(), 1);

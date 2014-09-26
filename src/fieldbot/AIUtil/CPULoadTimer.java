@@ -59,7 +59,7 @@ public class CPULoadTimer {
     	if (timerStartAt!=null) {
     		timerGameTime.setTime( timerGameTime.getTime() + (timerStopAt.getTime()-timerStartAt.getTime()) ); // ... long - 9,223,372,036,854,775,807 много лет работать будет :)
     		timerStartAt=null;
-    	} // TODO else ... иначе ничего не прибавляется?
+    	} // else ?
     }
     
     /**

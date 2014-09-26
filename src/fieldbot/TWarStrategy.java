@@ -138,7 +138,7 @@ public class TWarStrategy {
                  //TODO дополнительный параметр по оружию: насколько "массово" должно быть оружие - против толпы мелких, например.
                     //weapon.getDamage().getImpulseBoost();
               owner.sendTextMsg(" Weapon "+weapon.getName()+" damage="+dmg+" x multipler="+dMultipler+" (isSelfExplode="+weapon.isSelfExplode()+" isNoSelfDamage="+weapon.isNoSelfDamage()+" isParalyzer="+weapon.isParalyzer()+" isShield="+weapon.isShield()+" isAbleToAttackGround="+weapon.isAbleToAttackGround()+");" ,FieldBOT.MSG_DBG_ALL);
-                damage += dmg*dMultipler; // TODO Test
+                damage += dmg*dMultipler;
             } else owner.sendTextMsg(" Weapon "+weapon.getName()+" isSelfExplode="+weapon.isSelfExplode()+", isNoSelfDamage="+weapon.isNoSelfDamage()+" isParalyzer="+weapon.isParalyzer()+" isShield="+weapon.isShield()+" isAbleToAttackGround="+weapon.isAbleToAttackGround()+";" ,FieldBOT.MSG_DBG_ALL);
         }
         if (unit.isAbleToKamikaze()) {
@@ -239,14 +239,10 @@ public class TWarStrategy {
         
         noramilzeVector(kachestva); // normalize vector: from 0 up to 1.0.
         
-// x * 1/max_k[i];// !!!! нормализация значений (далее)
-        
         // 2.2 Назначение таблицы коэффициентов и матрицы стоимости
         
         // Определение кто кого может строить и кому помогать.
         // TODO check: builder realy can build it
-        //!!!!
-        // TODO 2.2 !!
         
         // Resource limit borders.
         int numRes=owner.avgEco.resName.length;
@@ -261,7 +257,7 @@ public class TWarStrategy {
         double M_k[]=new double[buildVars.size()];
         double M_res[][]=new double[numAllRes][buildVars.size()];
         
-        double K_PRECISSION=1.0e+4; // !!! TODO пока это для лучшего значения!!!! если расчёты не в плавающих а в целых числах.
+        double K_PRECISSION=1.0e+4; // for precission multipler. Or using precission on simplex method.
         if (USE_MULTIPLY) K_PRECISSION*=1e+6;// !!!
         
         for (int i=0; i<buildVars.size(); i++) { //!!
@@ -273,7 +269,7 @@ public class TWarStrategy {
             double k; // + or *  , 0 or 1  ? choose best formul!
             if (USE_MULTIPLY) k=1; else k=0;
             for (int j=0;j<NUM_P;j++) {
-                double x = unitK[j]/max_k[j] * kachestva[j];
+                double x = unitK[j]/max_k[j] * kachestva[j]; // normalize values
                 if (USE_MULTIPLY) { // * or +
                     k *= (1.0 + x); // !!!
                 } else k += x;
@@ -293,8 +289,8 @@ public class TWarStrategy {
         for (int i=0;i<numRes;i++) V_Res[i]=tmpEndTRes[i];
 
         V_Res[posTimeRes]=onBase.getBuildPower(false, false) * timeLimit;// TODO OnlyFactory for NO ASSISTABLE (NOTA) !!!
-        // TODO разные заводы и их кол-во.
-        // особенно хоошо для NOTA
+        // TODO different factoru and factoru count
+        // it will be best for NOTA
         
         if (posCountLimit>=0) V_Res[posCountLimit]=unitLimit +0.05; // Ограничение на колличество, +0.05 на погрешность вычислений!!!
          

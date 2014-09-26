@@ -124,7 +124,7 @@ public abstract class ABasePlaning {
     
     private AIFloat3 findFreeGeoPointAt(UnitDef unitType, AIFloat3 buildCenter,float r)
     {
-        if (buildCenter.equals(owner.center)) // TODO && r==owner.radius
+        if (buildCenter.equals(owner.center) && r==owner.radius)
         {// cahse
             if (cashe_GeoPoints==null) {
                 cashe_GeoPoints=new ArrayList<AIFloat3>();
@@ -141,15 +141,15 @@ public abstract class ABasePlaning {
     }
     private AIFloat3 findFreeMetalPointAt(UnitDef unitType, AIFloat3 buildCenter,float r)
     {
-        if (buildCenter.equals(owner.center)) // TODO && r==owner.radius
+        if (buildCenter.equals(owner.center) && r==owner.radius)
         {// cashe
             if (cashe_MetalPoints==null) cashe_MetalPoints=owner.owner.getMetalSpotsInRadius(buildCenter, r);
             if (cashe_MetalPoints!=null) return findNear_noClosePoint(unitType, buildCenter, r, cashe_MetalPoints);
-            else return null;// !!! TODO ?
+            else return null;
         } else { // no cashe
             ArrayList<AIFloat3> MetalPoints=owner.owner.getMetalSpotsInRadius(buildCenter, r);
             if (MetalPoints!=null) return findNear_noClosePoint(unitType, buildCenter, r, MetalPoints);
-            else return null;// !!! TODO ?
+            else return null;
         }
     }
     
@@ -192,11 +192,11 @@ public abstract class ABasePlaning {
        // double maxDR = owner.radius;//unitType.getRadius();
         
         
-        double deltaR=maxR-minR;
-        
         // point depend building
         if (unitType.isNeedGeo()) return findFreeGeoPointAt(unitType, buildCenter, (float)maxR);
         if (needMetalSpots) return findFreeMetalPointAt(unitType, buildCenter, (float)maxR);
+
+        double deltaR=maxR-minR;
         
       do {
         buildPos = new AIFloat3(buildCenter);
@@ -256,26 +256,14 @@ public abstract class ABasePlaning {
         }
 
         // быстро проверить в центре
-//        if (needMetalSpots) {
-//            AIFloat3 metalP=owner.owner.clb.getMap().getResourceMapSpotsNearest(resMetal, owner.center);
-//            float l=MathPoints.getDistanceBetweenFlat(metalP, owner.center);
-//            if (l<owner.radius ) { //|| l<extrRadius) { // !!!!!
-//                if (map.isPossibleToBuildAt(unitType, metalP, buildFacing)) return true;
-//            } else {
-//                // Если намного превышает радиус базы то НЕ СТРОИТЬ!!!
-//                if (l>owner.radius *1.4f) return false;
-//            }
-//        } else {
-            if (cashe_LastCanBuildPoint!=null) {
-                if (map.isPossibleToBuildAt(unitType, cashe_LastCanBuildPoint, buildFacing)) return true;
-            } else {
-                if (map.isPossibleToBuildAt(unitType, owner.center, buildFacing)) {
-                    cashe_LastCanBuildPoint=new AIFloat3(owner.center);
-                    return true;
-                }
+        if (cashe_LastCanBuildPoint!=null) {
+            if (map.isPossibleToBuildAt(unitType, cashe_LastCanBuildPoint, buildFacing)) return true;
+        } else {
+            if (map.isPossibleToBuildAt(unitType, owner.center, buildFacing)) {
+                cashe_LastCanBuildPoint=new AIFloat3(owner.center);
+                return true;
             }
-//        }
-        // FIXME если центр застроен возвращает FALSE !!!!! иногда
+        }
         
         // или обход по спирали до края базы...
         final int NUM_APPROX_POINTS=25; // число пробных точек

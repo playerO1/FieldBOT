@@ -334,7 +334,7 @@ public class TEcoStrategy {
      */
     protected float getRashotBuildTime(UnitDef build,float[][] currentRes,float buildSpeed, float resCurrentMultipler) {
         final Resource resName[]=owner.avgEco.resName; // !!! test
-        float T=0.0f;// TODO test with MINIMAL_BUILD_TIME;
+        float T=MINIMAL_BUILD_TIME;// TODO test with MINIMAL_BUILD_TIME;
         // TODO сделать boolean mojetVliatNaPosleduyshie=false;... если критич. ресурсы не меняются, то нет и зависимость линейна.
         // TODO use getWaitTimeForProductResource. часть кода отсюда уже скопированно в getWaitTimeForProductResource()
         for (int rN=0; rN<currentRes[resName.length].length;rN++) {
@@ -359,7 +359,7 @@ public class TEcoStrategy {
         }
         
         if (buildSpeed>0.0f && buildSpeed!=Float.POSITIVE_INFINITY) T=Math.max(T, build.getBuildTime()/buildSpeed);
-        T += MINIMAL_BUILD_TIME;  // "fuzzy" limit: nothink faster that 2 second can not build.
+        T += 1;  // "fuzzy" limit: nothink faster that 2 second can not build.
         return T;
     }
     
@@ -409,7 +409,6 @@ public class TEcoStrategy {
                 timeLost-=t;
                 break; // !!
             }
-            //TODO TEST!!!!
             buildPower += deltaBPower; // учесть строительство, TODO test with float.INFINITY!!!
             //owner.sendTextMsg("dbg: build:"+build.getName()+" t<MaxT: t="+t+" maxTime="+maxTime, FieldBOT.MSG_DBG_ALL);
             for (int r=0;r<numRes;r++) {
@@ -478,36 +477,50 @@ public class TEcoStrategy {
         float avg_stor_E=currentRes[AdvECO.R_Storage][1];//owner.avgEco.getAvgStorage(resE);
         float avg_delta_E=currentRes[AdvECO.R_Income][1]-currentRes[AdvECO.R_Usage][1];//owner.avgEco.getAvgIncome(resE)-owner.avgEco.getAvgUsage(resE);
         
-        // Экономика
+        // Economic - select need resources to do resource generators
         final float EconvertK=Math.min(owner.modSpecific.metal_maker_workZone*1.19f, 0.97f);
         
         if (owner.isMetalFieldMap==FieldBOT.IS_NO_METAL || owner.isMetalFieldMap==FieldBOT.IS_NORMAL_METAL)
         {
             if ( avg_cur_E/avg_stor_E <= EconvertK || (avg_delta_E<1 && avg_cur_E/avg_stor_E <= 0.87)) { // FIXME !!!!!!!!!
-//                owner.sendTextMsg(" cel->electrostanciya" , FieldBOT.MSG_DBG_SHORT);
+//                owner.sendTextMsg(" cel->electrostanciya1" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resE;
             }
             if ( avg_cur_M/avg_stor_M < 0.5  &&  avg_cur_E/avg_stor_E >= Math.min(EconvertK*1.07,0.97) && avg_delta_E>1) {
-//                owner.sendTextMsg(" cel->metal" , FieldBOT.MSG_DBG_SHORT);
+//                owner.sendTextMsg(" cel->metal2" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
-            if (bestUnit==null) bestUnitR = resM;
-            if ( avg_cur_M/avg_stor_M>0.9 && avg_delta_M>0) bestUnitR = resE;
+            if (bestUnitR==null) {
+//                owner.sendTextMsg(" cel->metal3" , FieldBOT.MSG_DBG_SHORT);
+                bestUnitR = resM;
+            }
+            if ( avg_cur_M/avg_stor_M>0.9 && avg_delta_M>0) {
+//                owner.sendTextMsg(" cel->electrostanciya4" , FieldBOT.MSG_DBG_SHORT);
+                bestUnitR = resE;
+            }
         }
         else if (owner.isMetalFieldMap==FieldBOT.IS_METAL_FIELD)
         {
             if ( avg_cur_E/avg_stor_E <= 0.50 || avg_delta_E*2<avg_delta_M) {
-//                owner.sendTextMsg(" cel->electrostanciya" , FieldBOT.MSG_DBG_SHORT);
+//                owner.sendTextMsg(" cel->electrostanciya1-" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resE;
             }
             if ( avg_cur_M/avg_stor_M < 0.50  || avg_delta_M*2<avg_delta_E) {
-//                owner.sendTextMsg(" cel->metal" , FieldBOT.MSG_DBG_SHORT);
+//                owner.sendTextMsg(" cel->metal2-" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
-            if (bestUnit==null) bestUnitR = resE;
-            if ( avg_cur_M/avg_stor_M>0.9 && avg_delta_M>0) bestUnitR = resE;
-        } //TODO else log.error!
+            if (bestUnitR==null) {
+//                owner.sendTextMsg(" cel->electrostanciya3-" , FieldBOT.MSG_DBG_SHORT);
+                bestUnitR = resE;
+            }
+            if ( avg_cur_M/avg_stor_M>0.9 && avg_delta_M>0) {
+//                owner.sendTextMsg(" cel->electrostanciya4-" , FieldBOT.MSG_DBG_SHORT);
+                bestUnitR = resE;
+            }
+        } else owner.sendTextMsg(" uncknown map resource type = "+owner.isMetalFieldMap , FieldBOT.MSG_DBG_SHORT); // or FieldBOT.MSG_ERR?
         
+//        owner.sendTextMsg(" dbg, avg_cur_M="+avg_cur_M+", avg_stor_M="+avg_stor_M+", avg_delta_M="+avg_delta_M+"; avg_cur_E="+avg_cur_E+", avg_stor_E="+avg_stor_E+", avg_delta_E="+avg_delta_E+" ; EconvertK="+EconvertK, FieldBOT.MSG_DBG_ALL);
+//        owner.sendTextMsg(" do call getBestGeneratorRes for resource:"+bestUnitR.getName(), FieldBOT.MSG_DBG_ALL);
         bestUnit = getBestGeneratorRes(bestUnitR, buildVariants,buildPower, currentRes); ;
 
         // workers:
@@ -552,8 +565,8 @@ public class TEcoStrategy {
         }
         // -------- ------- --------
         
-//        if (bestUnit!=null) owner.sendTextMsg(" vibor: "+bestUnit.getName()+" - " + bestUnit.getHumanName()  , FieldBOT.MSG_DBG_ALL);
-//        else owner.sendTextMsg(" NE VIBRAN!" , FieldBOT.MSG_DBG_SHORT);
+//        if (bestUnit!=null) owner.sendTextMsg(" vibor: "+bestUnit.getName()+" - " + bestUnit.getHumanName() , FieldBOT.MSG_DBG_ALL);
+//        else owner.sendTextMsg(" NO SELECT!" , FieldBOT.MSG_DBG_SHORT);
 
         return bestUnit;
     }
@@ -882,7 +895,7 @@ owner.sendTextMsg("i="+i+", t1="+t1+" ecoState="+ecoState.toString(), FieldBOT.M
                 float deltaR=ecoState.resources[AdvECO.R_Income][r]-ecoState.resources[AdvECO.R_Usage][r];
                 if (deltaR>0) {
                     t2=Math.max(t2, -ecoState.resources[AdvECO.R_Current][r]/deltaR);
-                } else t2+=1e+20; //FIXME !!!!!!!!
+                } else t2+=1e+20; //!!!!!!!!
                 owner.sendTextMsg("> error, resource "+r+" is negative! value="+ecoState.resources[AdvECO.R_Current][r]+", time T2 fix to "+t2, FieldBOT.MSG_DBG_SHORT);
             }
         }

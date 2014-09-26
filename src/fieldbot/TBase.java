@@ -212,7 +212,7 @@ public class TBase extends AGroupManager{
         if (unit.isBeingBuilt()) {
             if (!buildLst.contains(unit) && !buildLst_noAssistable.contains(unit)) {
                 buildLst.add(unit);
-                // FIXME что делать с !!!!! buildLst_noAssistable ???
+                // FIXME what doing with buildLst_noAssistable ???
             }
             if (ENABLE_CASHING) dropCashe();
             return true;
@@ -816,23 +816,24 @@ public class TBase extends AGroupManager{
                      && !u.isParalyzed()) {
                     Unit bestToReclime=null; float minDist=1.0f;
                     AIFloat3 uPos=u.getPos();
+                    float buildDist=u.getDef().getBuildDistance();
+                    boolean ableToMove=ModSpecification.isRealyAbleToMove(u.getDef());
                     for (Unit uRcl:toReclime) {
                         // TODO FIXME Check uRcl.getDef().isReclaimable() !!!!
                         float lt=MathPoints.getDistanceBetweenFlat(uRcl.getPos(), uPos); // ближайщый
-                        lt -= u.getDef().getBuildDistance(); // сократить на расстояние строителя.
+                        lt -= buildDist; // сократить на расстояние строителя.
                         if (lt>=0) { // need walk
-                            if (ModSpecification.isRealyAbleToMove(u.getDef())) { // если может ходить
-                                lt = lt/u.getMaxSpeed(); // время, за которое он подберётся на расстояние постройки.
-                                //lt = getAvgBuildTime(uRcl.getDef(),u.getDef().getBuildSpeed()) / lt; // TODO ЭТО НЕ ПРАВИЛЬНО. коэффициент нужности ускорения.
+                            if (ableToMove) { // if can walking
+                                //TODO if potimize with more unit moving: lt = lt/u.getMaxSpeed(); // use time to move
                                 // TODO check lost build time if (lt>1.8f*getAvgBuildTime(blbUnit.getDef(),u.getDef().getBuildSpeed())) {
-                                if (minDist<lt || bestToReclime==null) {
+                                if (lt<minDist || bestToReclime==null) {
                                     minDist=lt;
                                     bestToReclime=uRcl;
                                 }
                             }
                         } else { // in the area
                             bestToReclime=uRcl;
-                            minDist=0;
+                            minDist=lt;
                             break;
                         }
                     }
@@ -915,14 +916,13 @@ public class TBase extends AGroupManager{
 
                 if (makeIt!=null) {
                     
-                    // --- test, add noew workers
+                    // --- test, add new workers
                     if (itisSpecialCommand) { // if it is Tech up, and have too many resources and no have workers
                         UnitDef worker2=owner.ecoStrategy.needBuildWorkerBefore(makeIt, buildPower, buildVariants_first, null);
                         if (worker2!=null) {
                             makeIt=worker2;
                             buildPosOn=null;
                         }
-                        // TODO TEST!!!!!!!!!
                     }
                     // ---
                     

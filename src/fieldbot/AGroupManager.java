@@ -113,10 +113,12 @@ public abstract class AGroupManager {
         
         return currentUnitTypesSet;
         // TODO кэшировать вывод
-        
     }
     
-    // TODO Javadoc
+    /**
+     * See all unit and return center of unit group.
+     * @return center, or null if not have unit.
+     */
     public AIFloat3 getCenter() {
         // TODO test
         ArrayList<Unit> allUnit=getAllUnits(false);

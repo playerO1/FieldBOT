@@ -267,19 +267,19 @@ public class AdvECO {
     }
     
     /**
-     * Возвращает сколько ресурсов накопится через определённое время. Без учёта пределов хранилищя и отрицательных чисел.
-     * @param time время в секундах.
-     * @param smartCalc более умный расчёт - при использовании metal maker половина энергии сохраняется
+     * How many resources will be after time. Do not check storage and negative bounds.
+     * @param time time in second
+     * @param smartCalc more smart alhoritm - with using metal maker some energy saved
      * @return 
      */
     public float[] getAvgCurrentFromTime(float time, boolean smartCalc) {
         float k=1.0f;
-        float[] currRes=getCurrentToArr(); // последнее измерение
-        float[][] avgResInfo;//=getAVGResourceToArr();
+        float[] currRes=getCurrentToArr();
+        float[][] avgResInfo;// =getAVGResourceToArr();
 
         if (smartCalc) {
             avgResInfo=getSmartAVGResourceToArr();
-            // Ограничение от отрицательных ресурсов из-за переработки энергии
+            // depend from negative resource from metal makers
             float min=0,max=0;
             for (int i=0; i<currRes.length; i++) {
                 //currRes[i]/2 +
@@ -288,7 +288,7 @@ public class AdvECO {
                     min=x; // TODO !!!
                     float kk = 1.0f-avgResInfo[R_Usage][i]/(avgResInfo[R_Income][i] + avgResInfo[R_Usage][i]);
                     k=Math.min(k, kk);
-                    // FIXME TEST!!!
+                    // TODO TEST!!!
                 }
             }
             for (int i=0; i<currRes.length; i++) currRes[i] += k*time*(avgResInfo[R_Income][i]-avgResInfo[R_Usage][i]);
@@ -296,7 +296,7 @@ public class AdvECO {
             avgResInfo=getAVGResourceToArr();
             for (int i=0; i<currRes.length; i++) currRes[i] += time*(avgResInfo[R_Income][i]-avgResInfo[R_Usage][i]);
         }
-        // Bug: на картах без металла вся энергия в металл...
+        // TODO check on map without metall
         
         return currRes;
     }

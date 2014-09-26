@@ -84,7 +84,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
         
         // TODO use def.isAbleToKamikaze(), def.getKamikazeDist(), _def.weapons..._ !!!!, def.getSelfDExplosion()
         float cellPadding=DEFAULT_CELL_PADDING;
-        if (ModSpecification.isStationarFactory(def)) cellPadding+=def.getRadius()/2;//TODO base planing: радиус вокруг заводов
+        if (ModSpecification.isStationarFactory(def)) cellPadding+=def.getRadius()/2;//TODO test: base planing: free space in factory
         TPlanCell newCell=new TPlanCell(def, count, cellPadding, DEFAULT_CELL_SPACING);
         // 2. Подобрать место
         AIFloat3 p=MathPoints.getRandomPointOnRadius(center,maxR/10); // что лучше? !!! было new AIFloat3(center);

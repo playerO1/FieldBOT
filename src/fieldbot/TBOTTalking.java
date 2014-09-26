@@ -85,13 +85,13 @@ public class TBOTTalking {
     
 //private int sendToPlayer=-1;// кому сделать передачу
 private int sendToTeam=-1;
-private Resource sendingRes=null; // что передать. Если null то все.
-private float sendingResCount; // сколько передать.
-private ArrayList<Unit> lstToShare; // FIXME передача рабочих юнитов!!!
+private Resource sendingRes=null; // what resource tupe to send. If null then all.
+private float sendingResCount; // how many resource send
+private ArrayList<Unit> lstToShare; // list of sending units
 
 public void update(int frame) {
 
-    if ( sendToTeam>=0 ) { // !!!!!!!!!!!!!!!!!!!!!!
+    if ( sendToTeam>=0 ) {
         
         if (lstToShare==null || lstToShare.isEmpty()) {
             if (sendingRes==null) owner.sendTextMsg("res Sharing ALL count="+sendingResCount+" to team "+sendToTeam, FieldBOT.MSG_DLG);
@@ -104,7 +104,6 @@ public void update(int frame) {
             sendToTeam=-1;
         } else {
             //TODO ускорить изъятие... //owner.removeFromBaseAll(lstToShare);
-
             int nSending = owner.clb.getEconomy().sendUnits(lstToShare, sendToTeam );
             //if (nSending==lstToShare.size()) {
             //    for (TBase base:owner.bases) for (Unit u:lstToShare) base.removeUnit(u); // TODO изъять из всех списков баз... может по событиям обработка есть unitGiven... или нет?...
@@ -132,7 +131,6 @@ public void update(int frame) {
         }
     }
     
-    // TODO ...
 }
 
 private boolean lastIsForMe=false;
@@ -230,20 +228,6 @@ protected void onNewPoint(Point msgPoint) {
 
         List<Unit> unitSelect= selectUnitInArea_myOnly(msgPoint.getPosition(), -1, getUnitNow);
         lstToShare.addAll(unitSelect);
-        /*
-        // TODO быстрее сделать это (owner.clb.getFriendlyUnitsIn())
-        for (TBase base:owner.bases) {
-            for (Unit u:base.getAllUnits(getUnitNow))
-              //if (u.getDef().equals(meanUnitDef) && n<count) {
-             if (u!=null)// !!!!!!!!!!!!!!!!!
-             if (MathPoints.getDistanceBetweenFlat(msgPoint.getPosition(), u.getPos())<=u.getDef().getRadius()*2)
-              {
-                lstToShare.add(u);
-                //n++;
-                // TODO выход из цыкла быстрее
-            }
-        }
-        */
         
         if (lstToShare.isEmpty()) {
             owner.sendTextMsg("No unit for sharing.", FieldBOT.MSG_DLG);
@@ -251,8 +235,7 @@ protected void onNewPoint(Point msgPoint) {
         } else sendToTeam=msgTeam;
     }
     
-    if (message.contains("reclime") || message.contains("utilize")) { // TODO TEST!!!!!!!!
-        //boolean getUnitNow=message.contains(" now")||message.contains("now!");
+    if (message.contains("reclime") || message.contains("utilize")) {
         boolean reclimeAll=message.contains("all"); // reclime all of this type
         
         if (lstToShare==null) lstToShare=new ArrayList<Unit>();
@@ -281,7 +264,7 @@ protected void onNewPoint(Point msgPoint) {
                 }
             }
         }
-// TODO eclime unit in area
+// TODO reclime unit in area
 //        List<Unit> unitSelect= selectUnitInArea_myOnly(msgPoint.getPosition(), -1, true);//getUnitNow);
 //        boolean ok=false;
 //        for (Unit u:unitSelect) {
@@ -291,7 +274,6 @@ protected void onNewPoint(Point msgPoint) {
 //                if (reclimeAll) {
 //                    UnitDef uDef=u.getDef();
 //                    ArrayList<Unit> allUnit=base.getAllUnits(false);
-//                    // TODO test!!!
 //                    allUnit=TWarStrategy.selectUnitWithDef(allUnit,uDef);
 //                    for (Unit u2:allUnit) if (!base.unitToReclime.contains(u2) ) {
 //                        base.unitToReclime.add(u2);
@@ -328,7 +310,6 @@ protected void onNewPoint(Point msgPoint) {
     }
     
     if (message.contains("move") && message.contains("base")){// && (message.contains("this") || message.contains("new"))) {
-        //TBase newB=new TBase(owner, msgPoint.getPosition(), 1000);
         AIFloat3 to=msgPoint.getPosition();
         TBase nearB=owner.getNearBase(to);
         if (nearB!=null) {
@@ -380,7 +361,7 @@ public void message(int player, String message) {
     if (owner.clb.getSkirmishAI().getTeamId()==-1) return; // If bot was dead.
     
     boolean allowThisCommand=allowEnemyTeamCommand ||
-            (player!=-1 && // FIXME исправляет ошибку в Spring 94.1-96 Segmentation fault, из-за аргумента -1 (для наблюдателей)
+            (player!=-1 && // this  Spring 94.1-96 Segmentation fault, из-за аргумента -1 (для наблюдателей)
             owner.clb.getGame().getPlayerTeam(player)!=-1 &&
             owner.clb.getGame().getTeamAllyTeam(owner.clb.getGame().getPlayerTeam(player))==owner.clb.getGame().getTeamAllyTeam(owner.teamId));
     
@@ -943,10 +924,10 @@ private ArrayList<Integer> parsingIntArr(String message,String[] keywordAfther) 
 
 
 /**
- * Поиск, про кого написал человек.
- * @param HumanStr что написал
- * @param keywordAfther ключевые слова (множество), после которых нужно искать название юнитов
- * @return 
+ * Find unit def by human query
+ * @param HumanStr human query text
+ * @param keywordAfther set of keyworks, afther some of this words do search name sequence
+ * @return found UnitDef or null
  */
 private UnitDef findUnitDefByHumanQuery(String message,String[] keywordAfther,List<UnitDef> udl) {
     String s[]=message.split(messageSpliter);
@@ -961,7 +942,7 @@ private UnitDef findUnitDefByHumanQuery(String message,String[] keywordAfther,Li
 
             owner.sendTextMsg(" (debug) parsing element <"+s[i]+">" , FieldBOT.MSG_DBG_ALL);
 
-//            // TODO T1, T2, на самом деле 1 2 и 3 4... зависит от мода!
+//            // T1, T2, is realy 1 2 and 3 4... Depends of MODs!
 //            if (s[i].toLowerCase().equals("t1")) techLevel=1;
 //            if (s[i].toLowerCase().equals("t2")) techLevel=2;
 //            if (s[i].toLowerCase().equals("t3")) techLevel=3;
@@ -974,8 +955,7 @@ private UnitDef findUnitDefByHumanQuery(String message,String[] keywordAfther,Li
     UnitDef meanUnitDef=null; // кого строить
     int ver=0, minVer=1; // вероятность совпадений, минимальная вероятность для доверия поиску.
     float percentQWord=0.0f;// дополнительная проверка - какой процент из слов совпал относительно размера названия.
-    // TODO учесть неполное совпадение слов (релевантность)
-    // TODO может всех в игре?... но долго
+    // TODO может всех в игре?... но долго; ошибки в написании и лишние окончания.
     for (UnitDef def:udl) {
         String uName=def.getHumanName().toLowerCase();
         int tmpV=0;

@@ -344,7 +344,7 @@ try {
         if (queryStartPoint!=null) {
             sendTextMsg("Command acepted: start at "+queryStartPoint.x+":"+queryStartPoint.z, MSG_DLG);
             clb.getGame().sendStartPosition(true, queryStartPoint);
-            // TODO FIXME НЕ РАБОТАЕТ!!!!!! Команду принимает, но стартует в другом месте! Spring 94.1
+            // TODO DO NOT WORK! Command acepted, but start on other position. It maybe bug on Spring 94.1. TEst it later.
         }
         
         //bases.add(new TBase(this, clb.getMap().getStartPos(), 1000)); // Init first base
@@ -437,7 +437,7 @@ public void checkForMetal()
               sendTextMsg("Num of metal point: "+allMetallSpots.size(), MSG_DLG);
             // -----
             } else { // MOD SPECIFED FOR Zero-K!
-                //!!! TODO
+                //TODO metal for Zero-K
             }
         }
     }
@@ -482,26 +482,24 @@ public ArrayList<AIFloat3> getMetalSpotsInRadius(AIFloat3 center, float r) {
         if (mapTidal>0 && defTidalGenerator!=0) {
             resProduct += defTidalGenerator*mapTidal; // TODO TEST tidal res !!!!
 //            sendTextMsg("Tidal calc for "+def.getName()+" map tid shreng="+mapTidal+" def tid res gen="+defTidalGenerator+ " resProduct+="+resProduct, MSG_DBG_ALL);
-            // FIXME TIDAL GENERATOR не правильно считает!!!!
         }
         
         float defExtractRes=def.getExtractsResource(res);
-        if (isMetalFieldMap>=0 && defExtractRes!=0) {  // добавить извлекаемые ресурсы...
+        if (isMetalFieldMap>=0 && defExtractRes!=0) {  // add extract resource
             float mapResAvgExtract=clb.getMap().getExtractorRadius(res);
             double metalExSquare = mapResAvgExtract;
-                metalExSquare = metalExSquare * metalExSquare * Math.PI; // TODO check formul!
+                metalExSquare = metalExSquare * metalExSquare * Math.PI;
             resProduct+=defExtractRes * metalExSquare * clb.getMap().getResourceMapSpotsAverageIncome(res);
 //            sendTextMsg("Extract calc for "+def.getName()+" extr square="+metalExSquare+" map avg res income="+mapResAvgExtract+" def extract res gen="+defExtractRes+ " resProduct+="+resProduct, MSG_DBG_ALL);
         }
 
-        // - - Зависимая от мода часть! MMaker - -
+        // - - Depends of MOD part! MMaker - -
         float modSpecRes[]=modSpecific.getResourceConversionFor(def);
         if (modSpecRes!=null) {
             if (res.getName().equals("Metal")) resProduct += modSpecRes[0];
             if (res.getName().equals("Energy")) resProduct +=modSpecRes[1];
-            // TODO TEST!
         }
-        // TODO В моде EvolutionRTS все шахты производят 1 металл!!!
+        // TODO In mod EvolutionRTS all metal extractor make 1 (or 0.5) metall! In Zero-K extract metal on special formuls!
         
         return resProduct;
     }    
@@ -653,7 +651,22 @@ public TBase getNearBase(AIFloat3 nearTo) {
     }
     return nearB;
 }
-// TODO getNearGroup
+
+public AGroupManager getNearGroup(AIFloat3 nearTo) {
+    AGroupManager nearG=null;
+    float minL=Float.POSITIVE_INFINITY;
+    for (AGroupManager group:smartGroups) {
+        AIFloat3 gPos=group.getCenter();
+        if (gPos!=null) {
+            float l=MathPoints.getDistanceBetweenFlat(gPos, nearTo);
+            if (nearG==null || l<minL) {
+                minL=l;
+                nearG=group;
+            }
+        }
+    }
+    return nearG;
+}
 
 /**
  * Create new base and send to new base constructor unit from all other base.
@@ -666,13 +679,13 @@ public TBase spawnNewBase(AIFloat3 newBasePoint)
     for (TBase base:selectTBasesList()) { // TODO only from bases? Maybe from other group too?
         // TODO ...
         ArrayList<Unit> baseCons=new ArrayList<Unit>(base.idleCons);
-        baseCons.addAll(base.workingCons);
+        baseCons.addAll(base.workingCons);// !!!
         Iterator<Unit> itr1=baseCons.iterator();
         while (itr1.hasNext()) {
             Unit aCons = itr1.next();
             UnitDef cDef=aCons.getDef();
             if (!ModSpecification.isRealyAbleToMove(cDef)
-                || cDef.isCommander() // ? !!! No using commander! FIXME!!!!!
+                || cDef.isCommander()
                 || aCons.isParalyzed()
                 || !ModSpecification.isAbleToBuildBase(cDef) // So, they can build new base?
                 ) itr1.remove(); // Если нельзя переместить на новую базу
@@ -960,7 +973,7 @@ public int message(int player, String message) {
     @Override
     public int luaMessage(java.lang.String inData){  
         sendTextMsg("on luaMessage inData="+inData+"", MSG_DBG_ALL);
-// This function was taking and owerwrite from https://github.com/Anarchid/zkgbai/blob/master/src/zkgbai/graph/GraphManager.java#L83 (code from Anarchid)
+// This function was taking and owerwrite from https://github.com/Anarchid/zkgbai/blob/master/src/zkgbai/graph/GraphManager.java#L83 (code from (C) Anarchid)
         final String DATA_METAL_MAKR="METAL_SPOTS:";
     	if(inData.startsWith(DATA_METAL_MAKR))
         {
@@ -1014,8 +1027,8 @@ public void showUnitDefInfoDebug(UnitDef unit){
     }
     
     // Version specific:
-    sendTextMsg(" Engine version: '"+clb.getEngine().getVersion().getMajor()+"'" , MSG_DBG_ALL);
-    // Spring 96 and later code only, or crash:
+//    sendTextMsg(" Engine version: '"+clb.getEngine().getVersion().getMajor()+"'" , MSG_DBG_ALL);
+//    // Spring 96 and later code only, or crash:
 //    if (true) { // DEBUG ONLY!!!
 //        java.util.Map customP = unit.getCustomParams();
 //        sendTextMsg(" Custom params size = "+customP.size() , MSG_ERR);
@@ -1037,7 +1050,7 @@ public void showUnitInfoDebug(Unit unit){
             sendTextMsg("   (MORPH command detected! cmdID="+cmd.getId()+")" , MSG_DBG_SHORT);
         }
         //TODO test call  cmd.getParams() on spring 97!!!
-//        List<String> cmdPs=cmd.getParams(); // FIXME вызов этого СРЫВАЕТ игру! (движок игры).
+//        List<String> cmdPs=cmd.getParams(); // this call can CRASH SPRING engine on version 94 and 96.
 //        if (cmdPs!=null) for (String p:cmdPs) sendTextMsg("  >cmd param: " + p, MSG_DBG_ALL);
     }
 }
@@ -1199,7 +1212,7 @@ public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
         //if (base.contains(unit)) foundHomeBase=true; // TODO ...
         boolean baseR=sGroup.unitGiven(unit, oldTeamId, newTeamId);
         if (baseR) foundHomeBase=true;
-        //if (base.contains(unit)) foundHomeBase=true; // TODO ...
+        //if (base.contains(unit)) foundHomeBase=true;
     }
 
     if (oldTeamId==teamId && newTeamId!=teamId) { // out from AI
