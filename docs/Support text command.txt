@@ -16,7 +16,7 @@ Query text:
 8. Take army «get|give army»
 9. morphing unit «{do|start} morph [all] [now]»
 10. stop morph «stop morph» for all
-11. execute tech up to best economic level «do  tech up [now]», if "now" - don't check enought resources for this, do emiditly.
+11. execute tech up to best economic level «do tech up [now]», if "now" - don't check enought resources for this, do emiditly.
 12. Create army «{do|make} army [for [spam #] [HP|health #] [atack #] [range #] [stealth? #] [work #]] [limit #] [time # [{min|sec}]]», where # - number (percent of wanted), limit - max unit count, time-max time for build all army.
 13. Change BOT logic: «{enable | disable} { auto tech up | enemy chat | eco }». "enemy chat" - allow/disallow command from enemy team. "eco" - if disable, BOT do not build eco building, constructors will be walking random.
 14. Change BOT logic: «set {negative|pessimistic|bad}|{positive|optimistic|good} eco» - set resource analyzer mode, if "negative" then bot will be using not best eco building, if "positive" then bot will be build best eco building but they have bad if have economic cruzis (you will be take big resource from him, or if bot build too many in some time).
@@ -30,7 +30,7 @@ If game contain more that 1 bot, then all command must have prefix «{bot|%botSh
 4. Moving center fo near base to new position «move base». If you want that bot will be build new building on other position.
 5. Reclime unit «reclime|utilize [all]», all - reclime all unit of this tupe on this base.
 
-?. Set start position «start here|this» «start bot» (TODO), см. clb.getMap().getStartPos() и clb.getGame().sendStartPosition(boolean ready, AIFloat3 pos)).
+?. Set start position «start here|this» «start bot» (TODO, engine 94 and 96 not support), см. clb.getMap().getStartPos() и clb.getGame().sendStartPosition(boolean ready, AIFloat3 pos)).
 ?. Достроить, помочь построить «help|assist» (TODO)
 ?. Переместить армию «move army» (TODO)
 

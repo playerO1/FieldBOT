@@ -476,8 +476,8 @@ public class TEcoStrategy {
         UnitDef bestUnit=null; // What need build now
         Resource bestUnitR=null; // select best unit for generate this resource
         //Economy eco = owner.clb.getEconomy();
-        Resource resM=owner.clb.getResourceByName("Metal");
-        Resource resE=owner.clb.getResourceByName("Energy");
+        final Resource resM=owner.clb.getResourceByName("Metal");
+        final Resource resE=owner.clb.getResourceByName("Energy");
         // - - - - -
         
         //float buildPower=onBase.getBuildPower(false,true); // !!!
@@ -504,13 +504,16 @@ public class TEcoStrategy {
         // Economic - select need resources to do resource generators
         final float EconvertK=Math.min(owner.modSpecific.metal_maker_workZone*1.19f, 0.97f);
         
+        float pEstor=avg_cur_E/avg_stor_E; // Energy storage percent
+        float pMstor=avg_cur_M/avg_stor_M; // Metal storage percent
+        
         if (owner.isMetalFieldMap==FieldBOT.IS_NO_METAL || owner.isMetalFieldMap==FieldBOT.IS_NORMAL_METAL)
         {
-            if ( avg_cur_E/avg_stor_E <= EconvertK || (avg_delta_E<1 && avg_cur_E/avg_stor_E <= 0.87)) { // FIXME !!!!!!!!!
+            if ( pEstor <= EconvertK || (avg_delta_E<1 && pEstor <= 0.87)) { // FIXME !!!!!!!!!
 //                owner.sendTextMsg(" cel->electrostanciya1" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resE;
             }
-            if ( avg_cur_M/avg_stor_M < 0.5  &&  avg_cur_E/avg_stor_E >= Math.min(EconvertK*1.07,0.97) && avg_delta_E>1) {
+            if ( pMstor < 0.5  &&  pEstor >= Math.min(EconvertK*1.07,0.97) && avg_delta_E>1) {
 //                owner.sendTextMsg(" cel->metal2" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
@@ -518,18 +521,14 @@ public class TEcoStrategy {
 //                owner.sendTextMsg(" cel->metal3" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
-            if ( avg_cur_M/avg_stor_M>0.9 && avg_delta_M>0) {
-//                owner.sendTextMsg(" cel->electrostanciya4" , FieldBOT.MSG_DBG_SHORT);
-                bestUnitR = resE;
-            }
         }
         else if (owner.isMetalFieldMap==FieldBOT.IS_METAL_FIELD)
         {
-            if ( avg_cur_E/avg_stor_E <= 0.50 || avg_delta_E*2<avg_delta_M) {
+            if ( pEstor <= 0.50 || avg_delta_E*2<avg_delta_M) {
 //                owner.sendTextMsg(" cel->electrostanciya1-" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resE;
             }
-            if ( avg_cur_M/avg_stor_M < 0.50  || avg_delta_M*2<avg_delta_E) {
+            if ( pMstor < 0.50  || avg_delta_M*2<avg_delta_E) {
 //                owner.sendTextMsg(" cel->metal2-" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
@@ -537,15 +536,18 @@ public class TEcoStrategy {
 //                owner.sendTextMsg(" cel->electrostanciya3-" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resE;
             }
-            if ( avg_cur_M/avg_stor_M>0.9 && avg_delta_M>0) {
-//                owner.sendTextMsg(" cel->electrostanciya4-" , FieldBOT.MSG_DBG_SHORT);
-                bestUnitR = resE;
-            }
         } else owner.sendTextMsg(" uncknown map resource type = "+owner.isMetalFieldMap , FieldBOT.MSG_DBG_SHORT); // or FieldBOT.MSG_ERR?
+        if ( pMstor>0.9 && pEstor>EconvertK && avg_delta_M>0) {
+//            owner.sendTextMsg(" cel->4" , FieldBOT.MSG_DBG_SHORT);
+            final float resourceProportion[]=owner.modSpecific.resourceProportion; // last:{1.0f, 10.0f};
+            if (currentRes[AdvECO.R_Income][0]*resourceProportion[0]>currentRes[AdvECO.R_Income][1]*resourceProportion[1])
+                 bestUnitR = resE;
+            else bestUnitR = resM;
+        }
         
 //        owner.sendTextMsg(" dbg, avg_cur_M="+avg_cur_M+", avg_stor_M="+avg_stor_M+", avg_delta_M="+avg_delta_M+"; avg_cur_E="+avg_cur_E+", avg_stor_E="+avg_stor_E+", avg_delta_E="+avg_delta_E+" ; EconvertK="+EconvertK, FieldBOT.MSG_DBG_ALL);
 //        owner.sendTextMsg(" do call getBestGeneratorRes for resource:"+bestUnitR.getName(), FieldBOT.MSG_DBG_ALL);
-        bestUnit = getBestGeneratorRes(bestUnitR, buildVariants,buildPower, currentRes); ;
+        bestUnit = getBestGeneratorRes(bestUnitR, buildVariants,buildPower, currentRes);
 
         // workers:
         if (bestUnit!=null && avg_cur_E/avg_stor_E > 0.60 && avg_cur_M/avg_stor_M >0.50 && avg_delta_M>1 && (avg_delta_E>2 || avg_cur_E/avg_stor_E >= EconvertK)) {
@@ -561,7 +563,7 @@ public class TEcoStrategy {
             } else bestUnit_B=null;
             
 //            owner.sendTextMsg(" Check worker: buildPower="+buildPower+" optimalBPower="+optimalBPower , FieldBOT.MSG_DBG_SHORT); // DEBUG DBG_ALL
-            // TODO...
+            // TODO workers
             if (buildPower*0.98f < optimalBPower) { // if need have more build power
                 UnitDef worker=getBestGeneratorRes(null,buildVariants,buildPower, currentRes);
                 if (worker!=null)
@@ -586,6 +588,7 @@ public class TEcoStrategy {
             }
         }
         // -------- ------- --------
+        // TODO build storage, if deltaRes+- > 20% and storage using >80%
         
 //        if (bestUnit!=null) owner.sendTextMsg(" vibor: "+bestUnit.getName()+" - " + bestUnit.getHumanName() , FieldBOT.MSG_DBG_ALL);
 //        else owner.sendTextMsg(" NO SELECT!" , FieldBOT.MSG_DBG_SHORT);
@@ -905,7 +908,21 @@ private boolean techUpVirtualModeling(ArrayList<UnitDef> currentLevelDefs,ArrayL
         
 owner.sendTextMsg("i="+i+", t1="+t1+" ecoState="+ecoState.toString(), FieldBOT.MSG_DBG_ALL);
         // -- TechUP --
-//TODO check do need build worker before: at TBase it have realized now.
+        float t2w=0;
+        if (!toLevel.byMorph()) { //check - do need build worker before: at TBase this finction has been have.
+            UnitDef assistWorker=needBuildWorkerBefore(toLevel.needBaseBuilders.get(0), ecoState.assistBuildPower, currentLevelDefs, ecoState.resources);
+            if (assistWorker!=null) {
+                t2w=getRashotBuildTime(assistWorker, ecoState.resources, ecoState.assistBuildPower, 1.0f);
+                for (int r=0;r<ecoState.resources[0].length;r++) {
+                    ecoState.resources[AdvECO.R_Current][r] += 
+                            t2w *
+                            (ecoState.resources[AdvECO.R_Income][r]-ecoState.resources[AdvECO.R_Usage][r])
+                            - assistWorker.getCost(owner.avgEco.resName[r]);
+                }
+                ecoState.assistBuildPower+=assistWorker.getBuildSpeed();
+            }
+        }
+        
         float t2=toLevel.getTimeForBuildTechLevel(ecoState.assistBuildPower, ecoState.resources);
         float tUpRes[]=toLevel.getNeedRes();
         for (int r=0;r<tUpRes.length;r++) {
@@ -935,7 +952,7 @@ owner.sendTextMsg("i="+i+", t1="+t1+" ecoState="+ecoState.toString(), FieldBOT.M
             if (morphFrom.isBuilder() && !morphFrom.isAbleToAssist()) ecoState.noAssistBuildPower -= morphFrom.getBuildSpeed();
             // TODO resource income/usage for lost morph unit.
         }
-        ecoState.time+=t2;
+        ecoState.time+=t2+t2w;
         
         // use max storage - lost resource when above storage
         for (int r=0;r<ecoState.resources[AdvECO.R_Current].length;r++)
@@ -1038,8 +1055,7 @@ owner.sendTextMsg(" <getPrecissionTechUpTimeFor>, workers F: "+currentLvlPower+"
      */
     public TechUpTrigger getAbsolutePrecissionTechUpTimeFor(TBase onBase, HashSet<UnitDef> CurrentLevelUnitsCanBuild, List<TTechLevel> newLevels)
 {
-    // TODO TEST!!!!!
-    ArrayList<UnitDef> currentLevelDefs=select_EconomicUDefs(CurrentLevelUnitsCanBuild); // убрать лишних юнитов для ускорения расчётов
+    ArrayList<UnitDef> currentLevelDefs=select_EconomicUDefs(CurrentLevelUnitsCanBuild); // remove no economic units, for faster
     
     // prepare variables
     float currentLvlPower=onBase.getBuildPower(false,true); // !!!

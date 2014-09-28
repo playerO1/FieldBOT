@@ -1,5 +1,9 @@
 Changelog of FieldBOT.
 
+=== dev a1.5 ===
+- more workers will be build, better economic (bug fix on no-linear time math function will be better)
+- bug fix in tech up on NOTA mod
+
 === dev a1.4 ===
 - math fix for metal maker and army
 - add reclime unit (only by human map marck command «reclime|utilize [all]»)

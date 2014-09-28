@@ -18,17 +18,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Specific for different mods
  * @author PlayerO1
  */
 public class ModSpecification {
-    private final HashMap<String,float[]> treeMap_Eco; // metal makers info
-    // TODO можно ли использовать HashMap для этого? !!!! см. хэш Стринг...
+    private final HashMap<String,float[]> treeMap_Eco; // LUA metal makers info
     
     private final FieldBOT owner;
-    protected final List<UnitDef> allUnitDefs; // для ассоциации с Morph...
+    protected final List<UnitDef> allUnitDefs; // for Morph, get unit by ID.
     
     private final HashMap<UnitDef,Integer> specialTLevelRequired;//!!! Для TA и RD, смотри specificUnitEnabled
     
@@ -51,18 +51,23 @@ public class ModSpecification {
     public final int maker_resource_to;
     
     /**
-     * Существуют MetalMaker встроенные (EVO RTS) (через isNativeMetalMaker, getNativeConversionKMetalMaker )
+     * Exist MetalMaker native (EVO RTS) (info from isNativeMetalMaker, getNativeConversionKMetalMaker )
      */
     public final boolean exist_MetalMaker_native;
     /**
-     * Существуют MetalMaker скриптовые (BA, TA, NOTA) (через getResourceConversionFor, isMetalMaker, getConversionKMetalMaker)
+     * Exist MetalMaker by script (LUA) (BA, TA, NOTA) (info from getResourceConversionFor, isMetalMaker, getConversionKMetalMaker)
      */
     public final boolean exist_MetalMaker_lua;
     
     /**
-     * Если есть скриптовый metal extractor
+     * Exist script (LUA) metal extractor on this mod, or null
      */
     public final UnitDef luaMetalExtractor;
+    
+    /**
+     * Usualy resource ballance of incoming-usage. See metal makers and resource coast.
+     */
+    public final float resourceProportion[];
     
     /**
      * For Zero-K - first factory not need resource and build time, next factoru need.
@@ -76,11 +81,11 @@ public class ModSpecification {
     
     public ModSpecification(FieldBOT owner) {
         this.owner=owner;
-        allUnitDefs=owner.clb.getUnitDefs(); // !!! получение большого списка.
+        allUnitDefs=owner.clb.getUnitDefs(); // !!! getting large list, required time
         
         modName = owner.clb.getMod().getShortName();
         
-        //TODO в XML...
+        //TODO read from XML.
         
         // Tech Anihilation //MOD short name:TA
         // Robot Defence MOD short name: RD
@@ -157,6 +162,20 @@ public class ModSpecification {
         exist_MetalMaker_native= modName.equals("EvoRTS") || 
                 !(modName.equals("NOTA")||modName.equals("BA")||modName.equals("TA")||modName.equals("RD"));
         
+        // Mod resource proportion
+        if (exist_MetalMaker_lua) {
+            float rM=0,rE=0;
+            int n=0;
+            for (Map.Entry<String,float[]> entry:treeMap_Eco.entrySet()) {
+                float r[]=entry.getValue();
+                rM+=Math.abs(r[0]);
+                rE+=Math.abs(r[1]);
+                n++;
+            }
+            resourceProportion=new float[]{1.0f+rM/n, 2.0f+rE/n};
+        } else {
+            resourceProportion=new float[]{1.0f, 12.0f};
+        }
         
         if (specificUnitEnabled) {
             specialTLevelRequired=new HashMap<UnitDef, Integer>();
@@ -410,8 +429,18 @@ protected static final int CMD_MORPH = 31410;
             case 31430: mUnitDefID=408; break; // Combat Commander
             case 31431: mUnitDefID=407; break; // CORE Ecoing Commander
             case 31433: mUnitDefID=734; break; // TLL Battle Commander
-            default: return null;
+            default:
+//                FIXME // WTF I DOING? IT IS BOT API, NO HUMAN! The bot do not need read human names, there BOT life on numbers, no words.
+//                String unitName=parsingValueString(morphCmd.getName(),"Morph into a","");
+//                if (unitName.isEmpty()) return null;
+//                owner.sendTextMsg("Def name= '"+unitName+"'." , FieldBOT.MSG_ERR);
+//                // Search by name
+//                for () {
+//                    throw new IllegalArgumentException("TODO parsingValueString!");// FIXME TODO THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//                }
+                return null;
         }
+        
         
 //        owner.sendTextMsg("MORPHING CMD ID="+morphCmd.getId()+" supported ID="+morphCmd.getSupportedCommandId(), FieldBOT.MSG_DBG_ALL);
         UnitDef def=allUnitDefs.get(mUnitDefID-1);
@@ -431,7 +460,7 @@ protected static final int CMD_MORPH = 31410;
      * @param key
      * @return 
      */
-    private float parsingValue(String source, String key,float defaultVal) {
+    private float parsingValueFloat(String source, String key,float defaultVal) {
         float val;//=defaultVal;
         String keyS=key+" ";
         int p1=source.indexOf(keyS);
@@ -455,6 +484,30 @@ protected static final int CMD_MORPH = 31410;
         // TODO parsingValue test
         return val;
     }
+    private String parsingValueString(String source, String key,String defaultVal) {
+        String val;//=defaultVal;
+        String keyS=key+" ";
+        int p1=source.indexOf(keyS);
+        if (p1==-1) {
+            keyS=key;
+            p1=source.indexOf(keyS);
+        }
+        if (p1!=-1) {
+            p1+=keyS.length();
+            String xStr=source.substring(p1); // !!!
+            if (xStr.length()>0) {
+                throw new IllegalArgumentException("TODO parsingValueString!");// FIXME TODO THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                //val=xStr.substring(0, p1);!!!
+            } else {
+                val=defaultVal;
+            }
+        } else {
+            owner.sendTextMsg(" parsing ERROR: symbol ["+key+"] not found on ["+source+"]." , FieldBOT.MSG_ERR);
+            val=defaultVal;
+        }
+        // TODO parsingValue test
+        return val;
+    }
     
     public float getTimeForMprph(CommandDescription morphCmd) {
         float t=0.0f;//!!!!!!!!!!
@@ -465,13 +518,13 @@ protected static final int CMD_MORPH = 31410;
             case 31431: t=30; break; // CORE Ecoing Commander
             case 31433: t=30; break; // TLL Battle Commander
             default:
-                t=parsingValue(morphCmd.getName(),"Time:", 60.0f); // TODO test!
+                t=parsingValueFloat(morphCmd.getName(),"Time:", 60.0f); // TODO test!
                 owner.sendTextMsg(" no morph info for ID"+morphCmd.getId()+", but parsing from text="+t+" (default 60).", FieldBOT.MSG_ERR);
         }
         // TODO !!!!
-        for (String param:morphCmd.getParams()) {
-            owner.sendTextMsg(" parsing param: ["+param+"] to float exception: ", FieldBOT.MSG_ERR);
-        }
+//        for (String param:morphCmd.getParams()) {
+//            owner.sendTextMsg(" parsing param: ["+param+"] to float exception: ", FieldBOT.MSG_ERR);
+//        }
         /*
         for (String param:morphCmd.getParams()) {
             if (param.contains("time:")) { // parsing time...
@@ -508,7 +561,7 @@ protected static final int CMD_MORPH = 31410;
                owner.sendTextMsg(" no morph info for ID"+morphCmd.getId(), FieldBOT.MSG_ERR);
                 // TODO
                for (int i=0;i<res.length;i++) {
-                res[i]=parsingValue(morphCmd.getName(),owner.avgEco.resName[i].getName()+":", 0.0f); // TODO test!
+                res[i]=parsingValueFloat(morphCmd.getName(),owner.avgEco.resName[i].getName()+":", 0.0f); // TODO test!
                 owner.sendTextMsg("  >parsing from text="+res[i]+" (default 0).", FieldBOT.MSG_DBG_SHORT);
                }
         }
@@ -551,6 +604,7 @@ protected static final int CMD_MORPH = 31410;
         if (!isAble) return false;
         String hName=def.getHumanName();
         if (hName.contains("Air Repair") || hName.contains("Air Support Pad")) return false; // for Air Repair platform - usualy they can not assist, but they have assist option.
+        if (hName.equals("Giant")) return false; // TA mod, TLL air repair ship with anti-nuke
         return true;
     }
     

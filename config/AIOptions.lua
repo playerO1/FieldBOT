@@ -44,7 +44,7 @@ local options = {
 
 	{ -- list
 		key     = 'builddecorator',
-		name    = 'Build decorator type: how build base planing',
+		name    = 'Base build decorator type',
 		desc    = 'How choose building position on base surface.\nSpiral, krugi, tetris, random as other AI',
 		type    = 'list',
 		section = 'performance',
@@ -53,7 +53,7 @@ local options = {
 			{
 				key  = 'random',
 				name = 'Random',
-				desc = 'random razpredelenie (tupo).',
+				desc = 'random distribution (bad).',
 			},
 			{
 				key  = 'spiral',

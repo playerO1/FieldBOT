@@ -85,11 +85,11 @@ public class TTechLevel {
     }
     
     /**
-     * Создаёт новый тех. уровень на базе фабрик и строителей.
-     * @param baseUnit базовый строитель уровня.
-     * @param unitOldBuild список текущих возможностей (чтобы чётко выделить возможности уровня...)
-     * @param botClb для получения списка ресурсов.
-     * @param onBase На какой базе будет производится (убирает юниты которые нельзя построить на поверхности базы), может быть null.
+     * Create new Tech Level on based builders and factory
+     * @param baseUnit first level builder
+     * @param unitOldBuild list of current builds variants (for select new unit)
+     * @param botClb for getting resource list
+     * @param onBase on base surface (remove unit when can not build on this surface), can be null.
      */
     public TTechLevel(UnitDef baseUnit,HashSet<UnitDef> unitOldBuild, FieldBOT botClb, TBase onBase)
     {
@@ -125,11 +125,11 @@ public class TTechLevel {
             UnitDef bestWorker=null;
             
             // + worker
-            //FIXME NOTA select builder T2 for mexes.
+            //FIXME Check: NOTA not select builder T2 for mexes.
             for (UnitDef worker:newUnitDefs) if (worker.isBuilder()) {
                 HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(worker.getBuildOptions());
                 newWorkerUnitDefs.removeAll(unitOldBuild);
-                newWorkerUnitDefs.removeAll(newUnitDefs); // TODO test it
+                newWorkerUnitDefs.removeAll(newUnitDefs);
                 float k=calcEcoK(newWorkerUnitDefs,botClb);
                 if (k>lastEcoK) {
                     lastEcoK=k;
@@ -140,12 +140,12 @@ public class TTechLevel {
                 HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(bestWorker.getBuildOptions());
                 newWorkerUnitDefs.removeAll(unitOldBuild);
 
-                tmpTechLevels.add( bestWorker.getTechLevel() ); // было techLevelNumber=Math.max(techLevelNumber,bestWorker.getTechLevel());
+                tmpTechLevels.add( bestWorker.getTechLevel() );
 
                 if (botClb.modSpecific.specificUnitEnabled)
                     botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, tmpTechLevels);
                 
-                if (onBase!=null) removeWhereCantBuildOnBaseSurface(newWorkerUnitDefs, onBase); // только то, что можно строить на поверхности базы.
+                if (onBase!=null) removeWhereCantBuildOnBaseSurface(newWorkerUnitDefs, onBase); // only on base surface
                 newWorkerUnitDefs.removeAll(newUnitDefs);
                 if (!newWorkerUnitDefs.isEmpty()) { // TODO other workers check too
                     newUnitDefs.addAll(newWorkerUnitDefs);
@@ -265,11 +265,12 @@ public class TTechLevel {
     }
             
     /**
-     * Создаёт новый тех. уровень на основе апгрейда (morphing unit).
-     * @param morphUnit юнит для апгрейда (to morphing)
-     * @param morphCMD команда
-     * @param unitOldBuild список текущих возможностей (чтобы чётко выделить возможности уровня...)
-     * @param botClb для получения списка ресурсов.
+     * Create new Tecl level on morph unit (morphing unit).
+     * @param morphUnit unit for morph (to morphing)
+     * @param morphCMD morph command
+     * @param unitOldBuild list of current builds variants (for select new unit)
+     * @param botClb for getting resource list
+     * @param onBase on base surface (remove unit when can not build on this surface), can be null.
      */
     public TTechLevel(Unit morphUnit, CommandDescription morphCMD, HashSet<UnitDef> unitOldBuild, FieldBOT botClb, TBase onBase)
     {
@@ -295,10 +296,12 @@ public class TTechLevel {
         newUnitDefs.removeAll(unitOldBuild);
         
         if (botClb.modSpecific.specificUnitEnabled)
-            botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newUnitDefs, tmpTechLevels);// TODO Test it! Проверка на возможность зависимости от тех. уровней.
+            botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newUnitDefs, tmpTechLevels);// check tech level depends
 
-        if (onBase!=null) removeWhereCantBuildOnBaseSurface(newUnitDefs, onBase); // только то, что можно строить на поверхности базы.
+        if (onBase!=null) removeWhereCantBuildOnBaseSurface(newUnitDefs, onBase); // only on base surface
 
+// TODO Check it. Do not build builder after morph now, it will be next level. For TA/RD it true!
+        /**
         if (ModSpecification.isStationarFactory(morphTo)) {
             float lastEcoK=0; //calcEcoK(unitOldBuild,botClb);
             UnitDef bestWorker=null;
@@ -307,7 +310,7 @@ public class TTechLevel {
             for (UnitDef worker:newUnitDefs) if (worker.isBuilder()) {
                 HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(worker.getBuildOptions());
                 newWorkerUnitDefs.removeAll(unitOldBuild);
-                newWorkerUnitDefs.removeAll(newUnitDefs); // TODO test it
+                newWorkerUnitDefs.removeAll(newUnitDefs);
                 float k=calcEcoK(newWorkerUnitDefs,botClb);
                 if (k>lastEcoK) {
                     lastEcoK=k;
@@ -322,9 +325,9 @@ public class TTechLevel {
                 tmpTechLevels.add( bestWorker.getTechLevel() );
 
                 if (botClb.modSpecific.specificUnitEnabled)
-                  botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, tmpTechLevels);// TODO Test it! Проверка на возможность зависимости от тех. уровней.
+                  botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, tmpTechLevels);// tech level depends
                 
-                if (onBase!=null) removeWhereCantBuildOnBaseSurface(newWorkerUnitDefs, onBase); // только то, что можно строить на поверхности базы.
+                if (onBase!=null) removeWhereCantBuildOnBaseSurface(newWorkerUnitDefs, onBase); // only on base surface
                 
                 newWorkerUnitDefs.removeAll(newUnitDefs);
                 if (!newWorkerUnitDefs.isEmpty()) {
@@ -333,6 +336,7 @@ public class TTechLevel {
                 }
             }
         }
+        //*/
         
         levelNewDef=new ArrayList<UnitDef>();
         levelNewDef.addAll(newUnitDefs); //!!!!!!!!!!!!!!!!!!!!!!!
@@ -356,16 +360,16 @@ public class TTechLevel {
     }
     
     /**
-     * Переход через апгрейд byMorph
-     * @return да-см. переменные byMorph, morphCMD, morphTo
+     * Tech up by morphing some units
+     * @return if true - check variables: byMorph, morphCMD, morphTo; if false - not by morph, only by build factory/workers
      */
     public boolean byMorph() {
         return byMorph!=null;
     }
     
     /**
-     * Выдаёт сумму ресурсов для перехода на уровень
-     * @return сумма ресурсов для перехода на уровень
+     * All resources for do this tech up
+     * @return summ of all resources for build this level (all base builder + morphing)
      */
     public float[] getNeedRes() {
         float needRes[]=new float[botClb.avgEco.resName.length];
