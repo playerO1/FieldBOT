@@ -501,6 +501,17 @@ public class TEcoStrategy {
         float avg_stor_E=currentRes[AdvECO.R_Storage][1];//owner.avgEco.getAvgStorage(resE);
         float avg_delta_E=currentRes[AdvECO.R_Income][1]-currentRes[AdvECO.R_Usage][1];//owner.avgEco.getAvgIncome(resE)-owner.avgEco.getAvgUsage(resE);
         
+        // See on future, do not see on current time (as on stock exchange).
+        final float T_FUTURE=7.5f; // see on 7.5 second to future
+        if (avg_delta_E>0) {
+            avg_cur_E += avg_delta_E *T_FUTURE;
+            if (avg_cur_E>avg_stor_E) avg_cur_E=avg_stor_E;
+        }
+        if (avg_delta_M>0) {
+            avg_cur_M += avg_delta_M *T_FUTURE;
+            if (avg_cur_M>avg_stor_M) avg_cur_M = avg_stor_M;
+        }
+        
         // Economic - select need resources to do resource generators
         final float EconvertK=Math.min(owner.modSpecific.metal_maker_workZone*1.19f, 0.97f);
         
