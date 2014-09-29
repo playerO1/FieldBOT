@@ -675,6 +675,13 @@ public AGroupManager getNearGroup(AIFloat3 nearTo) {
  */
 public TBase spawnNewBase(AIFloat3 newBasePoint)
 {
+    // Check on free position from other TBases
+    TBase otherBase=getNearBase(newBasePoint);
+    if (otherBase!=null) {
+        if (MathPoints.getDistanceBetweenFlat(otherBase.getCenter(), newBasePoint) <= otherBase.radius) // TODO plas second radius
+            return null; // base collision
+    }
+    
     ArrayList<Unit> shareWorker= new ArrayList<Unit>();
     for (TBase base:selectTBasesList()) { // TODO only from bases? Maybe from other group too?
         // TODO ...
