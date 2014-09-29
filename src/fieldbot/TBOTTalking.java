@@ -299,8 +299,7 @@ protected void onNewPoint(Point msgPoint) {
             owner.addSmartGroup(newB);
             owner.sendTextMsg("New empty base created "+newB.toString(), FieldBOT.MSG_DLG);
         } else {
-            //TODO Перенести в FieldBOT класс!
-            TBase newB=owner.spawnNewBase(msgPoint.getPosition());
+            TBase newB=owner.spawnNewBase(msgPoint.getPosition(), 0);
             if (newB!=null) {
                 owner.sendTextMsg("New base created "+newB.toString()+", "+newB.getAllUnits(false).size()+" units sending to new base.", FieldBOT.MSG_DLG);
             } else {

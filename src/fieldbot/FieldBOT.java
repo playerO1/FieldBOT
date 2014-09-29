@@ -671,9 +671,10 @@ public AGroupManager getNearGroup(AIFloat3 nearTo) {
 /**
  * Create new base and send to new base constructor unit from all other base.
  * @param newBasePoint base center
+ * @param workerUsagePercent how many workers take from other base to send on new base. Recomended value: 0.1-0.4; if 0 then defauld=2/5.
  * @return return new base, or null if failed
  */
-public TBase spawnNewBase(AIFloat3 newBasePoint)
+public TBase spawnNewBase(AIFloat3 newBasePoint, float workerUsagePercent)
 {
     // Check on free position from other TBases
     TBase otherBase=getNearBase(newBasePoint);
@@ -681,6 +682,8 @@ public TBase spawnNewBase(AIFloat3 newBasePoint)
         if (MathPoints.getDistanceBetweenFlat(otherBase.getCenter(), newBasePoint) <= otherBase.radius) // TODO plas second radius
             return null; // base collision
     }
+    
+    if (workerUsagePercent<=0) workerUsagePercent=2/5;
     
     ArrayList<Unit> shareWorker= new ArrayList<Unit>();
     for (TBase base:selectTBasesList()) { // TODO only from bases? Maybe from other group too?
@@ -700,7 +703,7 @@ public TBase spawnNewBase(AIFloat3 newBasePoint)
         // TODO select only fast unit
         if (baseCons.size()>1) {
             HashSet<UnitDef> baseCanBuild=base.getBuildList(true);
-            for (int i=0; i<Math.max(1,baseCons.size()*2/5); i++)
+            for (int i=0; i<Math.max(1,baseCons.size()*workerUsagePercent); i++)
             {
                 Unit unit=baseCons.get(i);
                 base.removeUnit(unit);
