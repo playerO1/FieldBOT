@@ -32,8 +32,10 @@ import java.util.HashSet;
  */
 public abstract class AGroupManager {
 
-    
-    
+   /**
+    * For callback, utils
+    */
+   public final FieldBOT owner;
     
    /**
     * Base type
@@ -42,6 +44,11 @@ public abstract class AGroupManager {
     */
    public int baseType=0; // TODO specification
     
+   
+   public AGroupManager(FieldBOT owner) {
+       this.owner = owner;
+   }
+   
     /**
      * Add unit in group
      * @param unit
@@ -136,6 +143,14 @@ public abstract class AGroupManager {
         y= y/n;
         z= z/n;
         return new AIFloat3(x, y, z);
+    }
+    
+    /**
+     * This method send signal to owner, where this group finish target.
+     * You need call this afther some group target have been complited.
+     */
+    protected void onCommandFinished() {
+        owner.onGroupTargetFinished(this);
     }
     
     // Command, sending from bot, from Spring.

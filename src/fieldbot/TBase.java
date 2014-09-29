@@ -28,11 +28,6 @@ public class TBase extends AGroupManager{
    protected static final boolean ENABLE_CASHING=true; // вкл/выкл кэш.
     
    /**
-    * For callback, utils
-    */
-   public final FieldBOT owner;
-    
-   /**
     * Base center
     */
    public AIFloat3 center;
@@ -75,7 +70,7 @@ public class TBase extends AGroupManager{
      */
     public TBase(FieldBOT owner, AIFloat3 center, float radius)
     {
-        this.owner=owner;
+        super(owner); //this.owner=owner;
         this.center=new AIFloat3(center);
         
         if (radius<=0) radius=1000.0f; // !!!!
@@ -91,10 +86,9 @@ public class TBase extends AGroupManager{
         buildLst=new ArrayList<Unit>();
         buildLst_noAssistable=new ArrayList<Unit>();
         
-        unitToReclime=new ArrayList<Unit>(); // TODO test it!
-        currentBaseTarget=new TBaseTarget();
+        unitToReclime=new ArrayList<Unit>();
+        currentBaseTarget=new TBaseTarget(this);
 
-        // TODO !!!!!!!!!!!
         switch (owner.defauldBasePlaning) {
             case 0:
                 stroyPlaning=new TBasePlaning_randomNear(this);
@@ -102,7 +96,7 @@ public class TBase extends AGroupManager{
             case 1:
                 stroyPlaning=new TBasePlaning_spiral(this);
                 break;
-            //case 2:
+            //case 2: // TODO base Planing item 2
                 //stroyPlaning=new ...(this);
                 //break;
             case 3:

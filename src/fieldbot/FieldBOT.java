@@ -752,6 +752,15 @@ public AGroupManager getOwnerGroup(Unit unit) {
 }
 
 /**
+ * This method call from groups, when they finish some target.
+ * @param group 
+ */
+public void onGroupTargetFinished(AGroupManager group) {
+    // TODO onGroupTargetFinished
+    // send next to Eco and War strategy calls.
+}
+
+/**
  * Select TBase list from smartGroup list
  */
 public ArrayList<TBase> selectTBasesList() {

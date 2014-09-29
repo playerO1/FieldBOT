@@ -29,7 +29,6 @@ import java.util.Collection;
  * @author PlayerO1
  */
 public class TArmyGroup extends AGroupManager{
-    protected final FieldBOT owner;
     
     public ArrayList<Unit> army;
     public Unit slowUnit;
@@ -39,7 +38,7 @@ public class TArmyGroup extends AGroupManager{
     
     
     public TArmyGroup(FieldBOT owner) {
-        this.owner=owner;
+        super(owner); //this.owner=owner;
         baseType=1;
         army=new ArrayList<Unit>();
         slowUnit=null;

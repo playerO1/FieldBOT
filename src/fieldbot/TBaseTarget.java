@@ -16,6 +16,7 @@ import java.util.ArrayList;
  * @author PlayerO1
  */
 public class TBaseTarget {
+    private AGroupManager owner; // To call "Target finished"
     public ArrayList<com.springrts.ai.oo.clb.UnitDef> currentBuildLst; // What build for now
     public ArrayList<Integer> currentBuildCount; // How many build
     public ArrayList<AIFloat3> currentBuildPos; // predefine position, or null
@@ -34,7 +35,8 @@ public class TBaseTarget {
     public boolean needPrecissionRes; // for base, do not economic when this target is not complited.
     
     
-    public TBaseTarget() {
+    public TBaseTarget(AGroupManager ownerBase) {
+        this.owner=ownerBase;
         targetHaveComplite=false;
         commandNow=false;
         needPrecissionRes=false;
@@ -83,7 +85,7 @@ public class TBaseTarget {
         commandNow=false;
         needPrecissionRes=false;
         targetHaveComplite=true;
-        // TODO call to owner
+        if (owner!=null) owner.onCommandFinished(); // send signal
     }
     
     /**
