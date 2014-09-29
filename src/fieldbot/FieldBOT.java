@@ -744,14 +744,16 @@ public TBase getBestBase(boolean findWithoutBaseTarget) {
     return bestBase;
 }
 
+/**
+ * Set group for remove. It is safe for call from cycle FOR and iteratrs. Real removing group from list will be realized on update.
+ * @param group 
+ */
 public void removeSmartGroup(AGroupManager group) {
     if (!smartGroupsToRemove.contains(group)) {
         smartGroupsToRemove.add(group);
-        // TODO what doing with units?
     }
 }
 public void addSmartGroup(AGroupManager group) {
-    //if (!smartGroupsToRemove.contains(group)) smartGroupsToRemove.add(group);
     smartGroups.add(group);
     //bases.add(group);
 }
@@ -788,6 +790,12 @@ public int update(int frame) {
       
     if (!deadLstUnit.isEmpty()) deadLstUnit.clear();
     if (!smartGroupsToRemove.isEmpty()) { // TODO test.
+        for (AGroupManager group:smartGroupsToRemove) { // send units to other groups
+            List<Unit> freeUnits=group.getAllUnits(false);
+            // TODO what doing with units?
+            for (Unit u:freeUnits) addToSameGroup(u);
+        }
+
         if (smartGroups.removeAll(smartGroupsToRemove)) smartGroupsToRemove.clear();
         //TODO don't forget call removeSmartGroup(null) if add some methods/cashes for calling on this function;
     }
@@ -909,7 +917,7 @@ public boolean addToSameGroup(Unit unit) {
     // TODO check on dead/sharing list
     
    AGroupManager nearBase=null; float bestK=Float.NEGATIVE_INFINITY;//float bestDist=Float.POSITIVE_INFINITY;
-   for (AGroupManager sGroup:smartGroups) {
+   for (AGroupManager sGroup:smartGroups) if (!smartGroupsToRemove.contains(sGroup)) {
        //float l = TBase.getDistanceBetween(unit.getPos(), base.center);
        float k=sGroup.doYouNeedUnit(unit);
        if (k>bestK) {
@@ -1085,7 +1093,7 @@ public int unitCreated(Unit unit, Unit builder) {
     onAddUnit(unit);
     //onFreeBuildingUnit(unit);
     boolean foundHomeBase=false;
-    for (AGroupManager sGroup:smartGroups) {
+    for (AGroupManager sGroup:smartGroups) if (!smartGroupsToRemove.contains(sGroup)) {
         sGroup.unitCreated(unit, builder);
         if (sGroup.contains(unit)) foundHomeBase=true;
     }
@@ -1114,7 +1122,7 @@ public int unitFinished(Unit unit) {
     onAddUnit(unit);
     //onFreeBuildingUnit(unit);
     boolean foundHomeBase=false;
-    for (AGroupManager sGroup:smartGroups) {
+    for (AGroupManager sGroup:smartGroups) if (!smartGroupsToRemove.contains(sGroup)) {
         sGroup.unitFinished(unit);
         if (sGroup.contains(unit)) foundHomeBase=true;
     }
