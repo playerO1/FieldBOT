@@ -134,6 +134,7 @@ public class TArmyGroup extends AGroupManager{
             if (moveTarget!=null && slowUnit!=null) {
                 if (MathPoints.getDistanceBetween3D(moveTarget, slowUnit.getPos())<1) {
                     moveTarget=null; // finish.
+                    onCommandFinished();
                 }
 //                    }) {
 //                // send command
