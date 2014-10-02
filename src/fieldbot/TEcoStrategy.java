@@ -556,7 +556,8 @@ public class TEcoStrategy {
         if ( pMstor>0.9 && pEstor>EconvertK && avg_delta_M>0) {
 //            owner.sendTextMsg(" cel->4" , FieldBOT.MSG_DBG_SHORT);
             final float resourceProportion[]=owner.modSpecific.resourceProportion; // last:{1.0f, 10.0f};
-            if (currentRes[AdvECO.R_Income][0]*resourceProportion[0]>currentRes[AdvECO.R_Income][1]*resourceProportion[1])
+            if (currentRes[AdvECO.R_Income][0]*resourceProportion[0]<currentRes[AdvECO.R_Income][1]*resourceProportion[1])
+                // < or use /
                  bestUnitR = resE;
             else bestUnitR = resM;
         }
