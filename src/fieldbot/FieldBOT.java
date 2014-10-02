@@ -97,10 +97,10 @@ private Logger log = null;
 private static final int DEFAULT_ZONE = 0; // ????
 
 
-public CPULoadTimer cpuTimer; // для подсчёта процессорного времени
+public CPULoadTimer cpuTimer; // for check CPU usage
 
 /**
- * Конструктор...
+ * Init
  */
 public FieldBOT() {
     cpuTimer=new CPULoadTimer();
@@ -609,7 +609,7 @@ public boolean checkAndTechUp(boolean doEmidetly, boolean test) { // TODO ПЕР
                      }
                     break;
                 case 2:
-                    ArrayList<TTechLevel> TechLvls_eco=ecoStrategy.selectLvl_whoBetterThat(TechLvls, bestEco, bestBuilderF); // TODO test, maybe 'selectLvl_whoBetterThat' remove realy better level.
+                    //ArrayList<TTechLevel> TechLvls_eco=ecoStrategy.selectLvl_whoBetterThat(TechLvls, bestEco, bestBuilderF); // TODO test, maybe 'selectLvl_whoBetterThat' remove realy better level.
                     techUpTrigger = ecoStrategy.getAbsolutePrecissionTechUpTimeFor(base, onBaseBuildLst, TechLvls);
                      if (techUpTrigger!=null) {
                          sendTextMsg("> "+techUpTrigger.toString(), FieldBOT.MSG_DBG_SHORT);

@@ -526,15 +526,15 @@ public class TEcoStrategy {
         if (owner.isMetalFieldMap==FieldBOT.IS_NO_METAL || owner.isMetalFieldMap==FieldBOT.IS_NORMAL_METAL)
         {
             if ( pEstor <= EconvertK || (avg_delta_E<1 && pEstor <= 0.90)) { // FIXME !!!!!!!!!
-                owner.sendTextMsg(" cel->electrostanciya1" , FieldBOT.MSG_DBG_SHORT);
+//                owner.sendTextMsg(" cel->electrostanciya1" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resE;
             }
             if ( pMstor < 0.5  &&  pEstor >= Math.min(EconvertK*1.07,0.97) && avg_delta_E>1) {
-                owner.sendTextMsg(" cel->metal2" , FieldBOT.MSG_DBG_SHORT);
+//                owner.sendTextMsg(" cel->metal2" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
             if (bestUnitR==null) {
-                owner.sendTextMsg(" cel->metal3" , FieldBOT.MSG_DBG_SHORT);
+//                owner.sendTextMsg(" cel->metal3" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
         }
@@ -554,7 +554,7 @@ public class TEcoStrategy {
             }
         } else owner.sendTextMsg(" uncknown map resource type = "+owner.isMetalFieldMap , FieldBOT.MSG_DBG_SHORT); // or FieldBOT.MSG_ERR?
         if ( pMstor>0.9 && pEstor>EconvertK && avg_delta_M>0) {
-            owner.sendTextMsg(" cel->4" , FieldBOT.MSG_DBG_SHORT);
+//            owner.sendTextMsg(" cel->4" , FieldBOT.MSG_DBG_SHORT);
             final float resourceProportion[]=owner.modSpecific.resourceProportion; // last:{1.0f, 10.0f};
             if (currentRes[AdvECO.R_Income][0]*resourceProportion[0]>currentRes[AdvECO.R_Income][1]*resourceProportion[1])
                  bestUnitR = resE;
