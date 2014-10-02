@@ -278,7 +278,7 @@ public class TTechLevel {
         
         byMorph=morphUnit;
         this.morphCMD=morphCMD;
-        morphTo=botClb.modSpecific.getUnitDefForMprph(morphCMD);
+        morphTo=botClb.modSpecific.getUnitDefForMprph(morphCMD, byMorph.getDef());
         
         // 1. Базовые строители уровня
         needBaseBuilders=new ArrayList<UnitDef>();
@@ -572,7 +572,7 @@ public class TTechLevel {
         for (Unit u:currentUnits) {
             List<CommandDescription> morphLst=ModSpecification.getMorphCmdList(u, false);
             for (CommandDescription cmd:morphLst) {
-                UnitDef morphTo=botClb.modSpecific.getUnitDefForMprph(cmd);
+                UnitDef morphTo=botClb.modSpecific.getUnitDefForMprph(cmd, u.getDef());
                if (morphTo==null) {
                    // TODO !!!!
                    botClb.sendTextMsg(" Can't assign unit type for "+u.getDef().getName()+" morph to morph ID="+cmd.getId(), FieldBOT.MSG_ERR);

@@ -21,6 +21,24 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Information about morph command.
+ * @author PlayerO1
+ */
+class MorphInfo {
+    int CMDId=-1;
+    UnitDef from=null;
+    UnitDef to=null;
+    float time=Float.NaN;
+    float resource[]=null;
+    
+    public MorphInfo (int cmdId) {
+        this.CMDId=cmdId;
+    }
+    
+    // TODO read/write MorphInfo to XML node for cashing
+}
+
+/**
  * Specific for different mods
  * @author PlayerO1
  */
@@ -30,7 +48,10 @@ public class ModSpecification {
     private final FieldBOT owner;
     protected final List<UnitDef> allUnitDefs; // for Morph, get unit by ID.
     
-    private final HashMap<UnitDef,Integer> specialTLevelRequired;//!!! Для TA и RD, смотри specificUnitEnabled
+    private final HashMap<UnitDef,Integer> specialTLevelRequired;//For TA and RD, see specificUnitEnabled
+    
+    private final HashMap<Integer,MorphInfo> morphIDMap; // cashe for assign morph UnitDef to morph CMD ID (morphCMDID, morphToUDef)
+    // TODO where Spring 97 or later that 97 version will be relase, check unitCustomParam/unitLUAParam for getting morph info and other info.
     
     /**
      * This mod (for Tech Anihilation) have special unit enabled by tech level (laboratory).
@@ -188,6 +209,9 @@ public class ModSpecification {
         } else {
             specialTLevelRequired=null;
         }
+        
+        morphIDMap=new HashMap<Integer, MorphInfo>(); // TODO init morphIDMap only on Mod, when realy need it.
+        // TODO load from XML cashe file and save to file morphIDMap
         
     }
     
@@ -415,53 +439,58 @@ protected static final int CMD_MORPH = 31410;
     /**
      * Return UnitDef after unit will be do Morph
      * @param morphCmd
-     * @return future UnitDef (or NULL, TODO null value)
+     * @param fromUnit
+     * @return future UnitDef (or NULL, if not infromation found)
      */
-    public UnitDef getUnitDefForMprph(CommandDescription morphCmd) {
-        /*
-        final int MORPH_UNITID=31368; // отнять от номера команды morph... 31000?
-        int mUnitDefID=morphCmd.getId()-MORPH_UNITID;//!!!!;
-        */
-        int mUnitDefID;
-        switch (morphCmd.getId()) {
-            case 31456: mUnitDefID=90; break; // ARM Battle Commander
-            case 31457: mUnitDefID=89; break; // ARM Ecoing Commander
-            case 31430: mUnitDefID=408; break; // Combat Commander
-            case 31431: mUnitDefID=407; break; // CORE Ecoing Commander
-            case 31433: mUnitDefID=734; break; // TLL Battle Commander
-            default:
-//                FIXME // WTF I DOING? IT IS BOT API, NO HUMAN! The bot do not need read human names, there BOT life on numbers, no words.
-//                String unitName=parsingValueString(morphCmd.getName(),"Morph into a","");
-//                if (unitName.isEmpty()) return null;
-//                owner.sendTextMsg("Def name= '"+unitName+"'." , FieldBOT.MSG_ERR);
-//                // Search by name
-//                for () {
-//                    throw new IllegalArgumentException("TODO parsingValueString!");// FIXME TODO THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//                }
-                return null;
-        }
+    public UnitDef getUnitDefForMprph(CommandDescription morphCmd, UnitDef fromUnit) {
+        int morphID=morphCmd.getId();
+        UnitDef morphTo=null;
+        MorphInfo tmpMI=morphIDMap.get(morphID);
+        if (tmpMI!=null) morphTo=tmpMI.to;
+        if (morphTo!=null) return morphTo; // cashe using
         
+        // or find...
+        // WTF I DOING? IT IS BOT API, NO HUMAN! The bot do not need read human names, there BOT life on numbers, no words.
+        String unitName=parsingValueString(morphCmd.getToolTip(),"Morph into a",""); // FIXME check prefix for all mod, and text format
+         // getToolTip() - description ""? example?
+         // getName() = "Morph"
+        if (unitName.isEmpty()) return null;
+        owner.sendTextMsg("Parsing Def name from Cmd.getToolTip '"+unitName+"' for morphId="+morphID+"." , FieldBOT.MSG_DBG_SHORT);
         
-//        owner.sendTextMsg("MORPHING CMD ID="+morphCmd.getId()+" supported ID="+morphCmd.getSupportedCommandId(), FieldBOT.MSG_DBG_ALL);
-        UnitDef def=allUnitDefs.get(mUnitDefID-1);
-        if (def.getUnitDefId()==mUnitDefID) {
-            owner.sendTextMsg("Def detect №"+mUnitDefID , FieldBOT.MSG_DBG_SHORT);
-//             for (int i=-4;i<4;i++) owner.sendTextMsg("Def №"+(mUnitDefID+i)+" is "+allUnitDefs.get(mUnitDefID+i-1).getHumanName() , FieldBOT.MSG_DBG_SHORT); // DEBUG!!!
-        } else {
-            owner.sendTextMsg("Def detect ERROR: "+mUnitDefID+" <> found "+def.getUnitDefId() , FieldBOT.MSG_ERR);
-            def=null;
-        }
-        return def;
+        // Search by name
+        // select by CORE/ARM/TLL only
+        String fraction=null;//FIXME how true select fraction from unit name???
+        if (fromUnit!=null) fraction=fromUnit.getName().substring(0, 3); // FIXME check all using "substring" and index on sources!!!!
+        morphTo=TBOTTalking.findUnitDefByHumanQuery(unitName, null, allUnitDefs, fraction);
+
+        if (morphTo==null)
+            owner.sendTextMsg(" not found.", FieldBOT.MSG_DBG_SHORT);
+            else owner.sendTextMsg(" found: "+morphTo.getName(), FieldBOT.MSG_DBG_SHORT);
+
+        if (morphTo!=null) { // add to cashe
+            if (tmpMI==null) {
+                tmpMI=new MorphInfo(morphID);
+                morphIDMap.put(morphID, tmpMI);
+            }
+            if (tmpMI.from==null && fromUnit!=null) tmpMI.from=fromUnit;
+            if (tmpMI.to==null) tmpMI.to=morphTo;
+        } 
+        
+        return morphTo;
     }
     
     /**
-     * Разбирает строку вида "абв key: value abc"
+     * Parse string "qwe asd abc 123 def; key=abc: value=123"
      * @param source
      * @param key
-     * @return 
+     * @return parsing number after "key" word, or defaultVal
      */
     private float parsingValueFloat(String source, String key,float defaultVal) {
         float val;//=defaultVal;
+        
+        key=key.toLowerCase(); // for better comparable
+        source=source.toLowerCase();
+        
         String keyS=key+" ";
         int p1=source.indexOf(keyS);
         if (p1==-1) {
@@ -471,6 +500,8 @@ protected static final int CMD_MORPH = 31410;
         if (p1!=-1) {
             p1+=keyS.length();
             String intStr=source.substring(p1); // !!!
+            int pNL=intStr.indexOf("\n");
+            if (pNL>0) intStr=intStr.substring(0, pNL);
             try {
                 val=Float.parseFloat(intStr);
             } catch (NumberFormatException e) {
@@ -481,9 +512,15 @@ protected static final int CMD_MORPH = 31410;
             owner.sendTextMsg(" parsing ERROR: symbol ["+key+"] not found on ["+source+"]." , FieldBOT.MSG_ERR);
             val=defaultVal;
         }
-        // TODO parsingValue test
         return val;
     }
+    
+    /**
+     * Parse string "qwe asd abc; key=asd: value=abc"
+     * @param source
+     * @param key
+     * @return parsing number after "key" word, or defaultVal
+     */
     private String parsingValueString(String source, String key,String defaultVal) {
         String val;//=defaultVal;
         String keyS=key+" ";
@@ -496,8 +533,9 @@ protected static final int CMD_MORPH = 31410;
             p1+=keyS.length();
             String xStr=source.substring(p1); // !!!
             if (xStr.length()>0) {
-                throw new IllegalArgumentException("TODO parsingValueString!");// FIXME TODO THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                //val=xStr.substring(0, p1);!!!
+                int pNL=xStr.indexOf("\n");
+                if (pNL>0) xStr=xStr.substring(0, pNL);
+                val=xStr;
             } else {
                 val=defaultVal;
             }
@@ -505,76 +543,53 @@ protected static final int CMD_MORPH = 31410;
             owner.sendTextMsg(" parsing ERROR: symbol ["+key+"] not found on ["+source+"]." , FieldBOT.MSG_ERR);
             val=defaultVal;
         }
-        // TODO parsingValue test
         return val;
     }
     
     public float getTimeForMprph(CommandDescription morphCmd) {
-        float t=0.0f;//!!!!!!!!!!
-        switch (morphCmd.getId()) {
-            case 31456: t=30; break; // ARM Battle Commander
-            case 31457: t=30; break; // ARM Ecoing Commander
-            case 31430: t=30; break; // Combat Commander
-            case 31431: t=30; break; // CORE Ecoing Commander
-            case 31433: t=30; break; // TLL Battle Commander
-            default:
-                t=parsingValueFloat(morphCmd.getName(),"Time:", 60.0f); // TODO test!
-                owner.sendTextMsg(" no morph info for ID"+morphCmd.getId()+", but parsing from text="+t+" (default 60).", FieldBOT.MSG_ERR);
+        float t;// return value
+        int morphID=morphCmd.getId();
+        MorphInfo tmpMI=morphIDMap.get(morphID);
+        if (tmpMI!=null && tmpMI.time!=Float.NaN) {
+            t=tmpMI.time;
+        } else {
+            t=parsingValueFloat(morphCmd.getToolTip(),"Time:", Float.NaN); // TODO test!
+            if (tmpMI!=null && tmpMI.time!=Float.NaN && t!=Float.NaN) tmpMI.time=t;
+            if (t==Float.NaN) {
+                t=0; // no time found? TODO time check for morph.
+                owner.sendTextMsg(" time not found for ID"+morphCmd.getId(), FieldBOT.MSG_DBG_SHORT);
+            }
+            owner.sendTextMsg(" new time parsing for ID"+morphCmd.getId()+", t="+t, FieldBOT.MSG_DBG_SHORT);
         }
-        // TODO !!!!
+// debug:
 //        for (String param:morphCmd.getParams()) {
 //            owner.sendTextMsg(" parsing param: ["+param+"] to float exception: ", FieldBOT.MSG_ERR);
 //        }
-        /*
-        for (String param:morphCmd.getParams()) {
-            if (param.contains("time:")) { // parsing time...
-                int p1=param.indexOf(": ");
-                //if (p1==-1) p1=param.indexOf(":"); +1
-                if (p1!=-1) {
-                    String intStr=param.substring(p1+2);
-                    try {
-                        t=Float.parseFloat(intStr);
-                    } catch (NumberFormatException e) {
-                        owner.sendTextMsg(" parsing ERROR: ["+intStr+"] to float exception: "+e.toString() , FieldBOT.MSG_ERR);
-                    }
-                } else owner.sendTextMsg(" parsing ERROR: separator not found in ["+param+"]." , FieldBOT.MSG_ERR);
-            }
-        }
-        if (t<=0.0) {
-            t=100.0f;
-            owner.sendTextMsg(" parsing ERROR: time not found!", FieldBOT.MSG_ERR);
-        }*/
         return t;
     }
     public float[] getResForMprph(CommandDescription morphCmd) {
-        float res[]=null;
-        switch (morphCmd.getId()) {
-            case 0:
-            case 31456: res=new float[]{1350.0f, 24500.0f}; break; // ARM Battle Commander
-            case 31457: res=new float[]{1100.0f, 24000f}; break; //!!! ARM Ecoing Commander
-            case 31430: res=new float[]{1350.0f, 24500.0f}; break; // Combat Commander
-            case 31431: res=new float[]{1100f, 24000f}; break; //!!! CORE Ecoing Commander
-            case 31433: res=new float[]{1350.0f,12000.0f}; break; // TLL Battle Commander
-            default:
-               res=new float[owner.avgEco.resName.length];
-               Arrays.fill(res, 0.0f);
-               owner.sendTextMsg(" no morph info for ID"+morphCmd.getId(), FieldBOT.MSG_ERR);
-                // TODO
-               for (int i=0;i<res.length;i++) {
-                res[i]=parsingValueFloat(morphCmd.getName(),owner.avgEco.resName[i].getName()+":", 0.0f); // TODO test!
-                owner.sendTextMsg("  >parsing from text="+res[i]+" (default 0).", FieldBOT.MSG_DBG_SHORT);
-               }
+        float res[];// return value
+        int morphID=morphCmd.getId();
+        MorphInfo tmpMI=morphIDMap.get(morphID);
+        if (tmpMI!=null && tmpMI.resource!=null) return tmpMI.resource;
+        res=new float[owner.avgEco.resName.length];
+        Arrays.fill(res, 0.0f);
+        for (int i=0;i<res.length;i++) {
+          res[i]=parsingValueFloat(morphCmd.getToolTip(),owner.avgEco.resName[i].getName()+":", 0.0f); // TODO test!
+//          owner.sendTextMsg("  >parsing from text="+res[i]+" (default 0).", FieldBOT.MSG_DBG_ALL); // DEBUG
         }
+        owner.sendTextMsg(" new resource parsing for ID"+morphCmd.getId()+" res="+Arrays.toString(res), FieldBOT.MSG_DBG_SHORT);
+        if (tmpMI!=null) tmpMI.resource=res;
         return res;
     }
     
     /**
-     * Can unit build new base. Check can this unit build other builder.
+     * Can unit build new base. Check, can do this unit build other builders.
      * @param def builder
      * @return 
      */
     public static boolean isAbleToBuildBase(UnitDef def) {
-        // TODO можно кэшировать
+        // TODO can be cashed
         if (!def.isBuilder()) return false;
         List<UnitDef> bOption=def.getBuildOptions();
         if (bOption==null || bOption.isEmpty()) return false;

@@ -331,7 +331,7 @@ protected void onNewPoint(Point msgPoint) {
 
         HashSet<UnitDef> udSet=new HashSet<UnitDef>();
         for (TBase base:owner.selectTBasesList()) udSet.addAll(base.getBuildList(true)); // всех, в т.ч. недостроенных.
-        UnitDef meanUnitDef=findUnitDefByHumanQuery(message,parsingParam,new ArrayList(udSet)); // кого строить
+        UnitDef meanUnitDef=findUnitDefByHumanQuery(message,parsingParam,new ArrayList(udSet), null); // кого строить
 
         ArrayList<Integer> countRaw=parsingIntArr(message,parsingParam);
         int count=1;
@@ -482,7 +482,7 @@ public void message(int player, String message) {
 
             HashSet<UnitDef> udSet=new HashSet<UnitDef>();
             for (AGroupManager sGroup:owner.smartGroups) udSet.addAll(sGroup.getContainUnitDefsList(false)); // всех, в т.ч. недостроенных.
-            UnitDef meanUnitDef=findUnitDefByHumanQuery(message,parsingParam,new ArrayList(udSet)); // кого передать.
+            UnitDef meanUnitDef=findUnitDefByHumanQuery(message,parsingParam,new ArrayList(udSet), null); // кого передать.
             // TODO список из существующих сейчас юнитов !!!
             ArrayList<Integer> countRaw=parsingIntArr(message,parsingParam);
             int count=1;
@@ -617,7 +617,7 @@ public void message(int player, String message) {
                         if (!l.isEmpty()) {
                             CommandDescription cmd=l.get(0);
                             if (l.size()>1) cmd=l.get(1); // to Eco com... TODO переделать!
-                            UnitDef morphTo=owner.modSpecific.getUnitDefForMprph(cmd);
+                            UnitDef morphTo=owner.modSpecific.getUnitDefForMprph(cmd, u.getDef());
                             if (morphTo!=null) owner.sendTextMsg(" Morphing "+u.getDef().getHumanName()+" to "+morphTo.getHumanName(), FieldBOT.MSG_DLG);
                             else owner.sendTextMsg("  error getUnitDefForMprph is null!", FieldBOT.MSG_ERR);
                             u.executeCustomCommand(cmd.getId(), new ArrayList<Float>(), (short)0, DEFAULT_TIMEOUT);
@@ -641,7 +641,7 @@ public void message(int player, String message) {
                             if (!l2.isEmpty()) {
                                 CommandDescription cmd=l2.get(0);
                                 if (l2.size()>1) cmd=l2.get(1); // to Eco com... TODO переделать!
-                                UnitDef morphTo=owner.modSpecific.getUnitDefForMprph(cmd);
+                                UnitDef morphTo=owner.modSpecific.getUnitDefForMprph(cmd, unit.getDef());
                                 if (morphTo!=null) owner.sendTextMsg(" Morphing "+unit.getDef().getHumanName()+" to "+morphTo.getHumanName(), FieldBOT.MSG_DLG);
                                 else owner.sendTextMsg("  error getUnitDefForMprph is null!", FieldBOT.MSG_ERR);
                                 unit.executeCustomCommand(cmd.getId(), new ArrayList<Float>(), (short)0, DEFAULT_TIMEOUT);
@@ -787,7 +787,7 @@ public void message(int player, String message) {
             
             HashSet<UnitDef> udSet=new HashSet<UnitDef>();
             for (TBase base:owner.selectTBasesList()) udSet.addAll(base.getBuildList(true)); // всех, в т.ч. недостроенных.
-            UnitDef meanUnitDef=findUnitDefByHumanQuery(message,parsingParam,new ArrayList(udSet)); // кого строить
+            UnitDef meanUnitDef=findUnitDefByHumanQuery(message,parsingParam,new ArrayList(udSet), null); // кого строить
             
             ArrayList<Integer> countRaw=parsingIntArr(message,parsingParam);
             int count=1;
@@ -933,14 +933,16 @@ private ArrayList<Integer> parsingIntArr(String message,String[] keywordAfther) 
 
 /**
  * Find unit def by human query
- * @param HumanStr human query text
- * @param keywordAfther set of keyworks, afther some of this words do search name sequence
+ * @param message full text with unit name name
+ * @param udl list for select unit by name max relevants
+ * @param keywordAfther set of keyworks, afther some of this words do search name sequence, can be empty.
+ * @param prefix unitDef name prefix, can be null. Example: "arm", "cor", "tll"
  * @return found UnitDef or null
  */
-private UnitDef findUnitDefByHumanQuery(String message,String[] keywordAfther,List<UnitDef> udl) {
+protected static UnitDef findUnitDefByHumanQuery(String message,String[] keywordAfther,List<UnitDef> udl, String prefix) {
     String s[]=message.split(messageSpliter);
     int i,parsingStage=0;
-    if (keywordAfther.length==0) parsingStage=1; // если нет ключевых слов - исследовать всё
+    if (keywordAfther==null || keywordAfther.length==0) parsingStage=1; // если нет ключевых слов - исследовать всё
     ArrayList<String> unitNameElement=new ArrayList<String>(); // элементы названия юнита
 //    int techLevel=-1; // сколько строить
     
@@ -948,7 +950,7 @@ private UnitDef findUnitDefByHumanQuery(String message,String[] keywordAfther,Li
         if (parsingStage>=1 && parsingStage<4) {
             unitNameElement.add(s[i]);
 
-            owner.sendTextMsg(" (debug) parsing element <"+s[i]+">" , FieldBOT.MSG_DBG_ALL);
+//            owner.sendTextMsg(" (debug) parsing element <"+s[i]+">" , FieldBOT.MSG_DBG_ALL);
 
 //            // T1, T2, is realy 1 2 and 3 4... Depends of MODs!
 //            if (s[i].toLowerCase().equals("t1")) techLevel=1;
@@ -957,13 +959,14 @@ private UnitDef findUnitDefByHumanQuery(String message,String[] keywordAfther,Li
            
             parsingStage++;
         }
-        for (int j=0;j<keywordAfther.length;j++) if (s[i].equals(keywordAfther[j])) parsingStage=1;
+        if (keywordAfther!=null) for (int j=0;j<keywordAfther.length;j++) if (s[i].equals(keywordAfther[j])) parsingStage=1;
     }
 
     UnitDef meanUnitDef=null; // кого строить
     int ver=0, minVer=1; // вероятность совпадений, минимальная вероятность для доверия поиску.
     float percentQWord=0.0f;// дополнительная проверка - какой процент из слов совпал относительно размера названия.
     // TODO может всех в игре?... но долго; ошибки в написании и лишние окончания.
+    if (prefix!=null && !prefix.isEmpty()) minVer++;
     for (UnitDef def:udl) {
         String uName=def.getHumanName().toLowerCase();
         int tmpV=0;
@@ -972,6 +975,11 @@ private UnitDef findUnitDefByHumanQuery(String message,String[] keywordAfther,Li
 //            if (minVer<=1) minVer++; // не учитывать только по тех уровню.
 //            //owner.sendTextMsg(" (debug) "+def.getName()+" tech level "+def.getTechLevel()+" find TL="+techLevel);
 //        }
+        if (prefix!=null && !prefix.isEmpty()) {
+            String defN=def.getName();
+            if ( defN.startsWith(prefix) ) tmpV++;
+        }
+        
         float tmpPercentW=0.0f;
         for (String nel:unitNameElement) if (uName.contains(nel.toLowerCase())) {
             tmpV++;
