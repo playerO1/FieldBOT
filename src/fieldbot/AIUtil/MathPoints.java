@@ -115,16 +115,16 @@ public class MathPoints {
 
     /**
      *
-     * @param p1 откуда двигаться
-     * @param targetPoint куда двигаться
-     * @param targetDist на какой радиус подойти к цели
-     * @return точка на радиусе цели
+     * @param p1 walking from
+     * @param targetPoint walking to
+     * @param targetDist length from targetPoint - radius
+     * @return point on radius on target
      */
     public static AIFloat3 getNearBetweenPoint(AIFloat3 p1, AIFloat3 targetPoint, float targetDist) {
         float L = getDistanceBetween3D(p1, targetPoint);
         float k = 0.0F;
         if (L != 0) k = targetDist / L;
-        AIFloat3 p = new AIFloat3(p1.x - (targetPoint.x - p1.x) * k, p1.y - (targetPoint.y - p1.y) * k, p1.z - (targetPoint.z - p1.z) * k);
+        AIFloat3 p = new AIFloat3(targetPoint.x - (targetPoint.x - p1.x) * k, targetPoint.y - (targetPoint.y - p1.y) * k, targetPoint.z - (targetPoint.z - p1.z) * k);
         return p;
     }
     

@@ -10,12 +10,12 @@ import com.springrts.ai.oo.clb.*;
 import java.util.List;
 
 /**
- * Улучшенная информация об экономике. Поддерживает усреднённые значения.
+ * Advances economic information. Support average info.
  * @author PlayerO1
  */
 public class AdvECO {
     /**
-     * Названия ресурсов (заголовки)
+     * List of resources
      */
     public final Resource resName[];
     
@@ -30,24 +30,24 @@ public class AdvECO {
     private float resCurrent[][]; // TODO...
     
     /**
-     * средние текущие ресурсы (кэш)
+     * average current resource (cashe)
      */
     private float resAvg[][];
     /**
-     * средние для постройки доступные ресурсы (smart) (кэш)
+     * средние для постройки доступные ресурсы (smart) (cashe)
      */
     private float resSAvg[][];
     
     /**
-     * Число усреднённых значений.
+     * Number of average storage count.
      */
     public final int avgTime;
     
     /**
-     * сырая статистика для обработки
+     * raw statistics info
      */
     private float resStatisticRav[][][];
-    private int dataI;
+    private int dataI; // raw statistic last index
     
     private final OOAICallback clb;
     private final ModSpecification modMakerSpecific;
@@ -57,7 +57,7 @@ public class AdvECO {
     
     /**
      * 
-     * @param numStatisticTime число измерений для усреднения
+     * @param numStatisticTime number of point to store average info
      */
     public AdvECO(int numStatisticTime, OOAICallback clb, ModSpecification modMakerSpecific) {
         avgTime = numStatisticTime;

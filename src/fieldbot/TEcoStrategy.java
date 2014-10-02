@@ -501,35 +501,40 @@ public class TEcoStrategy {
         float avg_stor_E=currentRes[AdvECO.R_Storage][1];//owner.avgEco.getAvgStorage(resE);
         float avg_delta_E=currentRes[AdvECO.R_Income][1]-currentRes[AdvECO.R_Usage][1];//owner.avgEco.getAvgIncome(resE)-owner.avgEco.getAvgUsage(resE);
         
+        // Economic - select need resources to do resource generators
+        final float EconvertK=Math.min(owner.modSpecific.metal_maker_workZone*1.19f, 0.97f);
+        
         // See on future, do not see on current time (as on stock exchange).
-        final float T_FUTURE=7.5f; // see on 7.5 second to future
-        if (avg_delta_E>0) {
-            avg_cur_E += avg_delta_E *T_FUTURE;
-            if (avg_cur_E>avg_stor_E) avg_cur_E=avg_stor_E;
+        final float T_FUTURE=0.035f; // see on ? second to future
+        if (avg_delta_E>0) { //  && avg_cur_E/avg_stor_E<EconvertK // FIXME avg_delta_E and T_FUTURE!!!!!!!!!!!! Maybe just do not using this?
+            float pEstor1=avg_cur_E/avg_stor_E; // Energy storage percent
+            float pEstor2=(avg_cur_E+avg_delta_E *T_FUTURE)/avg_stor_E; // Energy storage percent
+            if (pEstor2-pEstor1>0.3 || pEstor2<EconvertK)
+            {
+                avg_cur_E += avg_delta_E *T_FUTURE;
+                if (avg_cur_E>avg_stor_E) avg_cur_E=avg_stor_E;
+            } // TODO else ??? need know max conversion power.
         }
         if (avg_delta_M>0) {
             avg_cur_M += avg_delta_M *T_FUTURE;
             if (avg_cur_M>avg_stor_M) avg_cur_M = avg_stor_M;
         }
         
-        // Economic - select need resources to do resource generators
-        final float EconvertK=Math.min(owner.modSpecific.metal_maker_workZone*1.19f, 0.97f);
-        
         float pEstor=avg_cur_E/avg_stor_E; // Energy storage percent
         float pMstor=avg_cur_M/avg_stor_M; // Metal storage percent
         
         if (owner.isMetalFieldMap==FieldBOT.IS_NO_METAL || owner.isMetalFieldMap==FieldBOT.IS_NORMAL_METAL)
         {
-            if ( pEstor <= EconvertK || (avg_delta_E<1 && pEstor <= 0.87)) { // FIXME !!!!!!!!!
-//                owner.sendTextMsg(" cel->electrostanciya1" , FieldBOT.MSG_DBG_SHORT);
+            if ( pEstor <= EconvertK || (avg_delta_E<1 && pEstor <= 0.90)) { // FIXME !!!!!!!!!
+                owner.sendTextMsg(" cel->electrostanciya1" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resE;
             }
             if ( pMstor < 0.5  &&  pEstor >= Math.min(EconvertK*1.07,0.97) && avg_delta_E>1) {
-//                owner.sendTextMsg(" cel->metal2" , FieldBOT.MSG_DBG_SHORT);
+                owner.sendTextMsg(" cel->metal2" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
             if (bestUnitR==null) {
-//                owner.sendTextMsg(" cel->metal3" , FieldBOT.MSG_DBG_SHORT);
+                owner.sendTextMsg(" cel->metal3" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
         }
@@ -549,7 +554,7 @@ public class TEcoStrategy {
             }
         } else owner.sendTextMsg(" uncknown map resource type = "+owner.isMetalFieldMap , FieldBOT.MSG_DBG_SHORT); // or FieldBOT.MSG_ERR?
         if ( pMstor>0.9 && pEstor>EconvertK && avg_delta_M>0) {
-//            owner.sendTextMsg(" cel->4" , FieldBOT.MSG_DBG_SHORT);
+            owner.sendTextMsg(" cel->4" , FieldBOT.MSG_DBG_SHORT);
             final float resourceProportion[]=owner.modSpecific.resourceProportion; // last:{1.0f, 10.0f};
             if (currentRes[AdvECO.R_Income][0]*resourceProportion[0]>currentRes[AdvECO.R_Income][1]*resourceProportion[1])
                  bestUnitR = resE;

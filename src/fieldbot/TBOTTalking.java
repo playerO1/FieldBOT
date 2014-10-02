@@ -295,9 +295,18 @@ protected void onNewPoint(Point msgPoint) {
     
     if (message.contains("create") && message.contains("base")){// || message.contains("new"))) {
         if (message.contains("empty")) {
-            TBase newB=new TBase(owner, msgPoint.getPosition(), 0);
-            owner.addSmartGroup(newB);
-            owner.sendTextMsg("New empty base created "+newB.toString(), FieldBOT.MSG_DLG);
+            // Check on free position from other TBases
+            TBase otherBase=owner.getNearBase(msgPoint.getPosition());
+            boolean canCreate=true;
+            if (otherBase!=null) {
+                if (MathPoints.getDistanceBetweenFlat(otherBase.getCenter(), msgPoint.getPosition()) <= otherBase.radius) // TODO plas second radius
+                    canCreate=false; // base collision
+            }
+            if (canCreate) {
+                TBase newB=new TBase(owner, msgPoint.getPosition(), 0);
+                owner.addSmartGroup(newB);
+                owner.sendTextMsg("New empty base created "+newB.toString(), FieldBOT.MSG_DLG);
+            } else owner.sendTextMsg("Can not create base: collision.", FieldBOT.MSG_DLG);
         } else {
             TBase newB=owner.spawnNewBase(msgPoint.getPosition(), 0);
             if (newB!=null) {
