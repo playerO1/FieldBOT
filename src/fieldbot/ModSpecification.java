@@ -52,6 +52,7 @@ public class ModSpecification {
     
     private final HashMap<Integer,MorphInfo> morphIDMap; // cashe for assign morph UnitDef to morph CMD ID (morphCMDID, morphToUDef)
     // TODO where Spring 97 or later that 97 version will be relase, check unitCustomParam/unitLUAParam for getting morph info and other info.
+    private short MORPH_GETINFO_MODE=1; // 0 - do not get morph info, only from morphIDMap (TODO load from XML morph info); 1 - use cmdTolTip text parsing and add to morphIDMap new info; 2 - TODO after spring 97 relase getting info from unitScriptParam.
     
     /**
      * This mod (for Tech Anihilation) have special unit enabled by tech level (laboratory).
@@ -449,6 +450,9 @@ protected static final int CMD_MORPH = 31410;
         if (tmpMI!=null) morphTo=tmpMI.to;
         if (morphTo!=null) return morphTo; // cashe using
         
+        if (MORPH_GETINFO_MODE==0) return null; // do not add new info, if mode = 0
+        if (MORPH_GETINFO_MODE>=2 || MORPH_GETINFO_MODE<0) throw new IllegalArgumentException(" this mode "+MORPH_GETINFO_MODE+" not support. To doing");
+        
         // or find...
         // WTF I DOING? IT IS BOT API, NO HUMAN! The bot do not need read human names, there BOT life on numbers, no words.
         String unitName=parsingValueString(morphCmd.getToolTip(),"Morph into a",""); // FIXME check prefix for all mod, and text format
@@ -550,16 +554,24 @@ protected static final int CMD_MORPH = 31410;
         float t;// return value
         int morphID=morphCmd.getId();
         MorphInfo tmpMI=morphIDMap.get(morphID);
-        if (tmpMI!=null && tmpMI.time!=Float.NaN) {
+        if (tmpMI!=null && !Float.isNaN(tmpMI.time)) {
             t=tmpMI.time;
         } else {
-            t=parsingValueFloat(morphCmd.getToolTip(),"Time:", Float.NaN); // TODO test!
-            if (tmpMI!=null && tmpMI.time!=Float.NaN && t!=Float.NaN) tmpMI.time=t;
-            if (t==Float.NaN) {
-                t=0; // no time found? TODO time check for morph.
-                owner.sendTextMsg(" time not found for ID"+morphCmd.getId(), FieldBOT.MSG_DBG_SHORT);
+            switch (MORPH_GETINFO_MODE) {
+                case 0: t=0;
+                    break;
+                case 1:
+                    t=parsingValueFloat(morphCmd.getToolTip(),"Time:", Float.NaN);
+                    if (tmpMI!=null && !Float.isNaN(tmpMI.time) && !Float.isNaN(t)) tmpMI.time=t;
+                    if (Float.isNaN(t)) {
+                        t=0; // no time found? TODO time check for morph.
+                        owner.sendTextMsg(" time not found for ID"+morphCmd.getId(), FieldBOT.MSG_DBG_SHORT);
+                    }
+                    owner.sendTextMsg(" new time parsing for ID"+morphCmd.getId()+", t="+t, FieldBOT.MSG_DBG_SHORT);
+                    break;
+                default:
+                    throw new IllegalArgumentException(" this mode "+MORPH_GETINFO_MODE+" not support. To doing this."); // TODO mode 3 for Spring >97
             }
-            owner.sendTextMsg(" new time parsing for ID"+morphCmd.getId()+", t="+t, FieldBOT.MSG_DBG_SHORT);
         }
 // debug:
 //        for (String param:morphCmd.getParams()) {
@@ -572,14 +584,22 @@ protected static final int CMD_MORPH = 31410;
         int morphID=morphCmd.getId();
         MorphInfo tmpMI=morphIDMap.get(morphID);
         if (tmpMI!=null && tmpMI.resource!=null) return tmpMI.resource;
+
         res=new float[owner.avgEco.resName.length];
         Arrays.fill(res, 0.0f);
-        for (int i=0;i<res.length;i++) {
-          res[i]=parsingValueFloat(morphCmd.getToolTip(),owner.avgEco.resName[i].getName()+":", 0.0f); // TODO test!
-//          owner.sendTextMsg("  >parsing from text="+res[i]+" (default 0).", FieldBOT.MSG_DBG_ALL); // DEBUG
+        switch (MORPH_GETINFO_MODE) {
+            case 0: break;
+            case 1:
+                for (int i=0;i<res.length;i++) {
+                  res[i]=parsingValueFloat(morphCmd.getToolTip(),owner.avgEco.resName[i].getName()+":", 0.0f); // TODO test!
+        //          owner.sendTextMsg("  >parsing from text="+res[i]+" (default 0).", FieldBOT.MSG_DBG_ALL); // DEBUG
+                }
+                owner.sendTextMsg(" new resource parsing for ID"+morphCmd.getId()+" res="+Arrays.toString(res), FieldBOT.MSG_DBG_SHORT);
+                if (tmpMI!=null) tmpMI.resource=res;
+                break;
+            default:
+                throw new IllegalArgumentException(" this mode "+MORPH_GETINFO_MODE+" not support. To doing this."); // TODO mode 3 for Spring >97
         }
-        owner.sendTextMsg(" new resource parsing for ID"+morphCmd.getId()+" res="+Arrays.toString(res), FieldBOT.MSG_DBG_SHORT);
-        if (tmpMI!=null) tmpMI.resource=res;
         return res;
     }
     
