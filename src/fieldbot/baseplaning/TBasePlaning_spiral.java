@@ -73,8 +73,11 @@ public class TBasePlaning_spiral extends ABasePlaning{
         }
         else buildCenter=owner.center; // центр базы для обычных строителей (рабочих)
         
+        AIFloat3 searchNear;
+        if (mainBuilder!=null) searchNear=mainBuilder.getPos(); else searchNear=null;
+        
         // TODO это оставить для обычных ходячих строителей вне базы. Или для здания неподвижного.
-        buildPos=getBuildPosition_Sppiral(unitType, buildCenter, startAng, minR, maxR);
+        buildPos=getBuildPosition_Sppiral(unitType, buildCenter,searchNear, startAng, minR, maxR);
         
         
      // if (full<numOfTry/NUM_APPROX_POINTS) full=numOfTry/NUM_APPROX_POINTS; // подсчёт на сколько заполнено.

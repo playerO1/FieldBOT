@@ -269,11 +269,15 @@ public class TBasePlaning_tetris extends ABasePlaning{
             }
             
             // 2. найти или создать зону строительства
-            if (needSpecialPoint) { // Если нужны специальные точки
-               // FIXME ПЕРЕДЕЛАТЬ! НЕ ПОДДЕРЖИВАЕТСЯ!!!!
+            if (needSpecialPoint) { // If need special point
+               // FIXME CHANGE! Not full support!!! Do: or add TPlanCell, or do some other.
                 double minR=maxR*0.10;
                 if (mainBuilder!=null) minR=Math.max(minR, MathPoints.getRadiusFlat(mainBuilder.getDef()));
-                buildPos=getBuildPosition_Sppiral(unitType, buildCenter, startAng, minR, maxR);
+                
+                AIFloat3 searchNear;
+                if (mainBuilder!=null) searchNear=mainBuilder.getPos(); else searchNear=null;
+                
+                buildPos=getBuildPosition_Sppiral(unitType, buildCenter,searchNear, startAng, minR, maxR);
                 if (!MathPoints.isValidPoint(buildPos)) buildPos=null;
             } else {
                 TPlanCell cell=findFreeCell(unitType, 1);

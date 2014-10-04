@@ -107,13 +107,31 @@ public abstract class ABasePlaning {
      */
     abstract public AIFloat3 getRecomendetBuildPosition(UnitDef unitType, Unit mainBuilder);    
     
-    private AIFloat3 findNear_noClosePoint(UnitDef unitType, AIFloat3 buildCenter,float r, List<AIFloat3> points) {
-        float L=r,l;
+    /**
+     * 
+     * @param unitType
+     * @param buildCenter
+     * @param r
+     * @param nearFor can be null
+     * @param points
+     * @return 
+     */
+    private AIFloat3 findNear_noClosePoint(UnitDef unitType, AIFloat3 buildCenter, float r, AIFloat3 nearFor, List<AIFloat3> points) {
+        float L,l;
+        boolean checkR2;
         AIFloat3 nearP=null;
+        if (nearFor==null) {
+            nearFor=buildCenter;
+            L=r;
+            checkR2=false;
+        } else {
+            L=Float.POSITIVE_INFINITY;
+            checkR2=true;
+        }
         for (AIFloat3 p:points) if (map.isPossibleToBuildAt(unitType, p, owner.BUILD_FACING)) 
         {
-            l=MathPoints.getDistanceBetween3D(p, buildCenter);
-            if (l<L) { // last: (L<0 || l<L)
+            l=MathPoints.getDistanceBetween3D(p, nearFor);
+            if (l<L && (!checkR2 || (MathPoints.getDistanceBetween3D(p, buildCenter)<r))) { // last: (L<0 || l<L)
                 L=l;
                 nearP=p;
             }
@@ -122,7 +140,7 @@ public abstract class ABasePlaning {
         return nearP; //last: null;
     }
     
-    private AIFloat3 findFreeGeoPointAt(UnitDef unitType, AIFloat3 buildCenter,float r)
+    private AIFloat3 findFreeGeoPointAt(UnitDef unitType, AIFloat3 buildCenter, float r, AIFloat3 nearFor)
     {
         if (buildCenter.equals(owner.center) && r==owner.radius)
         {// cahse
@@ -131,24 +149,24 @@ public abstract class ABasePlaning {
                 List<Feature> features=owner.owner.clb.getFeaturesIn(buildCenter, r);
                 for (Feature f:features) if (f.getDef().isGeoThermal()) cashe_GeoPoints.add(f.getPosition());
             }
-            return findNear_noClosePoint(unitType, buildCenter, r, cashe_GeoPoints);
+            return findNear_noClosePoint(unitType, buildCenter, r, nearFor, cashe_GeoPoints);
         } else {// no cashe
             ArrayList<AIFloat3> GeoPoints=new ArrayList<AIFloat3>();
             List<Feature> features=owner.owner.clb.getFeaturesIn(buildCenter, r);
             for (Feature f:features) if (f.getDef().isGeoThermal()) GeoPoints.add(f.getPosition());
-            return findNear_noClosePoint(unitType, buildCenter, r, GeoPoints);
+            return findNear_noClosePoint(unitType, buildCenter, r, nearFor, GeoPoints);
         }
     }
-    private AIFloat3 findFreeMetalPointAt(UnitDef unitType, AIFloat3 buildCenter,float r)
+    private AIFloat3 findFreeMetalPointAt(UnitDef unitType, AIFloat3 buildCenter, float r, AIFloat3 nearFor)
     {
         if (buildCenter.equals(owner.center) && r==owner.radius)
         {// cashe
             if (cashe_MetalPoints==null) cashe_MetalPoints=owner.owner.getMetalSpotsInRadius(buildCenter, r);
-            if (cashe_MetalPoints!=null) return findNear_noClosePoint(unitType, buildCenter, r, cashe_MetalPoints);
+            if (cashe_MetalPoints!=null) return findNear_noClosePoint(unitType, buildCenter, r, nearFor, cashe_MetalPoints);
             else return null;
         } else { // no cashe
             ArrayList<AIFloat3> MetalPoints=owner.owner.getMetalSpotsInRadius(buildCenter, r);
-            if (MetalPoints!=null) return findNear_noClosePoint(unitType, buildCenter, r, MetalPoints);
+            if (MetalPoints!=null) return findNear_noClosePoint(unitType, buildCenter, r, nearFor, MetalPoints);
             else return null;
         }
     }
@@ -177,7 +195,17 @@ public abstract class ABasePlaning {
         return unitType.isNeedGeo() || needMetalPosition(unitType);
     }
     
-    protected AIFloat3 getBuildPosition_Sppiral(UnitDef unitType, AIFloat3 buildCenter,double startAng, double minR, double maxR) {
+    /**
+     * 
+     * @param unitType
+     * @param buildCenter
+     * @param nearFor near builder, can be null (only for Geo and metal extractor)
+     * @param startAng
+     * @param minR
+     * @param maxR
+     * @return 
+     */
+    protected AIFloat3 getBuildPosition_Sppiral(UnitDef unitType, AIFloat3 buildCenter, AIFloat3 nearFor,double startAng, double minR, double maxR) {
         
         boolean needMetalSpots=needMetalPosition(unitType);
 
@@ -193,8 +221,8 @@ public abstract class ABasePlaning {
         
         
         // point depend building
-        if (unitType.isNeedGeo()) return findFreeGeoPointAt(unitType, buildCenter, (float)maxR);
-        if (needMetalSpots) return findFreeMetalPointAt(unitType, buildCenter, (float)maxR);
+        if (unitType.isNeedGeo()) return findFreeGeoPointAt(unitType, buildCenter, (float)maxR, nearFor);
+        if (needMetalSpots) return findFreeMetalPointAt(unitType, buildCenter, (float)maxR, nearFor);
 
         double deltaR=maxR-minR;
         
@@ -246,13 +274,13 @@ public abstract class ABasePlaning {
      */
     public boolean canBuildOnBase(UnitDef unitType, boolean checkForFreeMetalSpots, int buildFacing) {
         
-        if (unitType.isNeedGeo()) return findFreeGeoPointAt(unitType, owner.center, owner.radius)!=null; // TODO test it!
+        if (unitType.isNeedGeo()) return findFreeGeoPointAt(unitType, owner.center, owner.radius, null)!=null; // TODO test it!
         
         boolean needMetalSpots=needMetalPosition(unitType);
 
         if (needMetalSpots) {
             if (owner.owner.isMetalFieldMap==FieldBOT.IS_NO_METAL) return false; // !!!
-            return findFreeMetalPointAt(unitType, owner.center, owner.radius)!=null;
+            return findFreeMetalPointAt(unitType, owner.center, owner.radius, null)!=null;
         }
 
         // быстро проверить в центре

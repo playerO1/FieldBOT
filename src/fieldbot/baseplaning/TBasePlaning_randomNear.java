@@ -87,7 +87,9 @@ public class TBasePlaning_randomNear extends ABasePlaning{
         if (needSpecialPoints) {
             double minR=maxR*0.10;
             if (mainBuilder!=null) minR=Math.max(minR, MathPoints.getRadiusFlat(mainBuilder.getDef()));
-            buildPos=getBuildPosition_Sppiral(unitType, buildCenter, startAng, minR, maxR);
+            AIFloat3 searchNear;
+            if (mainBuilder!=null) searchNear=mainBuilder.getPos(); else searchNear=null;
+            buildPos=getBuildPosition_Sppiral(unitType, buildCenter,searchNear, startAng, minR, maxR);
             if (!MathPoints.isValidPoint(buildPos)) buildPos=null;
         } else {
             // !!!
