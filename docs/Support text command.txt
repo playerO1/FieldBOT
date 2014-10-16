@@ -1,7 +1,8 @@
 This manual syntax structure: comment «command example», {or 1|or 2|or 3} [optional 1, may be reduce][optional 2]. Don't write "{" "|" "[" it is for documentation only.
 
 -- By click on "Need resource" buttons (text chat) --
-Request resource (as button on team game), can send energy and metal. If without number (sending level) then will be send 70% of resource having.
+1. Request resource (as button on team game), can send energy and metal. If without number (sending level) then will be send 70% of resource having.
+2. on "Unit support" - share army units, only if have.
 
 -- By text chat --
 Chat text command syntax «{bot|%botShortName%|bot_color} query text», after last command you can using «and» without bot name ("and" must work, TEST). Example: "bot make kbot factory", "red do tech up", "FieldBOT show status".
