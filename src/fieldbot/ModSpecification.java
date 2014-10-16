@@ -96,6 +96,11 @@ public class ModSpecification {
      */
     public boolean firstFactoryIsFree;
     
+    
+    // TODO for Spring1944, Imperial Winter, and other capture flag MOD
+    // public final boolean captureFlag;
+    // public final int flagResourceID; // Metall or energy getting falg?
+    
     /**
      * MOD short name
      */
@@ -363,7 +368,7 @@ public class ModSpecification {
      * @param level parameter for select
      * @return list with units when def.getTechLevel()==level
      */
-    public ArrayList<UnitDef> selectDefByTechLevel(ArrayList<UnitDef> defs,int level)
+    public static ArrayList<UnitDef> selectDefByTechLevel(ArrayList<UnitDef> defs,int level)
     {
         ArrayList<UnitDef> selectedLst=new ArrayList<UnitDef>();
         for (UnitDef def:defs) if (def.getTechLevel()==level) selectedLst.add(def);
@@ -372,9 +377,8 @@ public class ModSpecification {
     
     /**
      * Return true list of real build options (only where enabled). It is require for TA/RD mod.
-     * TODO DO NOT WORK correct!
      * @param uBuilder
-     * @return список того, что может строить этот юнит
+     * @return what realy can build this unit now
      */
     public ArrayList<UnitDef> getRealBuildList(Unit uBuilder) {
         // FIXME TODO NOT WORK!!!
@@ -639,7 +643,7 @@ protected static final int CMD_MORPH = 31410;
         if (!isAble) return false;
         String hName=def.getHumanName();
         if (hName.contains("Air Repair") || hName.contains("Air Support Pad")) return false; // for Air Repair platform - usualy they can not assist, but they have assist option.
-        if (hName.equals("Giant")) return false; // TA mod, TLL air repair ship with anti-nuke
+        //if (hName.equals("Giant")) return false; // TA mod, TLL air repair ship with anti-nuke. P.S. It realy can repair other units on TA 2.31.
         return true;
     }
     

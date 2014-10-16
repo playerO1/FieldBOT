@@ -116,7 +116,7 @@ public class TPlanCell {
         for ( int i=0; i<maxCount ; i++ ) {
             AIFloat3 p=getPos(i);
             if (p!=null) {if (!map.isPossibleToBuildAt(forUnitType, p, buildFacing)) z++;}
-            else clb.sendTextMsg("ERROR updateZanatoPoz: point is NULL!!!", FieldBOT.MSG_ERR);//FIXME LOG ERROR!!!!!!!!!
+            else clb.sendTextMsg("ERROR updateZanatoPoz: point is NULL!!!", FieldBOT.MSG_ERR);// LOG ERROR!!!!!!!!!
         }
         zanato=z;
     }
@@ -130,11 +130,11 @@ public class TPlanCell {
         if (getNumFreePos()>0) for (int i=0;i<maxCount;i++) {
             pos=getPos(i);
             if (map.isPossibleToBuildAt(forUnitType, pos, buildFacing)) return pos;
-            if (zanato<i) clb.sendTextMsg("WARNING getFreePos: not correct free position: zanato="+zanato+" but position not free i="+i, FieldBOT.MSG_DBG_ALL);//FIXME LOG ERROR!!!!!!!!!
+            if (zanato<i) clb.sendTextMsg("WARNING getFreePos: not correct free position: zanato="+zanato+" but position not free i="+i, FieldBOT.MSG_DBG_ALL);// LOG ERROR!!!!!!!!!
             // TODO check again zanato<=i ???
         }
         if (zanato<maxCount) {
-            clb.sendTextMsg("WARNING getFreePos: not found free position, but: zanato="+zanato+", maxCount="+maxCount, FieldBOT.MSG_ERR);//FIXME LOG ERROR!!!!!!!!!
+            clb.sendTextMsg("WARNING getFreePos: not found free position, but: zanato="+zanato+", maxCount="+maxCount, FieldBOT.MSG_DBG_SHORT);// LOG ERROR!!!!!!!!!
             zanato=maxCount;
             // FIXME whay?
         }

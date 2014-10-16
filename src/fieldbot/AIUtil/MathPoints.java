@@ -28,17 +28,15 @@ import com.springrts.ai.oo.clb.UnitDef;
  */
 public class MathPoints {
 
-    // ==================================
-    // --------- утилиты ----------
     /**
-     * Проверяет действительность точки
+     * Check truing point
      * @param p
      * @return
      */
     public static boolean isValidPoint(AIFloat3 p) {
         if (p == null) return false;
         if (p.x < 0 || p.z < 0) return false;
-        // TODO размер карты учесть x>width, z>height....
+        // TODO check map size: x>width, z>height....
         return true;
     }
 
@@ -47,7 +45,7 @@ public class MathPoints {
     }
 
     /**
-     * Расстояние между двумя точками на плоскости.
+     * Distnace between 2 point on flat
      */
     public static float getDistanceBetweenFlat(AIFloat3 p1, AIFloat3 p2) {
         float dx = p1.x - p2.x;
@@ -56,7 +54,7 @@ public class MathPoints {
     }
 
     /**
-     * Расстояние между двумя точками 3D.
+     * Distance between 2 point 3D.
      */
     public static float getDistanceBetween3D(AIFloat3 p1, AIFloat3 p2) {
         double dx = p1.x - p2.x;

@@ -50,6 +50,7 @@ public static double simplexDouble(double[][] A, double[] b, double[] c, double[
     }
     // TODO при переработке энергии в металл можно учесть с помощью двух переменных и ограничения!!!
 
+    // FIXME precission - do not use between 0.00001 and 1.0, only 1,2,3...
     SimplexSolver solver = new SimplexSolver();
     PointValuePair optSolution = solver.optimize(new MaxIter(1000), f,
             new LinearConstraintSet(constraints),

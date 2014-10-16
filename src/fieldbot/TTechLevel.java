@@ -10,6 +10,7 @@ import com.springrts.ai.oo.clb.CommandDescription;
 import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
+import fieldbot.AIUtil.UnitSelector;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -64,10 +65,13 @@ public class TTechLevel {
      */
     public final float builderK;
     
-    // War info
-    public final float maxAtackRange;
-    public final float[] maxAtackPower;
+    // War info, can be null
+    public final float maxAtackRange_unit; // for movable unit
+    public final float[] maxAtackPower_unit;
     public final float maxUnitSpeed;
+    
+    public final float maxAtackRange_def; // for defence towers
+    public final float[] maxAtackPower_def;
     
     
     
@@ -109,7 +113,7 @@ public class TTechLevel {
         
         // 2. List of new units
         HashSet<UnitDef> newUnitDefs=new HashSet<UnitDef>();
-        newUnitDefs.addAll(baseUnit.getBuildOptions());//!!! unitCanBuild.clone();
+        newUnitDefs.addAll(baseUnit.getBuildOptions());
         newUnitDefs.removeAll(unitOldBuild);
         
         
@@ -165,13 +169,21 @@ public class TTechLevel {
             i++;
         }
         
-        // Определение экон. параметров.
+        // Write economic params
         ecoK = getMaxResProduct(levelNewDef, botClb);
         builderK= getMaxBuildPower(levelNewDef);
         
-        maxAtackRange=getMaxAtackRange(levelNewDef);
-        maxAtackPower=getMaxAtackDamage(levelNewDef);
-        maxUnitSpeed=getMaxSpeed(levelNewDef);
+        // Write war params
+        ArrayList<UnitDef> movableNewUnit = UnitSelector.movableUnits(levelNewDef);
+        ArrayList<UnitDef> stationaryNewUnit; // = UnitSelector.stationarUnits(levelNewDef);
+            stationaryNewUnit = new ArrayList(levelNewDef);
+            stationaryNewUnit.removeAll(movableNewUnit);
+        
+        maxAtackRange_unit=getMaxAtackRange(movableNewUnit);
+        maxAtackPower_unit=getMaxAtackDamage(movableNewUnit);
+        maxUnitSpeed=getMaxSpeed(movableNewUnit);
+        maxAtackRange_def=getMaxAtackRange(movableNewUnit);
+        maxAtackPower_def=getMaxAtackDamage(movableNewUnit);
     }
     
     /**
@@ -184,12 +196,12 @@ public class TTechLevel {
     {
         float[] maxRes=new float[botClb.avgEco.resName.length];
         Arrays.fill(maxRes, 0.0f);
-        for (UnitDef def:ecoUnits) 
+        for (UnitDef def:ecoUnits)
           for (int i=0;i<maxRes.length;i++)
-          {
-            float r=botClb.getUnitResoureProduct(def, botClb.avgEco.resName[i]);
-            if (r>maxRes[i]) maxRes[i]=r;
-          }
+        {
+          float r=botClb.getUnitResoureProduct(def, botClb.avgEco.resName[i]);
+          if (r>maxRes[i]) maxRes[i]=r;
+        }
         return maxRes;
     }
     
@@ -201,12 +213,10 @@ public class TTechLevel {
     public static float getMaxBuildPower(Collection<UnitDef> ecoUnits)
     {
         float maxB=0;
-        for (UnitDef def:ecoUnits) 
+        for (UnitDef def:ecoUnits) if (ModSpecification.isRealyAbleToAssist(def))
         {
-          float r;
-          if (ModSpecification.isRealyAbleToAssist(def)) r=def.getBuildSpeed();
-          else r=0;
-          if (r>maxB) maxB= r;
+            float r=def.getBuildSpeed();
+            if (r>maxB) maxB= r;
         }
         return maxB;
     }
@@ -219,12 +229,10 @@ public class TTechLevel {
     public static float getMaxAtackRange(Collection<UnitDef> warUnits)
     {
         float maxR=0;
-        for (UnitDef def:warUnits) 
+        for (UnitDef def:warUnits) if (def.isAbleToAttack())
         {
-          float r;
-          if (def.isAbleToAttack()) r=def.getMaxWeaponRange();
-          else r=0;
-          if (r>maxR) maxR= r;
+            float r=def.getMaxWeaponRange();
+            if (r>maxR) maxR= r;
         }
         return maxR;
     }
@@ -242,8 +250,8 @@ public class TTechLevel {
           if (def.isAbleToAttack()) {
               float[] tmpDmg=TWarStrategy.getSumWeaponDamage(def); // TODO isParalyzed, isAbleToGround/air...
               if (tmpDmg!=null) {
-                if (maxDmg==null) maxDmg=tmpDmg;
-                else
+                if (maxDmg==null) maxDmg=tmpDmg.clone();
+                else // TODO check tmpDmg.length and maxDmg.length
                   for (int i=0; i<tmpDmg.length;i++) if (tmpDmg[i]>maxDmg[i]) maxDmg[i]=tmpDmg[i];
               }
           }
@@ -253,13 +261,11 @@ public class TTechLevel {
     
     public static float getMaxSpeed(Collection<UnitDef> warUnits)
     {
-        float maxS=0;
-        for (UnitDef def:warUnits) 
-        {
-          float s;
-          if (def.isAbleToMove()) s=def.getSpeed(); // !!!
-          else s=0;
-          if (s>maxS) maxS= s;
+        float maxS=0.0f;
+        for (UnitDef def:warUnits) if (def.isAbleToMove())
+        { // maybe check ModSpecification.isRealyAbleToMove(), if some modifed will be on isRealyAbleToMove().
+              float s=def.getSpeed();
+              if (s>maxS) maxS= s;
         }
         return maxS;
     }
@@ -284,7 +290,6 @@ public class TTechLevel {
         needBaseBuilders=new ArrayList<UnitDef>();
         needBaseBuilders.add(morphTo);
         
-        // было techLevelNumber=morphTo.getTechLevel(); //!!!
         HashSet<Integer> tmpTechLevels=new HashSet<Integer>();
         tmpTechLevels.add( morphTo.getTechLevel() ); // TODO check is null !!!
         
@@ -292,7 +297,7 @@ public class TTechLevel {
 
         // 2. Список того, что даёт этот уровень нового
         HashSet<UnitDef> newUnitDefs=new HashSet<UnitDef>();
-        newUnitDefs.addAll(morphTo.getBuildOptions());//!!! unitCanBuild.clone();
+        newUnitDefs.addAll(morphTo.getBuildOptions());
         newUnitDefs.removeAll(unitOldBuild);
         
         if (botClb.modSpecific.specificUnitEnabled)
@@ -301,8 +306,10 @@ public class TTechLevel {
         if (onBase!=null) removeWhereCantBuildOnBaseSurface(newUnitDefs, onBase); // only on base surface
 
 // TODO Check it. Do not build builder after morph now, it will be next level. For TA/RD it true!
-        /**
-        if (ModSpecification.isStationarFactory(morphTo)) {
+        //**
+        if ( ModSpecification.isStationarFactory(morphTo)
+             || (morphTo.isBuilder() && newUnitDefs.size()<=1) )
+        {
             float lastEcoK=0; //calcEcoK(unitOldBuild,botClb);
             UnitDef bestWorker=null;
             
@@ -321,7 +328,6 @@ public class TTechLevel {
                 HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(bestWorker.getBuildOptions());
                 newWorkerUnitDefs.removeAll(unitOldBuild);
 
-                // было techLevelNumber=Math.max(techLevelNumber,bestWorker.getTechLevel());
                 tmpTechLevels.add( bestWorker.getTechLevel() );
 
                 if (botClb.modSpecific.specificUnitEnabled)
@@ -339,7 +345,7 @@ public class TTechLevel {
         //*/
         
         levelNewDef=new ArrayList<UnitDef>();
-        levelNewDef.addAll(newUnitDefs); //!!!!!!!!!!!!!!!!!!!!!!!
+        levelNewDef.addAll(newUnitDefs); //!!!
         
         for (UnitDef def:levelNewDef) tmpTechLevels.add( def.getTechLevel() );
         // Перечень всех тех. уровней
@@ -350,13 +356,21 @@ public class TTechLevel {
             i++;
         }
 
-        // Определение экон. параметров.
+        // Write economic params
         ecoK = getMaxResProduct(levelNewDef, botClb);
-        builderK=getMaxBuildPower(levelNewDef);
+        builderK= getMaxBuildPower(levelNewDef);
         
-        maxAtackRange=getMaxAtackRange(levelNewDef);
-        maxAtackPower=getMaxAtackDamage(levelNewDef);
-        maxUnitSpeed=getMaxSpeed(levelNewDef);
+        // Write war params
+        ArrayList<UnitDef> movableNewUnit = UnitSelector.movableUnits(levelNewDef);
+        ArrayList<UnitDef> stationaryNewUnit; // = UnitSelector.stationarUnits(levelNewDef);
+            stationaryNewUnit = new ArrayList(levelNewDef);
+            stationaryNewUnit.removeAll(movableNewUnit);
+        
+        maxAtackRange_unit=getMaxAtackRange(movableNewUnit);
+        maxAtackPower_unit=getMaxAtackDamage(movableNewUnit);
+        maxUnitSpeed=getMaxSpeed(movableNewUnit);
+        maxAtackRange_def=getMaxAtackRange(movableNewUnit);
+        maxAtackPower_def=getMaxAtackDamage(movableNewUnit);
     }
     
     /**
@@ -374,7 +388,6 @@ public class TTechLevel {
     public float[] getNeedRes() {
         float needRes[]=new float[botClb.avgEco.resName.length];
         Arrays.fill(needRes, 0);
-        float needWork=0.0f;
         // для строителей уровня
         for (UnitDef def:needBaseBuilders) {
           if (byMorph==null || def!=morphTo) // byMorph чтобы не считался по 2 раза
@@ -392,8 +405,8 @@ public class TTechLevel {
         return needRes;
     }
     /**
-     * Часть рабочего времени, ускоряемого
-     * @return нужно разделить на силу строителей
+     * Part of working time, can be acselerating by build power
+     * @return this need divide on build power of worker
      */
     public float getAssistWorkTime()  {
         float needWork=0.0f;
@@ -401,18 +414,20 @@ public class TTechLevel {
         for (UnitDef def:needBaseBuilders) {
             if (lastIsAssistable && def!=morphTo) needWork+=def.getBuildTime();
             lastIsAssistable = def.isAssistable();
-            // TODO учесть силу построевшегося строителя
+            // TODO check BuildPower of new worker, if they will be build on this list.
         }
         return needWork;
     }
     /**
-     * Часть времени, НЕ ускоряемого другими строителями.
+     * Part of time, can not acselerable. Do not divide it on build power.
+     * Include no assistable buildings.
+     * DO NOT INCLUDE: morphing time. TODO it!
      * @return time in second.
      */
     public float getNOAssistWorkTime()  {
         float needWork=0.0f;
         if (byMorph()) needWork=botClb.modSpecific.getTimeForMprph(morphCMD);
-        float lstBuildPower=100.0f;
+        float lstBuildPower=Float.NaN; // first can be NaN, if first lastIsAssistable be true.
         boolean lastIsAssistable=true;
         for (UnitDef def:needBaseBuilders) {
             // TODO test it
@@ -444,6 +459,7 @@ public class TTechLevel {
 
     /**
      * Get time in second for build this level.
+     * Contain building and morphing time
      * @param buildPower
      * @param currRes
      * @return 
@@ -459,10 +475,11 @@ public class TTechLevel {
             lvlBuilder1.remove(morphTo);
             if (!lvlBuilder1.isEmpty()) t=botClb.ecoStrategy.getRashotBuildTimeLst(lvlBuilder1, currRes, buildPower);
             else t=0;
-            t+=Math.max(getNOAssistWorkTime(),botClb.ecoStrategy.getWaitTimeForProductResource(currRes, botClb.modSpecific.getResForMprph(morphCMD)));
+            //TODO check bug with getNOAssistWorkTime(), last:t+=Math.max(getNOAssistWorkTime(),botClb.ecoStrategy.getWaitTimeForProductResource(currRes, botClb.modSpecific.getResForMprph(morphCMD)));
+            t+=botClb.ecoStrategy.getWaitTimeForProductResource(currRes, botClb.modSpecific.getResForMprph(morphCMD));
         } else {
             t=botClb.ecoStrategy.getRashotBuildTimeLst(needBaseBuilders, currRes, buildPower);
-            t+=getNOAssistWorkTime();
+            //t+=getNOAssistWorkTime(); // FIXME it add buildings on on assistable factory again!
         }
         return t;
         
@@ -492,6 +509,7 @@ public class TTechLevel {
      * @param anObject
      * @return true if this levels is equals (needBaseBuilders and levelNewDef is equals).
      */
+    @Override
     public boolean equals(Object anObject)
     {
         if (this == anObject) return true;
@@ -504,7 +522,7 @@ public class TTechLevel {
                 if (needBaseBuilders.containsAll(anotherLevel.needBaseBuilders)
                     &&
                     levelNewDef.containsAll(anotherLevel.levelNewDef))
-                    return true;
+                      return true;
             }
         }
         return false;
@@ -512,11 +530,12 @@ public class TTechLevel {
     
     
     /**
-     * Генерирует все варианты новых уровней (переходов)
-     * @param unitHave какие типы юнитов уже есть
-     * @param unitCanBuild какие типы юнитов можно строить
-     * @param onBase проверка возможности постройки на поверхности базы (может быть null)
-     * @return лист всех вариантов экономически значимых...
+     * Generate all new level variants by build new units
+     * @param unitHave current exist units
+     * @param unitCanBuild what can build now (what can build exist units)
+     * @param onBase check build on surface (can be null)
+     * @param botClb
+     * @return list of all levels.
      */
     public static ArrayList<TTechLevel> GetAllVariantLevel(HashSet<UnitDef> unitHave,HashSet<UnitDef> unitCanBuild, TBase onBase, FieldBOT botClb)
     {
@@ -558,11 +577,13 @@ public class TTechLevel {
         return nextTechLst;
     }
     /**
-     * Генерирует все варианты новых уровней (переходов)
-     * @param currentUnits список всех юнитов (проверяется возможность morph у каждого)
-     * @param unitHave какие типы юнитов уже есть
-     * @param unitCanBuild какие типы юнитов можно строить
-     * @return лист всех вариантов экономически значимых...
+     * Generate all new level variants by morph exist units to new unit
+     * @param currentUnits current exist units (check all morph CMD from this units)
+     * @param unitHave current exist units (TODO deprecated?)
+     * @param unitCanBuild what can build now (what can build exist units)
+     * @param onBase for call modSpecific.getUnitDefForMprph() and show debug message
+     * @param botClb
+     * @return list of all levels by morph.
      */
     public static ArrayList<TTechLevel> GetAllVariantLevelByMorph(List<Unit> currentUnits,HashSet<UnitDef> unitHave,HashSet<UnitDef> unitCanBuild, TBase onBase, FieldBOT botClb)
     {
@@ -603,15 +624,16 @@ public class TTechLevel {
     /**
      * Генерирует все варианты новых уровней (переходов), на базе текущего состояния и заданного будущего уровня.
      * @param baseLevel дополнительный уровень, от которого идти дальше...
+     * @param onBase
      * @param botClb
      * @return 
      */
     public static ArrayList<TTechLevel> GetAllNextVariantLevel(TTechLevel baseLevel, TBase onBase, FieldBOT botClb)
     {
-        // HashSet<UnitDef> unitHave,HashSet<UnitDef> unitCanBuild,
         HashSet<UnitDef> tmpUnitHave=new HashSet<UnitDef>();
         HashSet<UnitDef> tmpUnitCanBuild=new HashSet<UnitDef>();
-        
+        //FIXME Add to tmpUnitHave and tmpUnitCanBuild current can build and list of current units!
+        botClb.sendTextMsg("TODO GetAllNextVariantLevel!", FieldBOT.MSG_ERR);//!!!!!!!!!!
         //tmpUnitHave.addAll(unitHave);
         tmpUnitHave.addAll(baseLevel.needBaseBuilders);
         

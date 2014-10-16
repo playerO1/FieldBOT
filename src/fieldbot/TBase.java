@@ -54,10 +54,10 @@ public class TBase extends AGroupManager{
    public ABasePlaning stroyPlaning;
    
    protected static final int DEFAULT_TIMEOUT = Integer.MAX_VALUE;
-   public int BUILD_FACING = 0; // stump, TODO
+   public int BUILD_FACING = 0; // TODO this stump
    
    /**
-    * Base stupid protected system. TODO.
+    * TODO Base stupid protected system. 
     * if enemy come near to base (check every 100 update frame), this variable set to near enemy position, then send owner army with fight to this point and set null to this variable.
     */
    protected AIFloat3 lastAgressorPoint;

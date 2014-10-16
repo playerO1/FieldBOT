@@ -47,7 +47,7 @@ import com.json.parsers.JsonParserFactory;
 /**
 * Serves as Interface for a Java Skirmish AIs for the Spring engine.
 *
-* @author hoijui, rewrite to FieldBOT PlayerO1
+* @author hoijui - author of NullOOAI, rewrite to FieldBOT by PlayerO1
 */
 public class FieldBOT extends OOAI implements AI {
 
@@ -750,6 +750,7 @@ public TBase getBestBase(boolean findWithoutBaseTarget) {
  */
 public void removeSmartGroup(AGroupManager group) {
     if (!smartGroupsToRemove.contains(group)) {
+        sendTextMsg("Group removing:"+group, FieldBOT.MSG_DBG_SHORT);
         smartGroupsToRemove.add(group);
     }
 }
@@ -844,7 +845,7 @@ public int update(int frame) {
         boolean aceptBuildFactory=false;
         aceptBuildFactory = checkAndTechUp(true, false);
         if (!aceptBuildFactory) {
-            talkingDialogModule.message(clb.getSkirmishAI().getSkirmishAIId(), "bot make factory");
+            talkingDialogModule.message(clb.getSkirmishAI().getSkirmishAIId(), "bot make Bot Factory"); // ZK: Gunship Plant, Cloaky Bot Factory, Light Vehicle Factory, Heavy Tank Factory, Amphibious Operations Plant, Shipyard
             aceptBuildFactory=true;
             //TODO make better!
             //TODO checkAntDechUp_armyTechUp()

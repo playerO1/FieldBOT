@@ -116,16 +116,29 @@ public class TArmyGroup extends AGroupManager{
     // -----------------
     private void onModifedUnits() {
         slowUnit=getSlowUnit(); // change moving speed if in moving now.        
-        if (moveTarget!=null && slowUnit!=null) {
+        if (moveTarget!=null) {
+            updateUnitCommands();// send command
+        }
+    }
+    
+    private void updateUnitCommands() {
+        if (moveTarget!=null) {
+          if (slowUnit!=null) {
             // send command
             slowUnit.fight(moveTarget, (short)0, Integer.MAX_VALUE);
             for (Unit au:army) if (au!=slowUnit) au.guard(slowUnit, (short)0, Integer.MAX_VALUE);
+      owner.sendTextMsg("Moving army: folow my slow unit",FieldBOT.MSG_DBG_ALL);
+          } else {
+            for (Unit au:army) if (au!=slowUnit) au.fight(MathPoints.getRandomPointInCircle(moveTarget, 20), (short)0, Integer.MAX_VALUE);
+      owner.sendTextMsg("Moving army: all by fight",FieldBOT.MSG_DBG_ALL);
+          }
         }
     }
     
     public void moveTo(AIFloat3 target) {
         this.moveTarget=target;
         // send command
+        updateUnitCommands();
     }
     
     @Override

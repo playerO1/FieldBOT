@@ -240,10 +240,10 @@ protected void onNewPoint(Point msgPoint) {
         
         if (lstToShare==null) lstToShare=new ArrayList<Unit>();
 
-        // TODO only building, no moving!!!!
+        // TODO first building, no moving!!!!
         Unit unitSelect= selectUnitInArea_myOnly_near(msgPoint.getPosition(), -1, true);
         boolean ok=false;
-        if (unitSelect!=null) {
+        if (unitSelect!=null && unitSelect.getDef().isReclaimable()) {
             AGroupManager agm=owner.getOwnerGroup(unitSelect);
             if (agm!=null && agm instanceof TBase) {
                 TBase base=(TBase)agm; 
@@ -268,6 +268,7 @@ protected void onNewPoint(Point msgPoint) {
 //        List<Unit> unitSelect= selectUnitInArea_myOnly(msgPoint.getPosition(), -1, true);//getUnitNow);
 //        boolean ok=false;
 //        for (Unit u:unitSelect) {
+//        //Do check: unitSelect.getDef().isReclaimable() !!!
 //            AGroupManager agm=owner.getOwnerGroup(u);
 //            if (agm!=null && agm instanceof TBase) {
 //                TBase base=(TBase)agm; 
@@ -364,17 +365,38 @@ protected void onNewPoint(Point msgPoint) {
     }    
 
 }
+
+private void cmd_giveArmy(int toPlayer) {
+    if (lstToShare==null) lstToShare=new ArrayList<Unit>();
+    for (AGroupManager sGroup:owner.smartGroups) {
+        if (sGroup instanceof TBase) {
+            TBase base=(TBase)sGroup;
+            lstToShare.addAll(base.army);
+        } else if (sGroup.baseType>0){
+            //FIXME !!!
+            lstToShare.addAll(sGroup.getAllUnits(true));
+        }
+    }
+    if (lstToShare.isEmpty()) {
+        owner.sendTextMsg("No army unit for sharing.", FieldBOT.MSG_DLG);
+        lstToShare=null;
+    } else sendToTeam=owner.clb.getGame().getPlayerTeam(toPlayer);//sendToPlayer=toPlayer;    
+}
+
 //@Override
-public void message(int player, String message) {
+public void message(int player, String message) { // TODO return result, boolean
     if (owner.clb.getSkirmishAI().getTeamId()==-1) return; // If bot was dead.
     
     boolean allowThisCommand=allowEnemyTeamCommand ||
-            (player!=-1 && // this  Spring 94.1-96 Segmentation fault, из-за аргумента -1 (для наблюдателей)
+            (player!=-1 && // this  Spring 94.1,96 Segmentation fault, on argument -1 (message from spectators)
             owner.clb.getGame().getPlayerTeam(player)!=-1 &&
             owner.clb.getGame().getTeamAllyTeam(owner.clb.getGame().getPlayerTeam(player))==owner.clb.getGame().getTeamAllyTeam(owner.teamId));
     
-    if ( allowThisCommand && message.contains("I need") && message.contains("!") )
+    if ( allowThisCommand && message.startsWith("I need") && message.contains("!") )
     { // Просьбы о ресурсах
+            //if (player!=-1) TODO test: do need this if?
+            //    sendToTeam=...
+            //else owner.sendTextMsg("Can not share to spectator!", FieldBOT.MSG_ERR);
         Resource res=null;
         for (Resource r:owner.clb.getResources()) if (message.toLowerCase().contains(r.getName().toLowerCase())) { // TODO tolowercase???
             res=r;
@@ -384,21 +406,22 @@ public void message(int player, String message) {
         if (res!=null) {
             final String parsingParam[]={"need"};
             ArrayList<Integer> intRaw=parsingIntArr(message, parsingParam);
-            if (intRaw.size()==0) {
-                sendingResCount=owner.clb.getEconomy().getCurrent(res)*0.7f;
-            }
-            if (intRaw.size()==1) {
-                sendingResCount=Math.min(owner.clb.getEconomy().getCurrent(res), intRaw.get(0));
-            }
-            if (intRaw.size()>=2) {
-                owner.sendTextMsg("Error param for sharing res in message: "+message, FieldBOT.MSG_ERR);
-            } else {
-                //if (player!=-1) 
+            switch (intRaw.size()) {
+                case 0:
+                    sendingResCount=owner.clb.getEconomy().getCurrent(res)*0.7f;
                     sendToTeam=owner.clb.getGame().getPlayerTeam(player);
-                //else owner.sendTextMsg("Can not share to spectator!", FieldBOT.MSG_ERR);
+                    break;
+                case 1:
+                    sendingResCount=Math.min(owner.clb.getEconomy().getCurrent(res), intRaw.get(0));
+                    sendToTeam=owner.clb.getGame().getPlayerTeam(player);
+                    break;
+                default:
+                    owner.sendTextMsg("Error param for sharing res in message: "+message+" parsing N="+intRaw.size(), FieldBOT.MSG_ERR);
             }
             lstToShare=null;// !!!
-        }
+        }// else ...
+        if (message.equalsIgnoreCase("I need unit support!")) cmd_giveArmy(player);
+          // message: "I need unit support!" - make link to "give me army"
     }
     
     boolean itIsForMe=itIsForMeMsg(message, false); // проверка к кому обращаются
@@ -407,7 +430,7 @@ public void message(int player, String message) {
     
     if (itIsForMe) {
         
-        if ( !allowThisCommand ) // Если запрещено принимать команды от этого игрока
+        if ( !allowThisCommand ) // If not allow acept command from this player
         {
             owner.sendTextMsg("I don't talk with enemy. Command rejected.", FieldBOT.MSG_DLG);
             return;
@@ -494,11 +517,11 @@ public void message(int player, String message) {
             
             boolean getUnitNow=message.contains(" now")||message.contains("now!");
             
-            for (AGroupManager sGroup:owner.smartGroups) {
-                for (Unit u:sGroup.getAllUnits(getUnitNow)) if (u.getDef().equals(meanUnitDef) && n<count) {
+            lbl_searchUShare: for (AGroupManager sGroup:owner.smartGroups) {
+                for (Unit u:sGroup.getAllUnits(getUnitNow)) if (u.getDef().equals(meanUnitDef)) {
                     lstToShare.add(u);
                     n++;
-                    // TODO return from cicle faster, break
+                    if (n>=count) break lbl_searchUShare;// return from cicle faster
                 }
             }
             if (lstToShare.isEmpty()) {
@@ -510,20 +533,7 @@ public void message(int player, String message) {
         if ((message.contains("get")||message.contains("give")) && message.contains("army") && !message.contains("unit")) {
             //if (player==-1) owner.sendTextMsg("Can not share to spectator.", FieldBOT.MSG_DLG);
             //else {
-                if (lstToShare==null) lstToShare=new ArrayList<Unit>();
-                for (AGroupManager sGroup:owner.smartGroups) {
-                    if (sGroup instanceof TBase) {
-                        TBase base=(TBase)sGroup;
-                        lstToShare.addAll(base.army);
-                    } else if (sGroup.baseType>0){
-                        //FIXME !!!
-                        lstToShare.addAll(sGroup.getAllUnits(true));
-                    }
-                }
-                if (lstToShare.isEmpty()) {
-                    owner.sendTextMsg("No army unit for sharing.", FieldBOT.MSG_DLG);
-                    lstToShare=null;
-                } else sendToTeam=owner.clb.getGame().getPlayerTeam(player);//sendToPlayer=player;
+            cmd_giveArmy(player);
             //}
         }
 

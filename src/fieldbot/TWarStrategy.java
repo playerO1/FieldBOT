@@ -66,7 +66,7 @@ public class TWarStrategy {
         makeArmy=false; // TODO set true by default
     }
     
-    
+    //TODO move getZeroVector(int) to Utils
     private static double[] getZeroVector(int size) {
         double v[] = new double[size];
         Arrays.fill(v, 0.0); //for (int j=0;j<size;j++) v[j]=0.0; // zero vector
@@ -454,7 +454,7 @@ public class TWarStrategy {
     // TODO choose war tech level
 
     
-    private boolean baseBuildDef=false;
+    private short baseBuildDef=0; // 0 - tower, 1 - radar, 2 and more - army
     
     /**
      * Army control tick. TODO
@@ -468,25 +468,39 @@ public class TWarStrategy {
 
             boolean haveRes=true;
             float eco[][]=owner.avgEco.getAVGResourceToArr();
+            float minResPercent=0.5f;
+            if (baseBuildDef==0) minResPercent=0.37f;
             for (int i=0;i<eco[0].length; i++) {
-                if ( !(eco[AdvECO.R_Current][i]/eco[AdvECO.R_Storage][i]>0.5f && 
-                     eco[AdvECO.R_Income][i]*1.1f>eco[AdvECO.R_Usage][i]) )
-                        haveRes=false;
+                if ( !(eco[AdvECO.R_Current][i]/eco[AdvECO.R_Storage][i]>minResPercent && 
+                     eco[AdvECO.R_Income][i]*0.95f>eco[AdvECO.R_Usage][i]) )
+                        haveRes=false; //TODO if res>2 add breack for optimization;
             }
 
-
+        owner.sendTextMsg("army: haveRes="+haveRes, FieldBOT.MSG_DLG);
             if (haveRes) {
-                boolean defenceTower=false;
-
-                if (!baseBuildDef) {
+                boolean defenceTower=false; // build defence tower, or atack army
+                boolean onlyRadar=false; // work if defence tower only
+                if (baseBuildDef<2) {
                     defenceTower=true;
-                    baseBuildDef=true;
+                    onlyRadar = baseBuildDef==1;
+                    baseBuildDef++;
                 }
 
-                float timeL=3*60;
+                float timeL=2*60;
                 int unitL=5; //Integer.MAX_VALUE;
                 float kachestva[]={ 0.1f, 0.3f, 0.4f, 0.7f, 0.2f, 0.1f,0.1f, 0.0f }; // spam, speed, health, atack, range, radar, stealth
-                if (defenceTower) kachestva[P_SPEED]=0;
+                if (defenceTower) {
+                    if (onlyRadar) {
+                        Arrays.fill(kachestva, 0);
+                        kachestva[P_RADAR]=1.0f;
+                        unitL=1;
+                        timeL=40;
+                    } else {
+                        kachestva[P_SPEED]=0;
+                        kachestva[P_RADAR]=0;
+                        kachestva[P_STEALTH]=0;
+                    }
+                }
 
                 // Choose best base for make army
                 TBase bestBase=null; // TODO change to owner.getBestBase(false)
@@ -501,9 +515,10 @@ public class TWarStrategy {
 
                 if (bestBase!=null)
                 {
+        owner.sendTextMsg("army: bestBase="+bestBase, FieldBOT.MSG_DLG);
                     int weaponType=0;//!!! 0 - default. TODO
                     HashMap<UnitDef,Integer> armyUnits
-                            =owner.warStrategy.shooseArmy(bestBase, !defenceTower, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva, weaponType);
+                            =owner.warStrategy.shooseArmy(bestBase, defenceTower, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva, weaponType);
                         // TODO special unit enabled/disabled check (research center depends, TA/RD mod!)
 
                     // Send signal to base for make unit
@@ -535,6 +550,7 @@ public class TWarStrategy {
                         if (base.removeAllUnits(transferUnits)) {
                             army.addAllUnits(transferUnits);
                             owner.addSmartGroup(army);
+        owner.sendTextMsg("new army created:"+army, FieldBOT.MSG_DLG);
                         }
                     }
                 }
@@ -551,6 +567,7 @@ public class TWarStrategy {
                         if (army.moveTarget==null) {
                             AIFloat3 p=owner.scoutModule.getPointForMoveArmy(army.getCenter(), 0);
                             army.moveTo(p); // TODO
+        owner.sendTextMsg("army: send to point: "+p, FieldBOT.MSG_DLG);
                         }
                     }
                 }
