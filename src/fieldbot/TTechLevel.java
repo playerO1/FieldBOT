@@ -24,8 +24,8 @@ import java.util.List;
 
 
 /**
- * TechLevel определяет что нового можно строить и средную выгоду от этого.
- * Что нужно построить чтобы достичь этого уровня. Сколько это будет стоить.
+ * TechLevel define new technology units and techno way, and average profit from new tech level.
+ * What need build for tech up. What coast and time for do tech up.
  * @author PlayerO1
  */
 public class TTechLevel {
@@ -622,36 +622,41 @@ public class TTechLevel {
     }
     
     /**
-     * Генерирует все варианты новых уровней (переходов), на базе текущего состояния и заданного будущего уровня.
-     * @param baseLevel дополнительный уровень, от которого идти дальше...
+     * Generate all new future tech level variants, on base current level and one new tech level.
+     * Not support future level by morph unit.
+     * @param baseLevel add on base this tech level
+     * @param unitHave current unit have (can be null)
+     * @param unitCanBuild current build list (can be null)
      * @param onBase
      * @param botClb
-     * @return 
+     * @return list of new future level
      */
-    public static ArrayList<TTechLevel> GetAllNextVariantLevel(TTechLevel baseLevel, TBase onBase, FieldBOT botClb)
+    public static ArrayList<TTechLevel> GetAllNextVariantLevel(TTechLevel baseLevel, HashSet<UnitDef> unitHave, HashSet<UnitDef> unitCanBuild, TBase onBase, FieldBOT botClb)
     {
         HashSet<UnitDef> tmpUnitHave=new HashSet<UnitDef>();
+        
         HashSet<UnitDef> tmpUnitCanBuild=new HashSet<UnitDef>();
-        //FIXME Add to tmpUnitHave and tmpUnitCanBuild current can build and list of current units!
-        botClb.sendTextMsg("TODO GetAllNextVariantLevel!", FieldBOT.MSG_ERR);//!!!!!!!!!!
-        //tmpUnitHave.addAll(unitHave);
+
+        if (unitHave!=null) tmpUnitHave.addAll(unitHave);
         tmpUnitHave.addAll(baseLevel.needBaseBuilders);
         
-        //tmpUnitCanBuild.addAll(unitCanBuild);
+        if (unitCanBuild!=null) tmpUnitCanBuild.addAll(unitCanBuild);
         tmpUnitCanBuild.addAll(baseLevel.levelNewDef);
         
         return GetAllVariantLevel(tmpUnitHave, tmpUnitCanBuild, onBase, botClb);
-        // TODO пока ВСЕ в т.ч. предыдущие будут!!!!
+        // TODO add + morph level
     }
          
     
     @Override
     public String toString() {
-        String s="level="+Arrays.toString(techLevelNumber)+" byMorph="+byMorph()+" ecoK="+Arrays.toString(ecoK)+" build power="+builderK+" need build:(";
+        String s="level="+Arrays.toString(techLevelNumber);
+        if (byMorph()) s+=" (by Morph)";
+        s+=" ecoK="+Arrays.toString(ecoK)+" build power="+builderK+" need build: {";
         for (UnitDef def:needBaseBuilders) s+=" "+def.getName()+" -tlvl"+def.getTechLevel()+"- "+def.getHumanName()+",";
-        s+=") new:(";
+        s+="} new: {";
         for (UnitDef def:levelNewDef) s+=" "+def.getName()+",";
-        s+=")";
+        s+="}";
         return s;
     }
 

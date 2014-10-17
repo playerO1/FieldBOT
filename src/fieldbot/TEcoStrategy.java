@@ -733,7 +733,7 @@ public class TEcoStrategy {
      * @param TechLvls list for choose
      * @param currEcoLvl for compare level, best that this eco product
      * @param currentMaxBuilder max build power of 1 better builder
-     * @return list with Tecl Hevels when same items of currEcoLvl[] > that currentEco[]
+     * @return list with Tech Levels when same items of currEcoLvl[] > that currentEco[]
      */
     public ArrayList<TTechLevel> selectLvl_whoBetterThat(ArrayList<TTechLevel> TechLvls, float[] currEcoLvl, float currentMaxBuilder)
     {

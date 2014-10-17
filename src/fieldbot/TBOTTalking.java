@@ -16,6 +16,7 @@ import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import fieldbot.AIUtil.MathPoints;
+import fieldbot.AIUtil.UnitSelector;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -250,8 +251,7 @@ protected void onNewPoint(Point msgPoint) {
                 if (reclimeAll) {
                     UnitDef uDef=unitSelect.getDef();
                     ArrayList<Unit> allUnit=base.getAllUnits(false);
-                    // TODO test!!!
-                    allUnit=TWarStrategy.selectUnitWithDef(allUnit,uDef);
+                    allUnit=UnitSelector.selectUnitWithDef(allUnit,uDef);
                     for (Unit u2:allUnit) if (!base.unitToReclime.contains(u2) ) {
                         base.unitToReclime.add(u2);
                         ok=true;
@@ -342,7 +342,7 @@ protected void onNewPoint(Point msgPoint) {
             //for (String t:unitNameElement) un +=" " + t;
             owner.sendTextMsg("Unit type not found: "+un, FieldBOT.MSG_DLG);
         } else {
-            TBase baseForBuild=null; // ближайшая к точке что может это строить!
+            TBase baseForBuild=null; // near for point base
             float nearL=0.0f;
             for (TBase base:owner.selectTBasesList()) {
                 float L=MathPoints.getDistanceBetweenFlat(base.center, msgPoint.getPosition())-base.radius;
@@ -366,14 +366,17 @@ protected void onNewPoint(Point msgPoint) {
 
 }
 
+/**
+ * Send army unit from all groups to other team
+ * @param toPlayer 
+ */
 private void cmd_giveArmy(int toPlayer) {
     if (lstToShare==null) lstToShare=new ArrayList<Unit>();
     for (AGroupManager sGroup:owner.smartGroups) {
         if (sGroup instanceof TBase) {
             TBase base=(TBase)sGroup;
             lstToShare.addAll(base.army);
-        } else if (sGroup.baseType>0){
-            //FIXME !!!
+        } else if (sGroup.baseType>0) { //TODO give army - check by sGroup.baseType, maybe rewrite this line?
             lstToShare.addAll(sGroup.getAllUnits(true));
         }
     }
@@ -424,9 +427,7 @@ public void message(int player, String message) { // TODO return result, boolean
           // message: "I need unit support!" - make link to "give me army"
     }
     
-    boolean itIsForMe=itIsForMeMsg(message, false); // проверка к кому обращаются
-    
-    // TODO название и цвет учесть
+    boolean itIsForMe=itIsForMeMsg(message, false); // validate message target team
     
     if (itIsForMe) {
         
@@ -698,10 +699,8 @@ public void message(int player, String message) { // TODO return result, boolean
         }
         
         if (message.contains("make army") || message.contains(" do army")) {
-            // TODO ARMY!!!
             
             // 1. Подбор параметров армии, за какие сроки сделать? Для чего: скорость, защита, атака? На кого?
-            // TODO
             float timeL=3*60;
             int unitL=Integer.MAX_VALUE;
             //TWarStrategy.NUM_P = 7
@@ -711,7 +710,7 @@ public void message(int player, String message) { // TODO return result, boolean
             for (int i=0; i<msgP.length;i++) {
 
                 if (message.contains(" for "))
-                { // С параметрами
+                { // with parameters
                     if (parsingSt) {
                         // TODO упростить...
                         for (int j=0;j<TWarStrategy.P_NAMES_forParsing.length;j++)
@@ -893,9 +892,8 @@ public void message(int player, String message) { // TODO return result, boolean
 }
 
 /**
- * Проверяет на наличие сообщений игроков о стартовой позиции.
- * ТЕСТ!!!
- * @return требуемая человеком стартовая позиция, или null 
+ * Check on map point label from human about start position
+ * @return required by human start point, or null if messages not found
  */
 public AIFloat3 checkStartPositionMessage() {
     List<Point> points=ownerMap.getPoints(true); // getPoints(boolean includeAllies)
@@ -910,13 +908,13 @@ public AIFloat3 checkStartPositionMessage() {
     //onNewPoint(points.get(i));...
 }
 
-private static final String messageSpliter=" "; // чем разделяются слова
+private static final String messageSpliter=" "; // word separator for message parsing
 
 /**
- * Выделяет числа из строки
- * @param message исходное текстовое сообщение
- * @param keywordAfther ключевые слова (множество, одно из них), после которых начинать поиск
- * @return 
+ * Select number argument from string
+ * @param message text message for parsing
+ * @param keywordAfther key word (same of this word is signal), after keyword will be seek value
+ * @return integer values, where found after key
  */
 private ArrayList<Integer> parsingIntArr(String message,String[] keywordAfther) {
     String s[]=message.split(messageSpliter);
@@ -930,7 +928,7 @@ private ArrayList<Integer> parsingIntArr(String message,String[] keywordAfther) 
                 intLst.add(tmpC);
                 
             } catch (NumberFormatException nfe) {
-                // не число.
+                // is not number
             }
 
             parsingStage++;

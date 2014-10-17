@@ -23,6 +23,7 @@ import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import fieldbot.ModSpecification;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -61,6 +62,39 @@ public class UnitSelector {
     }
     
     
+    /**
+     * Select unit from allUnits where unit.getDef()==selectOnly;
+     * @param allUnits list for select
+     * @param selectOnly what unitDef select in list
+     * @return units with selectOnly UnitDef
+     */
+    public static ArrayList<Unit> selectUnitWithDef(ArrayList<Unit> allUnits, UnitDef selectOnly) {
+        ArrayList<Unit> selected = new ArrayList<Unit>();
+        for (Unit unit : allUnits) {
+            if (selectOnly.equals(unit.getDef())) {
+                selected.add(unit);
+            }
+        }
+        return selected;
+    }
+
+    /**
+     * Return list of all unit type of all unit in list in argument
+     * This method is copy and modifed from AGroupManager.getContainUnitDefsList() TODO share using!
+     * @param fromUnits select UnitDef from this unit list
+     * @return list of UnitDefs
+     */
+    public static HashSet<UnitDef> getUnitDefsFromUnitList(List<Unit> fromUnits) {
+        HashSet<UnitDef> currentUnitTypesSet = new HashSet<UnitDef>();
+        for (Unit unit : fromUnits) {
+            currentUnitTypesSet.add(unit.getDef());
+        }
+        return currentUnitTypesSet;
+    }
+    
+    // ----------
+    
+    
     // --- Export from other class ---
     
     // ModSpecification.getRealBuildList()
@@ -83,7 +117,8 @@ public class UnitSelector {
             if (!morphLst.isEmpty()) morphingUnits.add(u);
         }
         return morphingUnits;
-    }    
+    }
+    
 
     // TBOTTalking.findUnitDefByHumanQuery()
     // TBOTTalking.selectUnitInArea_myOnly()

@@ -25,6 +25,7 @@ import com.springrts.ai.oo.clb.WeaponDef;
 import com.springrts.ai.oo.clb.WeaponMount;
 import fieldbot.AIUtil.MathOptimizationMethods;
 import fieldbot.AIUtil.MathPoints;
+import fieldbot.AIUtil.UnitSelector;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -412,28 +413,6 @@ public class TWarStrategy {
         return bestUnit;
     }
     
-    /**
-     * Return list of all unit type of all unit in list in argument
-     * This method is copy and modifed from AGroupManager.getContainUnitDefsList() TODO share using!
-     * @param fromUnits select UnitDef from this unit list
-     * @return list of UnitDefs
-     */
-    public static HashSet<UnitDef> getUnitDefsFromUnitList(List<Unit> fromUnits) {
-        HashSet<UnitDef> currentUnitTypesSet=new HashSet<UnitDef>(); // Unit types
-        for (Unit unit:fromUnits) currentUnitTypesSet.add(unit.getDef());
-        return currentUnitTypesSet;
-    }
-    /**
-     * Select unit from allUnits where unit.getDef()==selectOnly;
-     * @param allUnits list for select
-     * @param selectOnly what unitDef select in list
-     * @return units with selectOnly UnitDef
-     */
-    public static ArrayList<Unit> selectUnitWithDef(ArrayList<Unit> allUnits, UnitDef selectOnly) {
-        ArrayList<Unit> selected=new ArrayList<Unit>();
-        for (Unit unit:allUnits) if (selectOnly.equals(unit.getDef())) selected.add(unit);
-        return selected;
-    }
     
     /**
      * Select units, best for kachestva
@@ -444,15 +423,63 @@ public class TWarStrategy {
      */
     public ArrayList<Unit> shooseBestFrom(boolean chooseBuilding, ArrayList<Unit> units, float kachestva[],int weaponDamageType)
     {
-        HashSet<UnitDef> unitDefs=getUnitDefsFromUnitList(units);
+        HashSet<UnitDef> unitDefs=UnitSelector.getUnitDefsFromUnitList(units);
         ArrayList<UnitDef> unitDefLst=new ArrayList<UnitDef>(unitDefs);
         UnitDef bestUDef= shooseBestFor(chooseBuilding, unitDefLst, kachestva, weaponDamageType);
         if (bestUDef==null) return null;
-        return selectUnitWithDef(units, bestUDef);
+        return UnitSelector.selectUnitWithDef(units, bestUDef);
     }
     
+// ---- Tech Lewel chooise ----
     // TODO choose war tech level
+    
+    /**
+     * Select better Tech Level that have now
+     * @param TechLvls list for choose
+     * @param currDamage for compare level, best that this eco product
+     * @param compareByDamageType index on currDamage[]; if -1 then compare by all damage type
+     * @param currentMaxRange - max weapon range of one better unit (better by range); if Float.POSITIVE_INFINITY then range will be not check
+     * @param compareByDefenceTower - if true then choose level by stationary unit (defence tower), if false then choose by movable unit
+     * @return list with Tech Levels when same items of currEcoLvl[] > that currentEco[]
+     */
+    public ArrayList<TTechLevel> selectLvl_whoBetterThat_damage(ArrayList<TTechLevel> TechLvls, float[] currDamage, int compareByDamageType, float currentMaxRange, boolean compareByDefenceTower)
+    {
+        ArrayList<TTechLevel> bestLvls=new ArrayList<TTechLevel>();
+        for (TTechLevel level:TechLvls) {
+//            float nFactor=0;
+            float k=0;
+            float lvlDmgArr[];// what compare - defence tower or unit?
+            if (compareByDefenceTower)
+                lvlDmgArr=level.maxAtackPower_def;
+                else lvlDmgArr=level.maxAtackPower_unit;
+            
+            if (compareByDamageType<0) { // by all damage type
+                for (int i=0;i<currDamage.length;i++) {
+                    float delta=lvlDmgArr[i]-currDamage[i];
+                    if (delta>0) {
+                        k+=delta;
+    //                  nFactor++;
+                    }
+                }
+            } else k=lvlDmgArr[compareByDamageType]-currDamage[compareByDamageType];
 
+            float rangeK;
+            if (compareByDefenceTower)
+                rangeK=level.maxAtackRange_def-currentMaxRange;
+                else rangeK=level.maxAtackRange_unit-currentMaxRange;;
+            if (rangeK>0) {
+                k+=rangeK /100; // TODO normalized atack range by atack damage!
+//                nFactor++;
+            }
+                    
+            if (k>0.0f) bestLvls.add(level);
+        }
+        return bestLvls;
+    }
+    
+    
+
+    // ---- War control ----
     
     private short baseBuildDef=0; // 0 - tower, 1 - radar, 2 and more - army
     
@@ -576,5 +603,6 @@ public class TWarStrategy {
         }
     }
     
+    // -----------
     
 }
