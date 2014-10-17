@@ -3,6 +3,7 @@ Changelog of FieldBOT.
 === dev a1.6 ===
 - chat command update: add "I need unit support!" - work as "give me army", bug fix "bot reclime" - now do not try reclime no reclamable units. P.S.
 - some bug fix on eco, some code refresh
+- improve morph support (getting morph info from tool tip command description)
 - now army control should be work: build some defence towers, radar, army group (but have bugs for no sending army to enemy base)
 
 === dev a1.5 ===
