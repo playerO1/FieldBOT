@@ -154,6 +154,12 @@ public class TBase extends AGroupManager{
         return center;
     }
     
+    @Override
+    public boolean haveSpecialCommand() {
+        return !currentBaseTarget.isEmpty() || !unitToReclime.isEmpty();
+    }
+    
+    
     // ----- cashe -----
     private HashSet<UnitDef> cashe_getContainUnitDefsList_false=null;
     private HashSet<UnitDef> cashe_getBuildList_false=null;
@@ -286,7 +292,7 @@ public class TBase extends AGroupManager{
         if (modifed) {
             unitToReclime.removeAll(units);// !!! test, add to documentation
             if (ENABLE_CASHING) dropCashe();
-            for (Unit u:units) stroyPlaning.onRemove(u);
+            for (Unit u:units) stroyPlaning.onRemove(u); // TODO ??? maybe do not do it?
         }
         return modifed;
     }
@@ -974,7 +980,7 @@ public class TBase extends AGroupManager{
     }
     
 /**
- * При появлении свободных бездействующих юнитов отсылает в группу бездельников
+ * On found idle workers send him to idle list
  * @param unit
  * @return 
  */
@@ -983,7 +989,7 @@ public boolean onFreeUnitFound(Unit unit) {
         if (workingCons.contains(unit)) setAsIdle(unit); // !!!
         return true;
     } else {
-        // Не принадлежит базе
+        // Not on this base
         return false;
     }
 }
@@ -1065,7 +1071,7 @@ public boolean unitGiven(Unit unit, int oldTeamId, int newTeamId) {
 @Override
 public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {
     if (oldTeamId==owner.teamId && newTeamId!=owner.teamId) {
-        //if (buildLst.contains(unit)) buildLst.remove(unit); // !!!
+        if (buildLst.contains(unit)) buildLst.remove(unit); // !!!
         removeUnit(unit);
     }
     return 0; // signaling: OK

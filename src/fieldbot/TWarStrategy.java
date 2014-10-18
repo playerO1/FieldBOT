@@ -51,7 +51,13 @@ public class TWarStrategy {
     // перечисление: spam, speed, health, atack, range, radar, stealth
     public final static int NUM_P=P_CONSTRUCTOR+1; // сколько параметров
     public final static String P_NAMES[]={"spam", "speed", "health", "atack", "range", "radar", "stealth","constructor"};
-    public final static String P_NAMES_forParsing[][]={{"spam"}, {"speed","fast"}, {"health","HP"}, {"atack","weapon","damage"}, {"range","distance","long"}, {"radar"}, {"stealth","hidde"},{"constructor","work"}};
+    public final static String P_NAMES_forParsing[][]={{"spam","units"}, {"speed","fast"}, {"health","HP"}, {"atack","weapon","damage"}, {"range","distance","long"}, {"radar"}, {"stealth","hidde"},{"constructor","work"}};
+    
+    // Predefine template for kachestva:
+    public static final float KACHESTVA_ARMY[]={ 0.05f, 0.3f, 0.6f, 0.9f, 0.3f, 0.1f,0.05f, 0.0f }; // spam, speed, health, atack, range, radar, stealth, worker
+    public static final float KACHESTVA_DEFTOWER[]={ 0, 0, 0.5f, 0.9f, 0.4f, 0.02f,0.01f, 0.0f };
+    public static final float KACHESTVA_RADAR[]=   { 0, 0, 0, 0, 0, 1, 0, 0 };
+
     
     private final FieldBOT owner;
     
@@ -167,14 +173,15 @@ public class TWarStrategy {
      */
     private double svestiZnacheniyaK(double unitK[], double normalizeTo_maxK[], float kachestva[]) {
         double k; // + or *  , 0 or 1  ? choose best formul!
+        final double MULT_ADD=1.0; // TODO theck this line. 0.0- only with all kachestva, 1.0 - more additive modeling on mul
         if (USE_MULTIPLY) k=1; else k=0;
         for (int j=0;j<NUM_P;j++) {
             double x = unitK[j]/normalizeTo_maxK[j] * kachestva[j];
             if (USE_MULTIPLY) { // * or +
-                k *= (1.0 + x); // !!!
+                k *= (MULT_ADD + x); // !!!
             } else k += x;
         }
-        if (USE_MULTIPLY) k-=1.0;
+        if (USE_MULTIPLY) k-=MULT_ADD;
         return k;
     }
     
@@ -484,15 +491,55 @@ public class TWarStrategy {
     private short baseBuildDef=0; // 0 - tower, 1 - radar, 2 and more - army
     
     /**
-     * Army control tick. TODO
+     * Army control tick.
      * @param frame 
      */
     public void update(int frame) {
         if (!makeArmy) return;
         
-        // TODO !!!
+        // TODO Army control
         if (frame%500==4) {
 
+            // Make war group
+            boolean needMakeWarGroup=true;
+            if (needMakeWarGroup) {
+                for (TBase base:owner.selectTBasesList())
+                  if (base.currentBaseTarget.isEmpty()) // if building army finished
+                {
+                    if (base.army.size()>2) {
+                        // TODO only movable units!!!
+                        TArmyGroup army=new TArmyGroup(owner);
+                        ArrayList transferUnits=new ArrayList(base.army);
+                        if (base.removeAllUnits(transferUnits)) {
+                            army.addAllUnits(transferUnits);
+                            owner.addSmartGroup(army);
+        owner.sendTextMsg("new army created:"+army, FieldBOT.MSG_DLG);
+                        } else owner.sendTextMsg("new army CAN NOT Create: unit not removed from group, size="+transferUnits.size(), FieldBOT.MSG_DLG);
+                    }
+                }
+            }
+            
+            // Scout/Atack
+            for (AGroupManager sGroup:owner.smartGroups)
+            {
+                if (sGroup instanceof TArmyGroup) {
+                    TArmyGroup army=(TArmyGroup)sGroup;
+                    if (army.isEmpty()) {
+                        owner.removeSmartGroup(sGroup); // Remove destroyed army.
+                    } else {
+                        if (army.moveTarget==null) {
+                            AIFloat3 p=owner.scoutModule.getPointForMoveArmy(army.getCenter(), 0);
+                            army.moveTo(p); // TODO army.moveTo
+        owner.sendTextMsg("army: send to point: "+p, FieldBOT.MSG_DLG);
+                        }
+                    }
+                }
+                // TODO scout group
+            }
+            
+            
+            // build army units
+            
             boolean haveRes=true;
             float eco[][]=owner.avgEco.getAVGResourceToArr();
             float minResPercent=0.5f;
@@ -503,8 +550,8 @@ public class TWarStrategy {
                         haveRes=false; //TODO if res>2 add breack for optimization;
             }
 
-        owner.sendTextMsg("army: haveRes="+haveRes, FieldBOT.MSG_DLG);
             if (haveRes) {
+        owner.sendTextMsg("army: haveRes, start make unt, i="+baseBuildDef, FieldBOT.MSG_DLG);
                 boolean defenceTower=false; // build defence tower, or atack army
                 boolean onlyRadar=false; // work if defence tower only
                 if (baseBuildDef<2) {
@@ -514,18 +561,16 @@ public class TWarStrategy {
                 }
 
                 float timeL=2*60;
-                int unitL=5; //Integer.MAX_VALUE;
-                float kachestva[]={ 0.1f, 0.3f, 0.4f, 0.7f, 0.2f, 0.1f,0.1f, 0.0f }; // spam, speed, health, atack, range, radar, stealth
+                int unitL=10; //Integer.MAX_VALUE;
+                float kachestva[]=KACHESTVA_ARMY; // don't forget that do not modify kachestva items - becouse there is link to template.
                 if (defenceTower) {
                     if (onlyRadar) {
-                        Arrays.fill(kachestva, 0);
-                        kachestva[P_RADAR]=1.0f;
                         unitL=1;
-                        timeL=40;
+                        timeL=45;
+                        kachestva=KACHESTVA_RADAR;
                     } else {
-                        kachestva[P_SPEED]=0;
-                        kachestva[P_RADAR]=0;
-                        kachestva[P_STEALTH]=0;
+                        unitL=4;
+                        kachestva=KACHESTVA_DEFTOWER;
                     }
                 }
 
@@ -550,6 +595,7 @@ public class TWarStrategy {
 
                     // Send signal to base for make unit
                     if (armyUnits!=null) {
+                        // TODO move and create method for translate Map into TBase commands to build.
                         for (Map.Entry<UnitDef,Integer> armyItem:armyUnits.entrySet())
                           if (armyItem.getValue()>0) // !!!!
                         {
@@ -565,41 +611,7 @@ public class TWarStrategy {
                     } else owner.sendTextMsg("No plan for army!", FieldBOT.MSG_DBG_SHORT);                        
                 }
             }
-
-            // Make war group
-            boolean needMakeWarGroup=true;
-            if (needMakeWarGroup) {
-                for (TBase base:owner.selectTBasesList()) if (base.currentBaseTarget.isEmpty()) {
-                    if (base.army.size()>2) {
-                        // TODO only movable units!!!
-                        TArmyGroup army=new TArmyGroup(owner);
-                        ArrayList transferUnits=new ArrayList(base.army);
-                        if (base.removeAllUnits(transferUnits)) {
-                            army.addAllUnits(transferUnits);
-                            owner.addSmartGroup(army);
-        owner.sendTextMsg("new army created:"+army, FieldBOT.MSG_DLG);
-                        }
-                    }
-                }
-            }
-            
-            // Scout/Atack
-            for (AGroupManager sGroup:owner.smartGroups)
-            {
-                if (sGroup instanceof TArmyGroup) {
-                    TArmyGroup army=(TArmyGroup)sGroup;
-                    if (army.isEmpty()) {
-                        owner.removeSmartGroup(sGroup); // Remove destroyed army.
-                    } else {
-                        if (army.moveTarget==null) {
-                            AIFloat3 p=owner.scoutModule.getPointForMoveArmy(army.getCenter(), 0);
-                            army.moveTo(p); // TODO
-        owner.sendTextMsg("army: send to point: "+p, FieldBOT.MSG_DLG);
-                        }
-                    }
-                }
-                // TODO scout group
-            }
+        
         }
     }
     

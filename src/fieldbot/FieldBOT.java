@@ -96,7 +96,7 @@ private Logger log = null;
 
 private static final int DEFAULT_ZONE = 0; // ????
 
-
+public int currentFrime=-1; // Game frime
 public CPULoadTimer cpuTimer; // for check CPU usage
 
 /**
@@ -420,27 +420,31 @@ public void checkForMetal()
             isMetalFieldMap=IS_NORMAL_METAL;
             sendTextMsg("This is a map with normal metal spots. Near Points: "+metalspot.toString(), MSG_DLG);
         }
-        
-        //for (AIFloat3 metalspot : availablemetalspots) sendTextMsg("Metal Spot at X: "+metalspot.x + ", Y: "+metalspot.y +", Z: "+metalspot.z); // DEBUG
     }
-    
+}
+/**
+ * Should be call for init metal data.
+ */
+private void initMetalData() {
     // Init metal points
     if (isMetalFieldMap==IS_METAL_FIELD || isMetalFieldMap==-2) allMetallSpots=null;
     else {
-        if (allMetallSpots!=null) allMetallSpots=new ArrayList<AIFloat3>();
-        if (isMetalFieldMap==IS_NORMAL_METAL && (allMetallSpots==null || allMetallSpots.isEmpty())) {
+        Resource metal=clb.getResourceByName("Metal");
+        if (allMetallSpots==null) allMetallSpots=new ArrayList<AIFloat3>();
+        else return;// !!!
+        if (isMetalFieldMap==IS_NORMAL_METAL) { //&& (allMetallSpots==null || allMetallSpots.isEmpty())) {
             String modName = modSpecific.modName; // last: clb.getMod().getShortName()
             boolean isZKmod=modName.equals("ZK");
-            if (!isZKmod) {
+//            if (!isZKmod) {
             // -- by engine --
                 allMetallSpots=clb.getMap().getResourceMapSpotsPositions(metal);
               sendTextMsg("Num of metal point: "+allMetallSpots.size(), MSG_DLG);
             // -----
-            } else { // MOD SPECIFED FOR Zero-K!
-                //TODO metal for Zero-K
-            }
+//            } else { // MOD SPECIFED FOR Zero-K!
+//                //TODO metal for Zero-K
+//            }
         }
-    }
+    }    
 }
 
 private List<AIFloat3> allMetallSpots;
@@ -787,6 +791,7 @@ public ArrayList<TBase> selectTBasesList() {
 public int update(int frame) {
   try {
   cpuTimer.start();
+    currentFrime=frame;
 //    sendTextMsg("update frame="+frame, MSG_DBG_ALL);
       
     if (!deadLstUnit.isEmpty()) deadLstUnit.clear();
@@ -805,6 +810,7 @@ public int update(int frame) {
     
   if (!inGameInitDone) {
         if (isMetalFieldMap==-2) checkForMetal(); // test for metal!!!
+        initMetalData(); // !!!
         inGameInitDone=true;
 
         Mod mod=clb.getMod();
@@ -1010,7 +1016,8 @@ public int message(int player, String message) {
             JSONParser parser=factory.newJsonParser();
             ArrayList<HashMap> jsonData=(ArrayList)parser.parseJson(json).values().toArray()[0];
             
-            if (allMetallSpots==null) allMetallSpots=new ArrayList<AIFloat3>();
+            //if (allMetallSpots==null) 
+                allMetallSpots=new ArrayList<AIFloat3>();
             for (HashMap s:jsonData){
                 float x = Float.parseFloat((String)s.get("x"));
                 float y = Float.parseFloat((String)s.get("y"));

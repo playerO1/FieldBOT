@@ -57,8 +57,8 @@ public class TScoutModule {
     public TScoutModule(FieldBOT owner) {
         this.owner=owner;
         this.map=owner.clb.getMap();
-        mapWidth=map.getWidth();//*8; // TEST !!!!
-        mapHeight=map.getHeight();//*8;
+        mapWidth=map.getWidth()*8; // TEST !!!!
+        mapHeight=map.getHeight()*8;
         
         smCellWidth=Math.min(mapWidth/30, 50);
         smCellHeight=Math.min(mapHeight/30, 50);
@@ -98,9 +98,9 @@ public class TScoutModule {
     public AIFloat3 getPointForMoveArmy(AIFloat3 nearTo,int pointID) {
         // TODO army seek point
         AIFloat3 p=last_enemyComeWatch;
-        if (p==null || Math.random()>0.7) {
-            float x=(float)Math.random() *owner.scoutModule.mapWidth;
-            float y=(float)Math.random() *owner.scoutModule.mapHeight;
+        if (p==null || pointID>0 || Math.random()>0.7) {
+            float x=(float)Math.random() *mapWidth;
+            float y=(float)Math.random() *mapHeight;
             p=new AIFloat3(x, 0, y);
         }
         return p;

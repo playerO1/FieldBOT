@@ -85,10 +85,8 @@ public class TBasePlaning_tetris extends ABasePlaning{
         for (AIFloat3 p:forPoints) { // reserve all this point
             TPlanCell newCell=new TPlanCell(SPECIAL_CELL_DEF, 1, cellPadding, DEFAULT_CELL_SPACING);
             //TODO maybe create class TPlanCell_reservePoint ?
-            // 2. Подобрать место
             newCell.moveTo(p.x, p.z);
             //newCell.updateZanatoPoz(map, 0); //!!!
-            // 3. Apply and save
             cells.add(newCell);
         }
     }

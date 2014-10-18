@@ -698,13 +698,19 @@ public void message(int player, String message) { // TODO return result, boolean
                 else owner.sendTextMsg("Command rejected: no morphing unit now.", FieldBOT.MSG_ERR);
         }
         
-        if (message.contains("make army") || message.contains(" do army")) {
+        boolean cmdMakeArmy=message.contains("make army") || message.contains(" do army");
+        boolean cmdMakeDefence=message.contains("make def") || message.contains(" do defence");
+        if (cmdMakeArmy && cmdMakeDefence) owner.sendTextMsg("Warning: uncknown chat command recognized as make amry and make defence too.", FieldBOT.MSG_ERR);
+        if (cmdMakeArmy || cmdMakeDefence) {
             
             // 1. Подбор параметров армии, за какие сроки сделать? Для чего: скорость, защита, атака? На кого?
             float timeL=3*60;
             int unitL=Integer.MAX_VALUE;
             //TWarStrategy.NUM_P = 7
-            float kachestva[]={ 1.0f, 0.3f, 0.4f, 0.5f, 0.2f, 0.1f,0.1f, 0.0f }; // spam, speed, health, atack, range, radar, stealth
+            float kachestva[]=TWarStrategy.KACHESTVA_ARMY.clone();//{ 0.01f, 0.3f, 0.6f, 0.6f, 0.2f, 0.1f,0.1f, 0.0f }; // spam, speed, health, atack, range, radar, stealth
+            if (cmdMakeDefence) {
+                kachestva=TWarStrategy.KACHESTVA_DEFTOWER.clone();
+            }
             String msgP[]=message.split(messageSpliter);
             boolean parsingSt=false;
             for (int i=0; i<msgP.length;i++) {
@@ -727,7 +733,7 @@ public void message(int player, String message) { // TODO return result, boolean
                         }
                     } else if (msgP[i].equalsIgnoreCase("for")) {
                         parsingSt=true;
-                        Arrays.fill(kachestva, 0.0f); // обнулить настройки
+                        Arrays.fill(kachestva, 0.0f); // drop predefine settings
                     }
                 }
 
@@ -754,7 +760,6 @@ public void message(int player, String message) { // TODO return result, boolean
                 }
             }
             
-            
             String msgT="";
             for (int i=0;i<kachestva.length;i++) msgT+= TWarStrategy.P_NAMES[i]+" "+kachestva[i]+", ";
             msgT+=" time limit="+timeL+" second";
@@ -772,11 +777,10 @@ public void message(int player, String message) { // TODO return result, boolean
                 }
             }
             
-            
             int weaponDamageType=0;// TODO choose weapon damage type. 0 = default
-            HashMap<UnitDef,Integer> armyUnits=owner.warStrategy.shooseArmy(bestBase, false, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva, weaponDamageType);
+            HashMap<UnitDef,Integer> armyUnits=owner.warStrategy.shooseArmy(bestBase, cmdMakeDefence, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva, weaponDamageType);
             
-            // TODO ТОлько те ктороые может строить (без лаборатории или с ней!!!!!!!!!!!!!!!!!!!)
+            // TODO Only what can build now (with or without research center on TA mod!!!)
             
             // 3. Отправка сигнала на строительство армии по базам.
             boolean isNotImitate=!message.contains("test");
@@ -788,9 +792,8 @@ public void message(int player, String message) { // TODO return result, boolean
                 }
             } else owner.sendTextMsg("No plan for army!", FieldBOT.MSG_DLG);
             
-            owner.sendTextMsg("TODO Army! Test!", FieldBOT.MSG_DLG);
         }
-        else // !!! Если не сделать армию, то сделать юнитов!!!
+        else // If not build army then make special unit
         if (message.contains("build") || message.contains("make")) {
             final String parsingParam[]={"build","make","unit"};
             
@@ -818,7 +821,6 @@ public void message(int player, String message) { // TODO return result, boolean
             }
         }
         
-
         if (message.contains("enable")) {
             boolean cmdAcepted=false;
             if ( message.contains(" auto") && message.contains("tech up"))
@@ -836,9 +838,15 @@ public void message(int player, String message) { // TODO return result, boolean
                 owner.ecoStrategy.makeEco=true;
                 cmdAcepted=true;
             }
+            if ( message.contains(" army control"))
+            {
+                owner.warStrategy.makeArmy=true;
+                cmdAcepted=true;
+            }
             if (cmdAcepted) owner.sendTextMsg("Command acepted.", FieldBOT.MSG_DLG);
                     else owner.sendTextMsg("Command rejected.", FieldBOT.MSG_DLG);
-        } else
+        }
+        else
         if (message.contains("disable")) {
             boolean cmdAcepted=false;
             if ( message.contains(" auto") && message.contains("tech up"))
@@ -854,6 +862,11 @@ public void message(int player, String message) { // TODO return result, boolean
             if ( message.contains(" eco"))
             {
                 owner.ecoStrategy.makeEco=false;
+                cmdAcepted=true;
+            }
+            if ( message.contains(" army control"))
+            {
+                owner.warStrategy.makeArmy=false;
                 cmdAcepted=true;
             }
             if (cmdAcepted) owner.sendTextMsg("Command acepted.", FieldBOT.MSG_DLG);

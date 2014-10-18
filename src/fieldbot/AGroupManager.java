@@ -119,7 +119,8 @@ public abstract class AGroupManager {
         for (Unit builder:getAllUnits(onlyWhatIdle)) currentUnitTypesSet.add(builder.getDef());
         
         return currentUnitTypesSet;
-        // TODO кэшировать вывод
+        // TODO move method getContainUnitDefsList into UnitSelector, or use this class
+        // TODO make cashe result
     }
     
     /**
@@ -153,7 +154,16 @@ public abstract class AGroupManager {
         owner.onGroupTargetFinished(this);
     }
     
-    // Command, sending from bot, from Spring.
+    /**
+     * Do this group execute now special command.
+     * 
+     * @return 
+     */
+    public abstract boolean haveSpecialCommand();
+    
+    
+    
+    // === Command, sending from bot, from Spring.===
     
     //@Override
     public int update(int frame) {
@@ -187,16 +197,25 @@ public abstract class AGroupManager {
 
     //@Override
     public boolean unitDestroyed(Unit unit, Unit attacker) {
-        return false;
+        //if (contains(unit)) {
+            return removeUnit(unit); // removeUnit already contain check on "slowUnit"
+        //}
+        //return false;
     }
     
     //@Override
     public boolean unitGiven(Unit unit, int oldTeamId, int newTeamId) {
+        if (oldTeamId==owner.teamId && newTeamId!=owner.teamId) {
+            return removeUnit(unit);
+        }// else return false;
         return false;
     }
 
     //@Override
     public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {
+        if (oldTeamId==owner.teamId && newTeamId!=owner.teamId) {
+            removeUnit(unit);
+        }
         return 0; // signaling: OK
     }
 
@@ -269,4 +288,12 @@ public abstract class AGroupManager {
         return 0; // signaling: OK
     }
 
+   @Override
+    public String toString() {
+        String s="center:"+getCenter();
+        if (isEmpty())
+          s+=" (empty)";
+          else s+="(unit count:"+getAllUnits(false).size()+")"; // TODO use more fast method for get unit count in group
+        return s+" " +super.toString();
+    }
 }

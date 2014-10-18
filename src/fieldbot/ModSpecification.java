@@ -118,6 +118,7 @@ public class ModSpecification {
         // Robot Defence MOD short name: RD
         
         specificUnitEnabled = modName.equals("TA") || modName.equals("RD"); // TODO specificUnitEnabled !
+        // TODO NOTA have 2 war unit on SpecialUnitEnabled too.
         
         if (modName.equals("EvoRTS")) {
             metal_maker_workZone=0.012f;
@@ -212,6 +213,48 @@ public class ModSpecification {
             if (def!=null) specialTLevelRequired.put(def, -1);
             def=owner.clb.getUnitDefByName("corfred");
             if (def!=null) specialTLevelRequired.put(def, -1);
+
+            // war units
+            def=owner.clb.getUnitDefByName("armpw1");// kbot
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("armcrack");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("aexxec");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("ahermes");// wehicle
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("armsonic");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("armscar");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("armrottweiler");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("armarty");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("armblz"); // fly
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("armjade");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+
+            def=owner.clb.getUnitDefByName("corak1");// kbot
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("corrock");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("gladiator");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("corjeag");// vehivle
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("cslicer");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("corgfbt");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("dao");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("cbrutus");
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            def=owner.clb.getUnitDefByName("corfiend");// fly
+            if (def!=null) specialTLevelRequired.put(def, -1);
+            // TODO realy need do it on XML export.
         } else {
             specialTLevelRequired=null;
         }

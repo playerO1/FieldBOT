@@ -97,6 +97,11 @@ public class TArmyGroup extends AGroupManager{
     public boolean contains(Unit unit) {
         return army.contains(unit);
     }
+    
+    @Override
+    public boolean haveSpecialCommand() {
+        return moveTarget!=null;
+    }
 
     @Override
     public float doYouNeedUnit(Unit unit) {
@@ -157,4 +162,56 @@ public class TArmyGroup extends AGroupManager{
         }
         return 0;
     }
+    
+    
+    
+    // TODO method call -------------------------
+
+@Override
+public int commandFinished(Unit unit, int commandId, int commandTopicId) {
+    if (unit.getCurrentCommands().isEmpty()) {
+        if (unit==slowUnit && moveTarget!=null) {
+            moveTarget=null; // failed move to this target
+            updateUnitCommands();
+            onCommandFinished(); // !!!
+        }
+    }
+    return 0; // signaling: OK
+}
+
+
+//@Override
+//public boolean unitDestroyed(Unit unit, Unit attacker) {
+//    if (contains(unit)) {
+//        return removeUnit(unit); // removeUnit already contain check on "slowUnit"
+//    }
+//    return false;
+//}
+
+
+@Override
+public int unitIdle(Unit unit) {
+    if (unit==slowUnit && moveTarget!=null) {
+        moveTarget=null; // failed move to this target
+        this.updateUnitCommands();
+        onCommandFinished(); // !!!
+    }
+    return 0; // signaling: OK
+}
+
+@Override
+public int unitMoveFailed(Unit unit) {
+    if (unit.getCurrentCommands().isEmpty()) {  // !!!!!!!!!!!! TEST
+        if (unit==slowUnit && moveTarget!=null) {
+            moveTarget=null; // failed move to this target
+            this.updateUnitCommands();
+            onCommandFinished(); // !!!
+        }
+    }
+    return 0; // signaling: OK
+}
+
+
+
+
 }
