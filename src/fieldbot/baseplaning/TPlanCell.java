@@ -28,12 +28,12 @@ import fieldbot.FieldBOT;
  * @author user2
  */
 public class TPlanCell {
-    public static FieldBOT clb;// !!! DEBUG!!!
+    public static FieldBOT clb;// !!! for DEBUG!!!
     
-    public float cx,cy; // центр
+    public float cx,cy; // center
     public final float width,height;// ширина высота
     
-    public final UnitDef forUnitType;// для чего
+    public final UnitDef forUnitType;// contain unit type
     
     public final int maxCount;// число вмещаемых элементов.
     public int zanato;// число вмещаемых элементов
@@ -79,15 +79,23 @@ public class TPlanCell {
         this.padding=padding;
         this.spacing=spacing;
         this.forUnitType=forUnitType;
-        // !!!!!!!!!!!!!!!!!!!!! ??? 16 ? 16/2=8 ? масштаб?
-        elementSX=forUnitType.getXSize()*16/2+spacing/2;
-        elementSY=forUnitType.getZSize()*16/2+spacing/2;
+        // !!! ??? 16 ? 16/2=8 ? size?
+        if (forUnitType!=null) {
+            elementSX=forUnitType.getXSize()*16/2+spacing/2;
+            elementSY=forUnitType.getZSize()*16/2+spacing/2;
+        } else { // TODO this function on this class, or make IllegalAgrumentException and create other class TPlanCell_reservedPoints?
+            elementSX=1*16/2+spacing/2; // !!!!!!!
+            elementSY=1*16/2+spacing/2;
+        }
         width=elementSX*countX+padding; // TODO -spacing вокруг, или с ним оставить? 
         height=elementSY*countY+padding;
         
         cx=cy=0;// TODO -width -height !!!
         
-        clb.sendTextMsg("Debug: cell create: "+countX+"x"+countY+" for "+forUnitType.getName()+" width="+width+" height="+height+", elementSX="+elementSX+" elementSY="+elementSY, FieldBOT.MSG_DBG_ALL);//DEBUG!!!
+        if (forUnitType!=null)
+            clb.sendTextMsg("Debug: cell create: "+countX+"x"+countY+" for "+forUnitType.getName()+" width="+width+" height="+height+", elementSX="+elementSX+" elementSY="+elementSY, FieldBOT.MSG_DBG_ALL);//DEBUG!!!
+        else
+            clb.sendTextMsg("Debug: cell create: "+countX+"x"+countY+" for <null> width="+width+" height="+height+", elementSX="+elementSX+" elementSY="+elementSY, FieldBOT.MSG_DBG_ALL);//DEBUG!!!
     }
     
     /**
@@ -112,6 +120,10 @@ public class TPlanCell {
      * @param buildFacing направление вращения построек...
      */
     public void updateZanatoPoz(Map map,int buildFacing) {
+        if (forUnitType==null) {
+            zanato=1;
+            return; // !!!!
+        }
         int z=0;
         for ( int i=0; i<maxCount ; i++ ) {
             AIFloat3 p=getPos(i);
@@ -126,6 +138,8 @@ public class TPlanCell {
     }
     
     public AIFloat3 getFreePos(Map map,int buildFacing) {
+        if (forUnitType==null) return new AIFloat3(cx, 0, cy); // !!!
+        
         AIFloat3 pos;
         if (getNumFreePos()>0) for (int i=0;i<maxCount;i++) {
             pos=getPos(i);

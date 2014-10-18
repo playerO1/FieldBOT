@@ -140,20 +140,32 @@ public abstract class ABasePlaning {
         return nearP; //last: null;
     }
     
+    /**
+     * Search geo points in radius. No cashe.
+     * @param buildCenter
+     * @param r
+     * @return list with geo points, or empty list
+     */
+    protected ArrayList<AIFloat3> getGeoPointsAt(AIFloat3 buildCenter, float r) {
+        ArrayList<AIFloat3> GeoPoints=new ArrayList<AIFloat3>();
+        List<Feature> features=owner.owner.clb.getFeaturesIn(buildCenter, r);
+        for (Feature f:features) if (f.getDef().isGeoThermal()) GeoPoints.add(f.getPosition());
+        return GeoPoints;
+    }
+//    private ArrayList<AIFloat3> getMetalPointsAt(AIFloat3 buildCenter, float r) {
+//        return owner.owner.getMetalSpotsInRadius(buildCenter, r);// !!!
+//    }
+    
     private AIFloat3 findFreeGeoPointAt(UnitDef unitType, AIFloat3 buildCenter, float r, AIFloat3 nearFor)
     {
         if (buildCenter.equals(owner.center) && r==owner.radius)
         {// cahse
             if (cashe_GeoPoints==null) {
-                cashe_GeoPoints=new ArrayList<AIFloat3>();
-                List<Feature> features=owner.owner.clb.getFeaturesIn(buildCenter, r);
-                for (Feature f:features) if (f.getDef().isGeoThermal()) cashe_GeoPoints.add(f.getPosition());
+                cashe_GeoPoints=getGeoPointsAt(buildCenter, r);
             }
             return findNear_noClosePoint(unitType, buildCenter, r, nearFor, cashe_GeoPoints);
         } else {// no cashe
-            ArrayList<AIFloat3> GeoPoints=new ArrayList<AIFloat3>();
-            List<Feature> features=owner.owner.clb.getFeaturesIn(buildCenter, r);
-            for (Feature f:features) if (f.getDef().isGeoThermal()) GeoPoints.add(f.getPosition());
+            ArrayList<AIFloat3> GeoPoints=getGeoPointsAt(buildCenter, r);
             return findNear_noClosePoint(unitType, buildCenter, r, nearFor, GeoPoints);
         }
     }

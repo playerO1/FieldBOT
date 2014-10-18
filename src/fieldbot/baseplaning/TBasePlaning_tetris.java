@@ -39,16 +39,16 @@ public class TBasePlaning_tetris extends ABasePlaning{
     private float DEFAULT_CELL_PADDING=60.2f;
     private float DEFAULT_CELL_SPACING=5.5f;
     
+    private final UnitDef SPECIAL_CELL_DEF=null; // mark this as UnitDef special cell for reserved point territory.
+    
     public TBasePlaning_tetris(TBase owner) {
         super(owner);
-        
         cells=new ArrayList<TPlanCell>();
-        
-        // TODO заранее место под шахты и геотермальные...
-        
-        TPlanCell.clb=owner.owner;// DEBUG !!!!!!!!
-        
+        TPlanCell.clb=owner.owner;// only for DEBUG !!!!!!!!
         freeSpaceUsingK=1.16f;
+        
+        // Reserve territory for metal extractors and geotermal points
+        reservePointPositions();
     }
     
     /**
@@ -69,6 +69,45 @@ public class TBasePlaning_tetris extends ABasePlaning{
     private TPlanCell findCollisionCell(TPlanCell c1) {
         for (TPlanCell cell2:cells) if (cell2!=c1) if (c1.collision(cell2)) return cell2;
         return null;
+    }
+    
+    
+    private void reservePointPositions() {
+        ArrayList<AIFloat3> forPoints=new ArrayList<AIFloat3>(getGeoPointsAt(owner.center, owner.radius));
+        if (owner.owner.isMetalFieldMap==FieldBOT.IS_NORMAL_METAL)
+        {
+            ArrayList<AIFloat3> metalPoints=owner.owner.getMetalSpotsInRadius(owner.center, owner.radius);
+            if (metalPoints!=null) forPoints.addAll(metalPoints);
+            else // !!! For debug TODO init prepare metal point on first base
+                owner.owner.sendTextMsg("Warning: tetris base planing can not reserved metal points, becouse metal data structure was not initialized.", FieldBOT.MSG_ERR);
+        }
+        float cellPadding=DEFAULT_CELL_PADDING*2;
+        for (AIFloat3 p:forPoints) { // reserve all this point
+            TPlanCell newCell=new TPlanCell(SPECIAL_CELL_DEF, 1, cellPadding, DEFAULT_CELL_SPACING);
+            //TODO maybe create class TPlanCell_reservePoint ?
+            // 2. Подобрать место
+            newCell.moveTo(p.x, p.z);
+            //newCell.updateZanatoPoz(map, 0); //!!!
+            // 3. Apply and save
+            cells.add(newCell);
+        }
+    }
+    /**
+     * Remove all special TPlanCell with mark SPECIAL_CELL_DEF from list.
+     * @return modify
+     */
+    private boolean clearReservedPointPositions() {
+        if (cells.isEmpty()) return false;
+        boolean modify=false;
+        Iterator<TPlanCell> itr1 = cells.iterator();
+        while (itr1.hasNext()) {
+            TPlanCell cell = itr1.next();
+            if (cell.forUnitType==SPECIAL_CELL_DEF) {
+                itr1.remove();
+                modify=true;
+            }
+        }
+        return modify;
     }
     
     /**
@@ -165,7 +204,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
      */
     @Override
     public float full() {
-        return super.full();// TODO
+        return super.full();// TODO full()
     }
     /**
      * Возвращает рекомендованный радиус базы (для расширения)
@@ -181,7 +220,6 @@ public class TBasePlaning_tetris extends ABasePlaning{
     @Override
     public void preparePositionFor(UnitDef unitType,int count)
     { // TODO use it!!!!!
-        // TODO and tesst it.
         if (ModSpecification.isRealyAbleToMove(unitType)) return;
         
         int preparePosHave=0;
@@ -203,7 +241,9 @@ public class TBasePlaning_tetris extends ABasePlaning{
     @Override
     public void onBaseMoving() {
         super.onBaseMoving();
+        clearReservedPointPositions();
         clearFreeCell();
+        reservePointPositions();
         // todo убрать только вне новой зоны.
     }
     
@@ -217,7 +257,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
         Iterator<TPlanCell> itr1 = cells.iterator(); // Цикл...
         while (itr1.hasNext()) {
             TPlanCell cell = itr1.next();
-            if (cell.zanato==0) {
+            if (cell.zanato==0 && cell.forUnitType!=SPECIAL_CELL_DEF) {
                 itr1.remove(); // убрать пустую клетку
                 modify=true;
             }
@@ -255,7 +295,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
         
         AIFloat3 buildCenter;
         
-        boolean etoStroenie=!ModSpecification.isRealyAbleToMove(unitType);
+        boolean etoStroenie=!ModSpecification.isRealyAbleToMove(unitType); // It is building - no moveable.
         
         if (etoStroenie) { // это здание
             // 1. Определится с масштабом зоны
@@ -301,13 +341,13 @@ public class TBasePlaning_tetris extends ABasePlaning{
             
             return buildPos;
             
-        } else { // It is unit
+        } else { // It is movable unit
             // 1. Build zone: near for main builder
             if (mainBuilder!=null) //&& !ModSpecification.isRealyAbleToMove(mainBuilder.getDef())) // если строитель неподвижный
             {
                 buildCenter = new AIFloat3(mainBuilder.getPos());
                 maxR=mainBuilder.getDef().getBuildDistance();
-            } else { // ??? !!!!!!!!!!!!!!!!
+            } else {
                 buildCenter=owner.center;
                 maxR=owner.radius;
             }
@@ -316,7 +356,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
             double r=1.6*MathPoints.getRadiusFlat(unitType), a=2*Math.PI*Math.random();
             buildPos.x+=r*Math.cos(a);  buildPos.z+=r*Math.sin(a);
             // TODO может по спирали?...
-            AIFloat3 np=map.findClosestBuildSite(unitType, buildPos, maxR, 1*Math.max(unitType.getXSize(), unitType.getZSize()) , owner.BUILD_FACING); // TODO test!
+            AIFloat3 np=map.findClosestBuildSite(unitType, buildPos, maxR, 1*Math.max(unitType.getXSize(), unitType.getZSize()) , owner.BUILD_FACING);
             if (!MathPoints.isValidPoint(np)) buildPos=null;
             else buildPos=np;
 
@@ -352,7 +392,7 @@ public class TBasePlaning_tetris extends ABasePlaning{
                 //TODO do use cell.updateZanatoPoz(map, owner.BUILD_FACING); ?
                 if (cell.zanato==0) {
                     cell.updateZanatoPoz(map, owner.BUILD_FACING); // check again
-                    if (cell.zanato==0) itr1.remove(); // убрать пустую клетку
+                    if (cell.zanato==0 && cell.forUnitType!=SPECIAL_CELL_DEF) itr1.remove(); // убрать пустую клетку
                 }
             }
             if (cell.zanato<0) owner.owner.sendTextMsg(" WARNING (tetris base planing) cell zanato="+cell.zanato+"!", FieldBOT.MSG_ERR);
