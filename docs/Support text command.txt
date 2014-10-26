@@ -18,8 +18,8 @@ Query text:
 9. morphing unit «{do|start} morph [all] [now]»
 10. stop morph «stop morph» for all
 11. execute tech up to best economic level «do tech up [now]», if "now" - don't check enought resources for this, do emiditly.
-12. Create army «{do|make} army [for [spam #] [HP|health #] [atack #] [range #] [stealth? #] [work #]] [limit #] [time # [{min|sec}]]», where # - number (percent of wanted), limit - max unit count, time-max time for build all army.
-13. Change BOT logic: «{enable | disable} { auto tech up | enemy chat | eco }». "enemy chat" - allow/disallow command from enemy team. "eco" - if disable, BOT do not build eco building, constructors will be walking random.
+12. Create army (or defence tower) «{do|make} {army|defence} [for [spam #] [HP|health #] [atack #] [range #] [stealth? #] [work #]] [limit #] [time # [{min|sec}]]», where # - number (percent of wanted), limit - max unit count, time-max time for build all army.
+13. Change BOT logic: «{enable | disable} { auto tech up | enemy chat | eco | army control }». "enemy chat" - allow/disallow command from enemy team. "eco" - if disable, BOT do not build eco building, constructors will be walking random.
 14. Change BOT logic: «set {negative|pessimistic|bad}|{positive|optimistic|good} eco» - set resource analyzer mode, if "negative" then bot will be using not best eco building, if "positive" then bot will be build best eco building but they have bad if have economic cruzis (you will be take big resource from him, or if bot build too many in some time).
 15. «help|list» - show support commands (TEST, UPDATE).
 
