@@ -640,8 +640,8 @@ public void message(int player, String message) { // TODO return result, boolean
                 for (AGroupManager sGroup:owner.smartGroups) {
                     ArrayList<Unit> toMorphLst=new ArrayList<Unit>(); // потом всех чтобы сделать рабочими
                     List<Unit> toMorphUnits=null;
-                    if (!doNow || !(sGroup instanceof TBase)) {
-                        TBase base=(TBase)sGroup; // TODO test!!!!
+                    if (!doNow && (sGroup instanceof TBase)) {
+                        TBase base=(TBase)sGroup;
                         toMorphUnits=base.idleCons;
                     } else toMorphUnits=sGroup.getAllUnits(true);
                     for (Unit unit:toMorphUnits) { // !!! Unit unit:base.workingCons
@@ -786,9 +786,11 @@ public void message(int player, String message) { // TODO return result, boolean
             boolean isNotImitate=!message.contains("test");
             if (!isNotImitate) owner.sendTextMsg("(test)", FieldBOT.MSG_DLG);
             if (armyUnits!=null) {
-                for (Entry<UnitDef,Integer> armyItem:armyUnits.entrySet()) {
-                  owner.sendTextMsg(" army>"+armyItem.getKey().getHumanName()+" * "+armyItem.getValue(), FieldBOT.MSG_DLG);
-                  if (isNotImitate) bestBase.currentBaseTarget.add(armyItem.getKey(), armyItem.getValue());
+                if (isNotImitate)
+                 owner.warStrategy.sendBuildMessageToBase(armyUnits, bestBase, false); //!!!
+                else for (Entry<UnitDef,Integer> armyItem:armyUnits.entrySet()) {
+                  // for Debug
+                    owner.sendTextMsg(" army>"+armyItem.getKey().getHumanName()+" * "+armyItem.getValue(), FieldBOT.MSG_DLG);
                 }
             } else owner.sendTextMsg("No plan for army!", FieldBOT.MSG_DLG);
             

@@ -34,7 +34,8 @@ public class TArmyGroup extends AGroupManager{
     public Unit slowUnit;
     
     public int tactic;
-    public AIFloat3 moveTarget; // TODO non-line moving road.
+    public AIFloat3 moveTarget; // TODO non-line moving road to enemy base.
+    public boolean targetScout;
     
     
     public TArmyGroup(FieldBOT owner) {
@@ -45,6 +46,7 @@ public class TArmyGroup extends AGroupManager{
         
         tactic=0;
         moveTarget=null;
+        targetScout=false;
     }
     
     /**
@@ -100,7 +102,7 @@ public class TArmyGroup extends AGroupManager{
     
     @Override
     public boolean haveSpecialCommand() {
-        return moveTarget!=null;
+        return moveTarget!=null || targetScout;
     }
 
     @Override
@@ -148,16 +150,30 @@ public class TArmyGroup extends AGroupManager{
     
     @Override
     public int update(int frame) {
-        if (frame%5==0) {
-            if (moveTarget!=null && slowUnit!=null) {
-                if (MathPoints.getDistanceBetween3D(moveTarget, slowUnit.getPos())<1) {
-                    moveTarget=null; // finish.
+        if (frame%7==4) {
+            if (targetScout) {
+                for (Unit u:army) if (u.getCurrentCommands().isEmpty())
+                {
+                    AIFloat3 sp=owner.scoutModule.getPointToScout(u.getPos(), 0);
+                    u.fight(sp, (short)0, Integer.MAX_VALUE);
+                }
+            } else {
+                if (moveTarget!=null && slowUnit!=null) {
+                    if (MathPoints.getDistanceBetween3D(moveTarget, slowUnit.getPos())<10
+                        || slowUnit.getCurrentCommands().isEmpty()) {
+                        moveTarget=null; // finish.
+                        onCommandFinished();
+                    }
+    //                    }) {
+    //                // send command
+    //                slowUnit.fight(moveTarget, (short)0, Integer.MAX_VALUE);
+    //                for (Unit au:army) if (au!=slowUnit) au.guard(slowUnit, (short)0, Integer.MAX_VALUE);
+                }
+                if (moveTarget!=null && slowUnit==null && !isEmpty()) {
+                    owner.sendTextMsg("Warning! army without main unit have target.", FieldBOT.MSG_ERR);
+                    moveTarget=null; // finish by error.
                     onCommandFinished();
                 }
-//                    }) {
-//                // send command
-//                slowUnit.fight(moveTarget, (short)0, Integer.MAX_VALUE);
-//                for (Unit au:army) if (au!=slowUnit) au.guard(slowUnit, (short)0, Integer.MAX_VALUE);
             }
         }
         return 0;
@@ -170,6 +186,7 @@ public class TArmyGroup extends AGroupManager{
 @Override
 public int commandFinished(Unit unit, int commandId, int commandTopicId) {
     if (unit.getCurrentCommands().isEmpty()) {
+       if (!targetScout)
         if (unit==slowUnit && moveTarget!=null) {
             moveTarget=null; // failed move to this target
             updateUnitCommands();
@@ -192,6 +209,7 @@ public int commandFinished(Unit unit, int commandId, int commandTopicId) {
 @Override
 public int unitIdle(Unit unit) {
     if (unit==slowUnit && moveTarget!=null) {
+       if (!targetScout)
         moveTarget=null; // failed move to this target
         this.updateUnitCommands();
         onCommandFinished(); // !!!
@@ -202,6 +220,7 @@ public int unitIdle(Unit unit) {
 @Override
 public int unitMoveFailed(Unit unit) {
     if (unit.getCurrentCommands().isEmpty()) {  // !!!!!!!!!!!! TEST
+       if (!targetScout)
         if (unit==slowUnit && moveTarget!=null) {
             moveTarget=null; // failed move to this target
             this.updateUnitCommands();

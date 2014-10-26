@@ -599,11 +599,11 @@ public class TEcoStrategy {
         }
         else if (owner.isMetalFieldMap==FieldBOT.IS_METAL_FIELD)
         {
-            if ( pEstor <= 0.50 || avg_delta_E*2<avg_delta_M) {
+            if ( pEstor <= 0.50 || (avg_delta_E*2<avg_delta_M && pMstor>0.20)) {
 //                owner.sendTextMsg(" cel->electrostanciya1-" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resE;
-            }
-            if ( pMstor < 0.50  || avg_delta_M*2<avg_delta_E) {
+            } // FIXME this is bad logic, if pE<0.1 or pM<0 then can be have problem
+            if ( (pMstor < 0.50 && pEstor>pMstor) || (avg_delta_M*2<avg_delta_E && pEstor>0.30)) {
 //                owner.sendTextMsg(" cel->metal2-" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
@@ -612,13 +612,13 @@ public class TEcoStrategy {
                 bestUnitR = resE;
             }
         } else owner.sendTextMsg(" uncknown map resource type = "+owner.isMetalFieldMap , FieldBOT.MSG_DBG_SHORT); // or FieldBOT.MSG_ERR?
-        if ( pMstor>0.9 && pEstor>EconvertK && avg_delta_M>0) {
+        if ( pMstor>0.9 && pEstor>EconvertK && avg_delta_M>0 || bestUnitR==null) {
 //            owner.sendTextMsg(" cel->4" , FieldBOT.MSG_DBG_SHORT);
             final float resourceProportion[]=owner.modSpecific.resourceProportion; // last:{1.0f, 10.0f};
             if (currentRes[AdvECO.R_Income][0]*resourceProportion[0]<currentRes[AdvECO.R_Income][1]*resourceProportion[1])
                 // < or use /
                  bestUnitR = resE;
-            else bestUnitR = resM;
+            else bestUnitR = resM; // FIXME on metal map do build too much metal extractors on ARM!
         }
 
         //TODO if >90% storage have, and delta Res >20% of storage, then make storage - getBestStorageRes()

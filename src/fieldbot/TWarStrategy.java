@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -54,14 +53,18 @@ public class TWarStrategy {
     public final static String P_NAMES_forParsing[][]={{"spam","units"}, {"speed","fast"}, {"health","HP"}, {"atack","weapon","damage"}, {"range","distance","long"}, {"radar"}, {"stealth","hidde"},{"constructor","work"}};
     
     // Predefine template for kachestva:
-    public static final float KACHESTVA_ARMY[]={ 0.05f, 0.3f, 0.6f, 0.9f, 0.3f, 0.1f,0.05f, 0.0f }; // spam, speed, health, atack, range, radar, stealth, worker
-    public static final float KACHESTVA_DEFTOWER[]={ 0, 0, 0.5f, 0.9f, 0.4f, 0.02f,0.01f, 0.0f };
-    public static final float KACHESTVA_RADAR[]=   { 0, 0, 0, 0, 0, 1, 0, 0 };
+    public static final float KACHESTVA_ARMY[]={ 0.002f, 0.16f, 0.4f, 1.0f, 0.3f, 0.06f,0.01f, 0.0f }; // spam, speed, health, atack, range, radar, stealth, worker
+    public static final float KACHESTVA_DEFTOWER[]={ 0, 0, 0.05f, 1.0f, 0.3f, 0.005f,0.002f, 0.0f };
+    public static final float KACHESTVA_RADAR[]=   { 0, 0, 0, 0, 0, 1.0f, 0, 0 };
 
+    public static final float KACHESTVA_U_SCOUT[]={ 0.15f, 0.9f, 0.12f, 0.2f, 0.1f, 0.6f,0.36f, 0.0f };
+    public static final float KACHESTVA_U_RAIDER[]={ 0, 0.1f, 0.6f, 1.0f, 0.19f, 0.01f,0.02f, 0.0f };
+    public static final float KACHESTVA_U_LRATACK[]={ 0, 0.01f, 0.3f, 0.6f, 1.0f, 0.01f,0.01f, 0.0f };
     
     private final FieldBOT owner;
     
-    private final boolean USE_MULTIPLY=true; // Использовать мультипликативную модель для оценки качеств юнитов (иначе адитивная модель)
+    private final boolean USE_MULTIPLY=false; // Использовать мультипликативную модель для оценки качеств юнитов (иначе адитивная модель)
+    private final double MULT_ADD=1.0; // TODO theck this line. 0.0- only with all kachestva, 1.0 - more additive modeling on mul
     
     /**
      * Enable army control
@@ -124,14 +127,13 @@ public class TWarStrategy {
         //unit.getWingAngle() // крыло?...
         //unit.getWingDrag()
         
-        kachestva[P_ATACK_POWER]=0;
-        kachestva[P_ATACK_DISTANCE]=0;
-        
         //---------
         double damage=0.0,
                range=unit.getMaxWeaponRange();//0.0;
         // TODO use getOnlyTargetCategory() !!!
-        for (WeaponMount weaponMount:unit.getWeaponMounts()) {
+        if (unit.isAbleToAttack())
+          for (WeaponMount weaponMount:unit.getWeaponMounts())
+        {
             WeaponDef weapon=weaponMount.getWeaponDef();
             if (!weapon.isParalyzer()  // Если не парализует... 
                 && weapon.isAbleToAttackGround() && !weapon.isShield()) { // и т.д.
@@ -153,11 +155,11 @@ public class TWarStrategy {
             owner.sendTextMsg(" Unit able to kamikadze. Weapon damage skip to 0. Unit="+unit.getName()+";" ,FieldBOT.MSG_DBG_ALL);
         }
         //---------
-        
+        if (damage==0.0) range=0;
         kachestva[P_ATACK_POWER]=damage; // за оружие
         kachestva[P_ATACK_DISTANCE]=range; // за расстояние
         
-        kachestva[P_RADAR]=Math.max(unit.getRadarRadius() , unit.getLosRadius()); // за радиус радара
+        kachestva[P_RADAR]=Math.max((float)unit.getRadarRadius()*8 , unit.getLosRadius()); // max see radius TODO test radar radius
         if (unit.isStealth()) kachestva[P_RADAR]=1.0f; else kachestva[P_RADAR]=0.0f; // за скрытность
         if (unit.isAbleToAssist()) kachestva[P_CONSTRUCTOR]=unit.getBuildSpeed(); else kachestva[P_CONSTRUCTOR]=0.0; // за строительства
         
@@ -173,7 +175,6 @@ public class TWarStrategy {
      */
     private double svestiZnacheniyaK(double unitK[], double normalizeTo_maxK[], float kachestva[]) {
         double k; // + or *  , 0 or 1  ? choose best formul!
-        final double MULT_ADD=1.0; // TODO theck this line. 0.0- only with all kachestva, 1.0 - more additive modeling on mul
         if (USE_MULTIPLY) k=1; else k=0;
         for (int j=0;j<NUM_P;j++) {
             double x = unitK[j]/normalizeTo_maxK[j] * kachestva[j];
@@ -279,10 +280,10 @@ public class TWarStrategy {
             for (int j=0;j<NUM_P;j++) {
                 double x = unitK[j]/max_k[j] * kachestva[j]; // normalize values
                 if (USE_MULTIPLY) { // * or +
-                    k *= (1.0 + x); // !!!
+                    k *= (MULT_ADD + x); // !!!
                 } else k += x;
             }
-            if (USE_MULTIPLY) k-=1.0;
+            if (USE_MULTIPLY) k-=MULT_ADD;
             M_k[i]=k * K_PRECISSION;// test
             
             for (int j=0;j<numRes;j++) M_res[j][i]=unit.getCost(owner.avgEco.resName[j]); //было M_res[i][j]
@@ -340,7 +341,13 @@ public class TWarStrategy {
         
         
         
-        double resK=MathOptimizationMethods.simplexDouble(M_res, V_Res, M_k, simplOtvet);
+        double resK;
+        if (unitLimit==1) { // more fast optimization
+            resK=MathOptimizationMethods.justOneMaximize(M_res, V_Res, M_k, simplOtvet);
+            //TODO test justOneMaximize!
+        } else { // more smart optimization
+            resK=MathOptimizationMethods.simplexDouble(M_res, V_Res, M_k, simplOtvet);
+        }
         if (resK<=0) return null;// If no one plan do not profit
         
         // 4 Обработка результата
@@ -348,19 +355,43 @@ public class TWarStrategy {
         for (int i=0; i<buildVars.size(); i++) {
             if (simplOtvet[i]!=0) {
                 UnitDef unit = buildVars.get(i);
-                int n=(int)Math.round(simplOtvet[i]); // !!!!!
-                outArmy.put(unit, n);
+                int n=(int)Math.round(simplOtvet[i]); //TODO check Math.round on this line !!!!!
+                if (n>0) outArmy.put(unit, n);
             }
         }
 
         return outArmy;
     }
 
+    public void sendBuildMessageToBase(HashMap<UnitDef,Integer> armyUnits, TBase toBase, boolean defenceTower)
+    {
+        for (Map.Entry<UnitDef,Integer> armyItem:armyUnits.entrySet())
+          if (armyItem.getValue()>0) // !!!!
+        {
+          owner.sendTextMsg(" army>"+armyItem.getKey().getHumanName()+" * "+armyItem.getValue(), FieldBOT.MSG_DBG_SHORT);
+          if (!defenceTower) toBase.currentBaseTarget.add(armyItem.getKey(), armyItem.getValue());
+          else {
+              for (int i=0;i< armyItem.getValue();i++) {
+                  AIFloat3 defPoint; // TODO check on null!
+                  int nTry=0;
+                  do {
+                    defPoint=MathPoints.getRandomPointOnRadius(toBase.center, toBase.radius*(0.5f+0.2f*(float)Math.random()));
+                    nTry++;
+                  } while 
+                    (!owner.clb.getMap().isPossibleToBuildAt(armyItem.getKey(), defPoint, toBase.BUILD_FACING) 
+                     || nTry<10 );
+                  toBase.currentBaseTarget.add(armyItem.getKey(), 1, defPoint);// TODO set defence tower position better.
+              }
+          }
+        }
+    }
+    
     /**
      * Select one of max better kachestva unit.
      * @param chooseBuilding
      * @param buildVariants
      * @param kachestva
+     * @param weaponDamageType
      * @return best UnitDef with max compare (better) for kachestva. Or null
      */
     public UnitDef shooseBestFor(boolean chooseBuilding, ArrayList<UnitDef> buildVariants, float kachestva[], int weaponDamageType)
@@ -488,7 +519,9 @@ public class TWarStrategy {
 
     // ---- War control ----
     
-    private short baseBuildDef=0; // 0 - tower, 1 - radar, 2 and more - army
+    private int armyTypeStage=0; // 0 - tower, 1 - radar, 2 and more - army
+    private int armyControlStage=-1;
+    private short lastBuildScoutGroup=0; // 2 - true
     
     /**
      * Army control tick.
@@ -498,13 +531,34 @@ public class TWarStrategy {
         if (!makeArmy) return;
         
         // TODO Army control
-        if (frame%500==4) {
-
-            // Make war group
+        
+        
+            // Scout/Atack
+        if (frame%400==105 || frame%400==305) {
+            for (AGroupManager sGroup:owner.smartGroups)
+            {
+                if (sGroup instanceof TArmyGroup) {
+                    TArmyGroup army=(TArmyGroup)sGroup;
+                    if (army.isEmpty()) {
+                        owner.removeSmartGroup(sGroup); // Remove destroyed army.
+                    } else {
+                        if (!army.haveSpecialCommand()) {
+                            AIFloat3 p=owner.scoutModule.getPointForMoveArmy(army.getCenter(), 0);
+                            army.moveTo(p); // TODO army.moveTo
+        owner.sendTextMsg("army: send to point: "+p, FieldBOT.MSG_DBG_SHORT);
+                        }
+                    }
+                }
+                // TODO scout group
+            }
+        }
+        
+        switch (armyControlStage) {
+         case 0: // Make war group
             boolean needMakeWarGroup=true;
             if (needMakeWarGroup) {
                 for (TBase base:owner.selectTBasesList())
-                  if (base.currentBaseTarget.isEmpty()) // if building army finished
+                  if (!base.haveSpecialCommand()) // if building army finished
                 {
                     if (base.army.size()>2) {
                         // TODO only movable units!!!
@@ -514,36 +568,29 @@ public class TWarStrategy {
                             army.addAllUnits(transferUnits);
                             owner.addSmartGroup(army);
         owner.sendTextMsg("new army created:"+army, FieldBOT.MSG_DLG);
+                            if (lastBuildScoutGroup==2) {
+                                army.targetScout = true;
+                                lastBuildScoutGroup=0;
+                            }
                         } else owner.sendTextMsg("new army CAN NOT Create: unit not removed from group, size="+transferUnits.size(), FieldBOT.MSG_DLG);
                     }
                 }
             }
             
-            // Scout/Atack
-            for (AGroupManager sGroup:owner.smartGroups)
-            {
-                if (sGroup instanceof TArmyGroup) {
-                    TArmyGroup army=(TArmyGroup)sGroup;
-                    if (army.isEmpty()) {
-                        owner.removeSmartGroup(sGroup); // Remove destroyed army.
-                    } else {
-                        if (army.moveTarget==null) {
-                            AIFloat3 p=owner.scoutModule.getPointForMoveArmy(army.getCenter(), 0);
-                            army.moveTo(p); // TODO army.moveTo
-        owner.sendTextMsg("army: send to point: "+p, FieldBOT.MSG_DLG);
-                        }
-                    }
-                }
-                // TODO scout group
-            }
+          armyControlStage++;
+        break;
+        
+        case 1:
+            // empty action
+          armyControlStage++;
+        break;
             
-            
+        case 2:
             // build army units
-            
             boolean haveRes=true;
             float eco[][]=owner.avgEco.getAVGResourceToArr();
             float minResPercent=0.5f;
-            if (baseBuildDef==0) minResPercent=0.37f;
+            if (armyTypeStage<3) minResPercent=0.37f;
             for (int i=0;i<eco[0].length; i++) {
                 if ( !(eco[AdvECO.R_Current][i]/eco[AdvECO.R_Storage][i]>minResPercent && 
                      eco[AdvECO.R_Income][i]*0.95f>eco[AdvECO.R_Usage][i]) )
@@ -551,13 +598,12 @@ public class TWarStrategy {
             }
 
             if (haveRes) {
-        owner.sendTextMsg("army: haveRes, start make unt, i="+baseBuildDef, FieldBOT.MSG_DLG);
+        owner.sendTextMsg("army: haveRes, start make unt, i="+armyTypeStage, FieldBOT.MSG_DLG);
                 boolean defenceTower=false; // build defence tower, or atack army
                 boolean onlyRadar=false; // work if defence tower only
-                if (baseBuildDef<2) {
+                if (armyTypeStage<2) {
                     defenceTower=true;
-                    onlyRadar = baseBuildDef==1;
-                    baseBuildDef++;
+                    onlyRadar = armyTypeStage==1;
                 }
 
                 float timeL=2*60;
@@ -572,46 +618,61 @@ public class TWarStrategy {
                         unitL=4;
                         kachestva=KACHESTVA_DEFTOWER;
                     }
-                }
-
-                // Choose best base for make army
-                TBase bestBase=null; // TODO change to owner.getBestBase(false)
-                HashSet<UnitDef> lstOfUDefs=new HashSet<UnitDef>();
-                for (TBase base:owner.selectTBasesList()) {
-                    HashSet<UnitDef> tmpUDefs=base.getBuildList(true);
-                    if (tmpUDefs.size()>lstOfUDefs.size() && base.currentBaseTarget.isEmpty()) { // idle base.
-                        bestBase=base;
-                        lstOfUDefs=tmpUDefs;
+                } else {
+                    switch (armyTypeStage%7) {
+                        case 2:
+                            unitL=7;
+                            kachestva=KACHESTVA_U_SCOUT;
+                            if (lastBuildScoutGroup==0) lastBuildScoutGroup=1;
+                            break;
+                        case 3:// see case 4
+                        case 4:
+                            kachestva=KACHESTVA_U_RAIDER;
+                            break;
+                        case 5:
+                            kachestva=KACHESTVA_U_LRATACK;
+                            break;
+                        case 6:
+                            kachestva=KACHESTVA_U_RAIDER;
+                            break;
+                        //case 0: tower / KACHESTVA_ARMY
+                        //case 1: radar / KACHESTVA_ARMY
                     }
                 }
+                
+                armyTypeStage++; // inc stage
+                if (armyTypeStage>30) armyTypeStage=0;
+                if (armyTypeStage>5 && armyTypeStage<10) {
+                    // do not do army now, concentrate to eco.
+                } else {
+                    // Choose best base for make army
+                    TBase bestBase=owner.getBestBase(true);
 
-                if (bestBase!=null)
-                {
-        owner.sendTextMsg("army: bestBase="+bestBase, FieldBOT.MSG_DLG);
-                    int weaponType=0;//!!! 0 - default. TODO
-                    HashMap<UnitDef,Integer> armyUnits
-                            =owner.warStrategy.shooseArmy(bestBase, defenceTower, new ArrayList<UnitDef>(lstOfUDefs),timeL,unitL,kachestva, weaponType);
-                        // TODO special unit enabled/disabled check (research center depends, TA/RD mod!)
+                    if (bestBase!=null)
+                    {
+            owner.sendTextMsg("army: bestBase="+bestBase, FieldBOT.MSG_DLG);
+                        int weaponType=0;//!!! 0 - default. TODO
+                        HashMap<UnitDef,Integer> armyUnits
+                                =owner.warStrategy.shooseArmy(bestBase, defenceTower, new ArrayList<UnitDef>(bestBase.getBuildList(true)),timeL,unitL,kachestva, weaponType);
+                            // TODO special unit enabled/disabled check (research center depends, TA/RD mod!)
 
-                    // Send signal to base for make unit
-                    if (armyUnits!=null) {
-                        // TODO move and create method for translate Map into TBase commands to build.
-                        for (Map.Entry<UnitDef,Integer> armyItem:armyUnits.entrySet())
-                          if (armyItem.getValue()>0) // !!!!
-                        {
-                          owner.sendTextMsg(" army>"+armyItem.getKey().getHumanName()+" * "+armyItem.getValue(), FieldBOT.MSG_DBG_SHORT);
-                          if (!defenceTower) bestBase.currentBaseTarget.add(armyItem.getKey(), armyItem.getValue());
-                          else {
-                              for (int i=0;i< armyItem.getValue();i++) {
-                                  AIFloat3 defPoint=MathPoints.getRandomPointOnRadius(bestBase.center, bestBase.radius);
-                                  bestBase.currentBaseTarget.add(armyItem.getKey(), 1, defPoint);// TODO test.
-                              }
-                          }
-                        }
-                    } else owner.sendTextMsg("No plan for army!", FieldBOT.MSG_DBG_SHORT);                        
+                        // Send signal to base for make unit
+                        if (armyUnits!=null) {
+                            // TODO move and create method for translate Map into TBase commands to build.
+                            sendBuildMessageToBase(armyUnits, bestBase, defenceTower);
+                            if (lastBuildScoutGroup==1) lastBuildScoutGroup=2;
+                            //    else lastBuildScoutGroup=0;
+                        } else owner.sendTextMsg("No plan for army!", FieldBOT.MSG_DBG_SHORT);                        
+                    }
+                    else armyTypeStage--;
                 }
             }
-        
+            armyControlStage++;
+          break;
+            
+            default: // clock of activation
+                if (frame%400==50 && frame>700) armyControlStage=0;
+
         }
     }
     

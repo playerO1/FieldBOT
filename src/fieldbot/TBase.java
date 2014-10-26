@@ -218,25 +218,25 @@ public class TBase extends AGroupManager{
             return true;
         }
         UnitDef ut=unit.getDef();
-        if (ut.isBuilder() || ut.isCommander() || ut.isAbleToAssist()) { // TODO test!
+        // ut.isCommander()
+        if (ut.isCommander() || ut.isAbleToAssist() || (ut.isBuilder() && !ut.getBuildOptions().isEmpty())) { // TODO test! Unit 'Necro' on TA is not builder, but ut.isBuilder()=true but not able to assist.
             if (!idleCons.contains(unit) && !workingCons.contains(unit)) idleCons.add(unit);
             if (ENABLE_CASHING) dropCashe();
             return true;
         }
         // TODO what doing with nano-tower builders!?!
         
-        if (!ut.isAbleToMove()) {
+        if (!ut.isAbleToMove() || !ModSpecification.isRealyAbleToMove(ut)) {
             if (!building.contains(unit)) building.add(unit);
             if (ENABLE_CASHING) dropCashe();
             return true;
         }
-        if (ut.isAbleToAttack()) {
+        if (ut.isAbleToAttack() || ut.isAbleToRepair()) { // repair - for rezcurrent bot
             if (!army.contains(unit)) army.add(unit);
             if (ENABLE_CASHING) dropCashe();
             return true;
         }
         return false; // ???
-        //if (unit.getDef().isCommander())
     }
     
     /**
@@ -897,8 +897,11 @@ public class TBase extends AGroupManager{
                         makeNow=currentBaseTarget.commandNow;
                     } else { // если нет чего сейчас закладывать строить
                         if (currentBaseTarget.needPrecissionRes) {
-                            buildVariants=canBuildPrikaz; // присвоение пустого list.
+                            buildVariants=canBuildPrikaz; // set empty list.
                             if (currentBaseTarget.isEmpty()) owner.sendTextMsg("ERROR! currentBaseTarget.isEmpty()==true but currentBaseTarget.needPrecissionRes==true!", FieldBOT.MSG_ERR);
+                        }
+                        if (!owner.ecoStrategy.makeEco) {
+                            buildVariants=canBuildPrikaz; // set empty list.
                         }
                     }
                 }
@@ -1159,7 +1162,7 @@ public int enemyFinished(Unit enemy) {
    @Override
    public String toString() {
     String t="Base at "+center+" radius "+radius+ "contains "+getAllUnits(true).size()+" units. ";
-    t+="Idle cons="+idleCons.size()+" working="+workingCons.size()+" building not finish="+buildLst.size()+".";
+    t+="Idle cons="+idleCons.size()+" working="+workingCons.size()+" building not finish="+buildLst.size()+" army="+army.size()+".";
     t+=" Base square using: "+stroyPlaning.full()*100+"%";
     if (workingCons.size()>0) {
         t+=" { ";

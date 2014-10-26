@@ -734,12 +734,17 @@ public TBase spawnNewBase(AIFloat3 newBasePoint, float workerUsagePercent)
     }            
 }
 
+/**
+ * Find base with maximal UnitDefs can build
+ * @param findWithoutBaseTarget find only idle base
+ * @return best base, or null
+ */
 public TBase getBestBase(boolean findWithoutBaseTarget) {
     TBase bestBase=null; HashSet<UnitDef> lstOfUDefs=new HashSet<UnitDef>();
     for (TBase base:selectTBasesList()) {
         HashSet<UnitDef> tmpUDefs=base.getBuildList(true);
         if (tmpUDefs.size()>lstOfUDefs.size() &&
-              (findWithoutBaseTarget || base.currentBaseTarget.isEmpty())) // idle base.
+              (!findWithoutBaseTarget || !base.haveSpecialCommand())) // idle base. 
         {
             bestBase=base;
             lstOfUDefs=tmpUDefs;
@@ -949,6 +954,8 @@ private void onAddUnit(Unit unit) {
         UnitDef def=unit.getDef();
         if (def.isCommander()) commanders.add(unit);
         
+        modSpecific.onAddUnit(def); // TODO show debug message about unlock technology
+        
         int uTLvl = def.getTechLevel();
         Integer foundNLvl=techLevels.get(uTLvl);
         if (foundNLvl==null) {
@@ -968,6 +975,8 @@ private void onLostUnit(Unit unit) {
         UnitDef def=unit.getDef();
         if (def.isCommander()) commanders.remove(unit);
 
+        modSpecific.onRemoveUnit(def); // TODO show debug message about lock technology
+        
         int uTLvl = def.getTechLevel();
         Integer foundNLvl=techLevels.get(uTLvl);
         if (foundNLvl==null) {

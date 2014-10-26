@@ -90,6 +90,7 @@ public static double justOneMaximize(double[][] A, double[] b, double[] c, doubl
             bestX=minN;
         }
     }
+    Arrays.fill(x, 0.0f);
     if (bestPlanI!=-1) x[bestPlanI]=bestX;
     return maxF;
 }

@@ -41,15 +41,9 @@ public abstract class ABasePlaning {
      */
     private ArrayList<AIFloat3> cashe_GeoPoints,cashe_MetalPoints;
 
-    protected final Resource resMetal;
-    protected final UnitDef luaMExtractor; // for Zero-K mod
-
     public ABasePlaning(TBase owner) {
         this.owner=owner;
         this.map=owner.owner.clb.getMap();
-        this.resMetal=owner.owner.clb.getResourceByName("Metal");
-        
-        this.luaMExtractor=owner.owner.modSpecific.luaMetalExtractor;
         
         freeSpaceUsingK=1.35f;
         containUnitSquare=0.0f;
@@ -190,10 +184,7 @@ public abstract class ABasePlaning {
      */
     public boolean needMetalPosition(UnitDef unitType) {
         if (owner.owner.isMetalFieldMap<=0) { // build metal extractor on normal map, or on non-metal map (TODO test)
-            if (unitType==luaMExtractor || unitType.getExtractsResource(resMetal)!=0.0f) {
-                return true;
-                //extrRadius=map.getExtractorRadius(resMetal);
-            }
+            return owner.owner.modSpecific.isExtractor(unitType);
         }
         return false;
     }

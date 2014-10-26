@@ -121,7 +121,7 @@ public class TTechLevel {
         
         // Check mod specific: research center on TA, NOTA
         if (botClb.modSpecific.specificUnitEnabled)
-            botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newUnitDefs, tmpTechLevels);// TODO Test it! Проверка на возможность зависимости от тех. уровней.
+            botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newUnitDefs, needBaseBuilders);// TODO Test it! Проверка на возможность зависимости от тех. уровней.
         
         
         if (ModSpecification.isStationarFactory(baseUnit)) {
@@ -147,7 +147,7 @@ public class TTechLevel {
                 tmpTechLevels.add( bestWorker.getTechLevel() );
 
                 if (botClb.modSpecific.specificUnitEnabled)
-                    botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, tmpTechLevels);
+                    botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, needBaseBuilders);
                 
                 if (onBase!=null) removeWhereCantBuildOnBaseSurface(newWorkerUnitDefs, onBase); // only on base surface
                 newWorkerUnitDefs.removeAll(newUnitDefs);
@@ -301,7 +301,7 @@ public class TTechLevel {
         newUnitDefs.removeAll(unitOldBuild);
         
         if (botClb.modSpecific.specificUnitEnabled)
-            botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newUnitDefs, tmpTechLevels);// check tech level depends
+            botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newUnitDefs, needBaseBuilders);// check tech level depends
 
         if (onBase!=null) removeWhereCantBuildOnBaseSurface(newUnitDefs, onBase); // only on base surface
 
@@ -331,7 +331,7 @@ public class TTechLevel {
                 tmpTechLevels.add( bestWorker.getTechLevel() );
 
                 if (botClb.modSpecific.specificUnitEnabled)
-                  botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, tmpTechLevels);// tech level depends
+                  botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, needBaseBuilders);// tech level depends
                 
                 if (onBase!=null) removeWhereCantBuildOnBaseSurface(newWorkerUnitDefs, onBase); // only on base surface
                 

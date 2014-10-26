@@ -48,7 +48,9 @@ public class ModSpecification {
     private final FieldBOT owner;
     protected final List<UnitDef> allUnitDefs; // for Morph, get unit by ID.
     
-    private final HashMap<UnitDef,Integer> specialTLevelRequired;//For TA and RD, see specificUnitEnabled
+    // FIXME TODO true support research center
+    private final HashMap<UnitDef,UnlockTechnology> specialTLevelRequired;//(TODO temove it, it is old)For TA and RD, see specificUnitEnabled
+    private final ArrayList<UnlockTechnology> lockTechno; //(new)For TA and RD, see specificUnitEnabled
     
     private final HashMap<Integer,MorphInfo> morphIDMap; // cashe for assign morph UnitDef to morph CMD ID (morphCMDID, morphToUDef)
     // TODO where Spring 97 or later that 97 version will be relase, check unitCustomParam/unitLUAParam for getting morph info and other info.
@@ -105,6 +107,10 @@ public class ModSpecification {
      * MOD short name
      */
     public final String modName;
+    
+    
+    private final Resource resMetal; // for isExtractor fast test. TODO modify if use no "Metall, Energy" resource.
+
     
     public ModSpecification(FieldBOT owner) {
         this.owner=owner;
@@ -206,62 +212,124 @@ public class ModSpecification {
         }
         
         if (specificUnitEnabled) {
-            specialTLevelRequired=new HashMap<UnitDef, Integer>();
+            // FIXME not depends from tech level, depends of unit Research center only!!!
+            specialTLevelRequired=new HashMap<UnitDef, UnlockTechnology>();
+            
+            lockTechno=new ArrayList<UnlockTechnology>();
+            String t1Names[]={"corech3","armrech3", "corech18","armrech18", "corech21","armrech21", "ccovertopscentre","acovertopscentre"};
+            String t2Names[]={"corech18","armrech18", "corech21","armrech21", "ccovertopscentre","acovertopscentre"};
+            String t3Names[]={"corech21","armrech21", "ccovertopscentre","acovertopscentre"};
+            UnlockTechnology tLvl1=new UnlockTechnology(owner.clb, t1Names, null);
+            lockTechno.add(tLvl1);
+            UnlockTechnology tLvl2=new UnlockTechnology(owner.clb, t2Names, null);
+            lockTechno.add(tLvl2);
+            UnlockTechnology tLvl3=new UnlockTechnology(owner.clb, t3Names, null);
+            lockTechno.add(tLvl3);
+            
             // For Tech Anililation and Robot Defence
             UnitDef def;
             def=owner.clb.getUnitDefByName("armmarv");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("corfred");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
 
-            // war units
+            // war units T1.5
             def=owner.clb.getUnitDefByName("armpw1");// kbot
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("armcrack");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("aexxec");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("ahermes");// wehicle
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("armsonic");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("armscar");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("armrottweiler");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("armarty");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("armblz"); // fly
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("armjade");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
 
             def=owner.clb.getUnitDefByName("corak1");// kbot
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("corrock");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("gladiator");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("corjeag");// vehivle
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("cslicer");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("corgfbt");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("dao");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("cbrutus");
-            if (def!=null) specialTLevelRequired.put(def, -1);
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
             def=owner.clb.getUnitDefByName("corfiend");// fly
-            if (def!=null) specialTLevelRequired.put(def, -1);
-            // TODO realy need do it on XML export.
+            if (def!=null) specialTLevelRequired.put(def, tLvl1);
+
+            // T2.5
+            def=owner.clb.getUnitDefByName("armcav");// ARM, kbot
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("taipan");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("akmech");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("armhdpw");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("armmech");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("armbull2");//wehicle
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("tawf014");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("armorca");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("tankanotor");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("armscpion");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("armcd");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("corprot");// CORE bot
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("coredauber");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("cormonsta");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("armkrmi");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("krogtaar");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("corpyrox");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("corshieldgen");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("cortotal");// tank
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("nsacskv");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("requ1");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+            def=owner.clb.getUnitDefByName("cormddm");
+            if (def!=null) specialTLevelRequired.put(def, tLvl2);
+
+// TODO realy need do it on XML export.
         } else {
             specialTLevelRequired=null;
+            lockTechno=null;
         }
         
         morphIDMap=new HashMap<Integer, MorphInfo>(); // TODO init morphIDMap only on Mod, when realy need it.
         // TODO load from XML cashe file and save to file morphIDMap
         
+        resMetal=owner.clb.getResourceByName("Metal");
     }
     
     /**
@@ -337,16 +405,17 @@ public class ModSpecification {
      * @return true if need check of special level
      */
     public boolean requiredSpecialTechLevel(UnitDef def) {
-        return (specialTLevelRequired==null) || (specialTLevelRequired.get(def)==null);
+        return (specialTLevelRequired==null) || (specialTLevelRequired.get(def)!=null);
     }
-    public int getRequiredTechLevel(UnitDef def) {
-        return specialTLevelRequired.get(def);
-    }
+// last   public Integer getRequiredTechLevel(UnitDef def) {
+//        return specialTLevelRequired.get(def);
+//    }
     public boolean haveTechLevelFor(UnitDef def) {
         if (specialTLevelRequired==null) return true;
-        Integer reqTL=specialTLevelRequired.get(def);
+        UnlockTechnology reqTL=specialTLevelRequired.get(def);
         if (reqTL==null) return true;
-        return owner.techLevels.get(reqTL)!=null;
+        return reqTL.unlocked();
+        // last 2: return owner.techLevels.get(reqTL)!=null;
         // last:
         //return !requiredSpecialTechLevel(def) ||
         //        (owner.techLevels.get(getRequiredTechLevel(def))!=null);
@@ -354,14 +423,15 @@ public class ModSpecification {
     /**
      * Seek tech level required
      * @param def
-     * @param techLvl list of have tech level
+     * @param techLvl list of have tech level (have UnitDef)
      * @return can build, or need to build new tech level before
      */
-    public boolean haveTechLevelFor(UnitDef def, HashSet<Integer> techLvl) { //было int haveLevels[]
+    public boolean haveTechLevelFor(UnitDef def, Collection<UnitDef> techLvl) { //было int haveLevels[]
         if (specialTLevelRequired==null) return true;
-        Integer reqTL=specialTLevelRequired.get(def);
+        UnlockTechnology reqTL=specialTLevelRequired.get(def);
         if (reqTL==null) return true;
-        return techLvl.contains(reqTL);
+        return reqTL.unlocked() || reqTL.unlockedBy(techLvl);
+        //techLvl.contains(reqTL);
         //return Arrays.binarySearch(haveLevels, reqTL)!=-1;
         //last: return !requiredSpecialTechLevel(def) ||
         //        Arrays.binarySearch(haveLevels, getRequiredTechLevel(def))!=-1;
@@ -391,7 +461,7 @@ public class ModSpecification {
      * @param techLvl2 add compare with this + owner.techLevels
      * @return list with unit that can build now or in future with techLvl2 levels
      */
-    public boolean removeUnitWhenCantBuildWithTeclLevel(Collection<UnitDef> lstDef, HashSet<Integer> techLvl2) {
+    public boolean removeUnitWhenCantBuildWithTeclLevel(Collection<UnitDef> lstDef, Collection<UnitDef> techLvl2) {
         Iterator<UnitDef> itr1 = lstDef.iterator();
         boolean modifed=false;
         while (itr1.hasNext()) {
@@ -439,7 +509,27 @@ public class ModSpecification {
         return outLst;
     }
     
-// ......... 
+    /**
+     * Register for work with UnlockTechnology
+     * @param newUnit 
+     */
+    public void onAddUnit(UnitDef newUnit) {
+        //TODO check metal maker max energy conversion value too
+        if (lockTechno!=null) {
+            for (UnlockTechnology technology:lockTechno) technology.onAddUnit(newUnit);
+        }
+    }
+    /**
+     * Register for work with UnlockTechnology
+     * @param newUnit 
+     */
+    public void onRemoveUnit(UnitDef newUnit) {
+        if (lockTechno!=null) {
+            for (UnlockTechnology technology:lockTechno) technology.onRemoveUnit(newUnit);
+        }
+    }
+    
+// ---- with morphing ----
 protected static final int CMD_MORPH_STOP = 32410;
 protected static final int CMD_MORPH = 31410;
 
@@ -648,6 +738,10 @@ protected static final int CMD_MORPH = 31410;
                 throw new IllegalArgumentException(" this mode "+MORPH_GETINFO_MODE+" not support. To doing this."); // TODO mode 3 for Spring >97
         }
         return res;
+    }
+    
+    public boolean isExtractor(UnitDef def) {
+        return def==luaMetalExtractor || def.getExtractsResource(resMetal)>0.0f;
     }
     
     /**

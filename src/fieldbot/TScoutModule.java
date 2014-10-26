@@ -21,6 +21,7 @@ package fieldbot;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Map;
 import com.springrts.ai.oo.clb.Unit;
+import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.WeaponDef;
 import fieldbot.AIUtil.MathPoints;
 import java.util.Arrays;
@@ -51,8 +52,10 @@ public class TScoutModule {
     public AIFloat3 last_enemyComeWatch;
     /**
      * Last point with enely leawe from wisible area, or dead. May be null.
+     * not register, if enemy destroy
      */
     public AIFloat3 last_enemyLeaveWatch;
+    public AIFloat3 lastEnemmyBuildings;
     
     public TScoutModule(FieldBOT owner) {
         this.owner=owner;
@@ -70,7 +73,7 @@ public class TScoutModule {
         enemyInLOS=new LinkedList<Unit>();
         enemyInRadar=new LinkedList<Unit>();
         
-        last_enemyComeWatch=last_enemyLeaveWatch=null;
+        last_enemyComeWatch=last_enemyLeaveWatch=lastEnemmyBuildings=null;
     }
     
     
@@ -83,10 +86,9 @@ public class TScoutModule {
      */
     public AIFloat3 getPointToScout(AIFloat3 nearTo,int pointID) {
         // TODO
-        if (last_enemyComeWatch!=null) return last_enemyComeWatch;
-        if (last_enemyLeaveWatch!=null) return last_enemyLeaveWatch;
-        
-        return new AIFloat3(mapWidth/2,0,mapHeight/2);
+        float x=(float)Math.random() *mapWidth;
+        float y=(float)Math.random() *mapHeight;
+        return new AIFloat3(x, map.getElevationAt(x, y) , y);
     }
     
     /**
@@ -96,12 +98,17 @@ public class TScoutModule {
      * @return point to send army, can be null
      */
     public AIFloat3 getPointForMoveArmy(AIFloat3 nearTo,int pointID) {
+        if (Math.random()>0.6) {
+            if (last_enemyLeaveWatch!=null) return last_enemyLeaveWatch;
+            if (last_enemyComeWatch!=null) return last_enemyComeWatch;
+        }
         // TODO army seek point
-        AIFloat3 p=last_enemyComeWatch;
+        AIFloat3 p=getPointToScout(nearTo, pointID);
+        if (Math.random()>0.6) p=getNearEnemy(nearTo, 260, true); // !!!!
         if (p==null || pointID>0 || Math.random()>0.7) {
             float x=(float)Math.random() *mapWidth;
             float y=(float)Math.random() *mapHeight;
-            p=new AIFloat3(x, 0, y);
+            p=new AIFloat3(x, map.getElevationAt(x, y) , y);
         }
         return p;
     }
@@ -134,14 +141,30 @@ public class TScoutModule {
     private boolean registerEnemy(Unit unit) {
         if (!enemyUnits.contains(unit)) {
             last_enemyComeWatch=unit.getPos();
+            if (!MathPoints.isValidPoint(last_enemyComeWatch)
+                || last_enemyComeWatch.x==0 && last_enemyComeWatch.y==0 && last_enemyComeWatch.z==0)
+                last_enemyComeWatch=null;
+            if (lastEnemmyBuildings==null) {
+                UnitDef ud=unit.getDef(); // FIXME on Spring 94 maybe take crash
+                if (ud!=null && !ud.isAbleToMove())
+                    lastEnemmyBuildings=last_enemyComeWatch;
+            }
             // TODO
             return enemyUnits.add(unit);
         }
         return false;
     }
-    private boolean unRegisterEnemy(Unit unit) {
-        if (enemyUnits.contains(unit)) {
+    private boolean unRegisterEnemy(Unit unit, boolean byDestroy) {
+        if (enemyUnits.contains(unit) && !byDestroy) {
             last_enemyLeaveWatch=unit.getPos();
+            if (!MathPoints.isValidPoint(last_enemyLeaveWatch)
+                || last_enemyLeaveWatch.x==0 && last_enemyLeaveWatch.y==0 && last_enemyLeaveWatch.z==0)
+                last_enemyLeaveWatch=null;
+            if (last_enemyLeaveWatch!=null) {
+                UnitDef ud=unit.getDef(); // FIXME on Spring 94 maybe take crash (radar)
+                if (ud!=null && !ud.isAbleToMove())
+                    lastEnemmyBuildings=last_enemyLeaveWatch;
+            }
             //TODO
         }
         enemyInLOS.remove(unit);
@@ -217,18 +240,19 @@ public class TScoutModule {
     //@Override
     public void enemyLeaveLOS(Unit enemy) {
         if (enemyInLOS.remove(enemy)) {
-            if (!enemyInRadar.contains(enemy)) unRegisterEnemy(enemy);
+            if (!enemyInRadar.contains(enemy)) unRegisterEnemy(enemy, false);
         }
     }
 
     //@Override
     public void enemyEnterRadar(Unit enemy) {
+        if (enemy==null) return; // !!!!!!
         if (enemyInRadar.add(enemy)) registerEnemy(enemy);
     }
     //@Override
     public void enemyLeaveRadar(Unit enemy) {
         if (enemyInRadar.remove(enemy)) {
-            if (!enemyInLOS.contains(enemy)) unRegisterEnemy(enemy);
+            if (!enemyInLOS.contains(enemy)) unRegisterEnemy(enemy, false);
         }
     }
 
@@ -242,7 +266,7 @@ public class TScoutModule {
 //        if (enemy==null) {
 //            owner.sendTextMsg("WTF ETTOR: enemyDestroyed enemy==null", FieldBOT.MSG_ERR);
 //        } else 
-        unRegisterEnemy(enemy);
+        unRegisterEnemy(enemy, true);
     }
 
     //@Override
