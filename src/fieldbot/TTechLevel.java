@@ -462,17 +462,31 @@ public class TTechLevel {
      * Contain building and morphing time
      * @param buildPower
      * @param currRes
+     * @param owner only if morph level: only for getUnitResoureProduct() and owner.avgEco.resName[i]
      * @return 
      */
-    public float getTimeForBuildTechLevel(float buildPower, float currRes[][])
+    public float getTimeForBuildTechLevel(float buildPower, float currRes[][], FieldBOT owner)
     {
     //TODO улучшить ... base.getBuildPower(false, true)    
       //  float t = getAssistWorkTime() / buildPower + getNOAssistWorkTime(); // время постройки
         float t;
-// TODO -> это работает, но из TBotTalking -> 
+// TODO -> это работает, но взято из TBotTalking -> 
         if (byMorph()) {
             ArrayList<UnitDef> lvlBuilder1=new ArrayList<UnitDef>(needBaseBuilders);
-            lvlBuilder1.remove(morphTo);
+            
+            lvlBuilder1.remove(morphTo); // remove morphTo unit from usualy build list
+            float[][] currRes2=AdvECO.cloneFloatMatrix(currRes);
+            UnitDef fromMorph=byMorph.getDef(); // and remove morphFrom from future economic
+            buildPower -= fromMorph.getBuildSpeed();
+            for (int i=0;i<currRes2[0].length;i++) {
+                float deltaRes=owner.getUnitResoureProduct(fromMorph, owner.avgEco.resName[i]);
+                if (deltaRes>0.0f)
+                    currRes2[AdvECO.R_Income][i] -= deltaRes;
+                else if ((deltaRes<0.0f))
+                    currRes2[AdvECO.R_Usage][i] -= deltaRes;
+            }
+            // FIXME on TA/BA morph unit was stop (paralyzed), on Zero-K it not stop - remove before/after morph depends on economic.
+            
             if (!lvlBuilder1.isEmpty()) t=botClb.ecoStrategy.getRashotBuildTimeLst(lvlBuilder1, currRes, buildPower);
             else t=0;
             //TODO check bug with getNOAssistWorkTime(), last:t+=Math.max(getNOAssistWorkTime(),botClb.ecoStrategy.getWaitTimeForProductResource(currRes, botClb.modSpecific.getResForMprph(morphCMD)));
@@ -482,26 +496,6 @@ public class TTechLevel {
             //t+=getNOAssistWorkTime(); // FIXME it add buildings on on assistable factory again!
         }
         return t;
-        
-        /*
-        //float t=ecoStrategy.getRashotBuildTimeLst(tLvl.needBaseBuilders, avgEco.getAVGResourceToArr(), buildPower);
-// FIXME t бывает ОЧЕНЬ БОЛЬШИМ!!!
-        float needRes[]=getNeedRes();
-        //было float currRes[][]=avgEco.getSmartAVGResourceToArr(); // было avgEco.getAVGResourceToArr();
-        // TODO test: учесть ложную нехватку ресурсов - когда можно расходы поделить на несколько строителей.    
-        for (int i=0;i<currRes[AdvECO.R_Current].length;i++) {
-            float dResNeed=needRes[i]-currRes[AdvECO.R_Current][i];
-            float dResHave= (currRes[AdvECO.R_Income][i]-currRes[AdvECO.R_Usage][i]) ;
-            float iT;
-            if (dResNeed>0)
-            {
-              if (dResHave>0) iT= dResNeed / dResHave;
-                         else return Float.POSITIVE_INFINITY;//!!!
-              t=Math.max(t, iT);
-            }
-        }
-        return t;
-        //*/
     }
 
     /**

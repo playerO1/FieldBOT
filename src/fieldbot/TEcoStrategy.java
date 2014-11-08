@@ -797,7 +797,7 @@ public TTechLevel selectLvl_bestForNow(ArrayList<TTechLevel> TechLvls, TBase onB
         }
         k = k * (1+nFactor) ; // For more different resources
 
-        float tBuild=level.getTimeForBuildTechLevel(onBase.getBuildPower(false, true), currentRes);
+        float tBuild=level.getTimeForBuildTechLevel(onBase.getBuildPower(false, true), currentRes, owner);
         if (tBuild<10.0f) tBuild=10.0f;// Нельзя построить так быстро...
         k= k / tBuild; // Выгодность / время постройки.
         // TODO учесть + время строительства электростанций
@@ -861,7 +861,7 @@ public boolean isActualDoTechUp_fastCheck(TBase onBase, HashSet<UnitDef> Current
         }
     }
     //TODO учесть за период + расходы на строительство!!!
-    return toNewLvl>0 && toLevel.getTimeForBuildTechLevel(buildPower, currentRes)<MAX_TECHUP_BUILD_TIME; //TODO test it.
+    return toNewLvl>0 && toLevel.getTimeForBuildTechLevel(buildPower, currentRes, owner)<MAX_TECHUP_BUILD_TIME;
 }
 
 /**
@@ -982,7 +982,7 @@ private boolean techUpVirtualModeling(ArrayList<UnitDef> currentLevelDefs,ArrayL
         
 owner.sendTextMsg("i="+i+", t1="+t1+" ecoState="+ecoState.toString(), FieldBOT.MSG_DBG_ALL);
         // -- TechUP --
-        float t2w=0;
+        float t2w=0; // time for build worker before tech up
         if (!toLevel.byMorph()) { //check - do need build worker before: at TBase this finction has been have.
             UnitDef assistWorker=needBuildWorkerBefore(toLevel.needBaseBuilders.get(0), ecoState.assistBuildPower, currentLevelDefs, ecoState.resources);
             if (assistWorker!=null) {
@@ -997,7 +997,7 @@ owner.sendTextMsg("i="+i+", t1="+t1+" ecoState="+ecoState.toString(), FieldBOT.M
             }
         }
         
-        float t2=toLevel.getTimeForBuildTechLevel(ecoState.assistBuildPower, ecoState.resources);
+        float t2=toLevel.getTimeForBuildTechLevel(ecoState.assistBuildPower, ecoState.resources, owner); // t2 - tech up time
         float tUpRes[]=toLevel.getNeedRes();
         for (int r=0;r<tUpRes.length;r++) {
             ecoState.resources[AdvECO.R_Current][r] += 
@@ -1018,13 +1018,22 @@ owner.sendTextMsg("i="+i+", t1="+t1+" ecoState="+ecoState.toString(), FieldBOT.M
                 ecoState.assistBuildPower +=lvlBuilder.getBuildSpeed();
             if (lvlBuilder.isBuilder() && !lvlBuilder.isAbleToAssist())
                 ecoState.noAssistBuildPower +=lvlBuilder.getBuildSpeed();
+            //TODO add resource delta: product/usage.
         }
         // if by morph level
         if (toLevel.byMorph()) {
+            // Warning! This math do on getTimeForBuildTechLevel() too, but not apply to eco state.
             UnitDef morphFrom=toLevel.byMorph.getDef();
             if (morphFrom.isAbleToAssist()) ecoState.assistBuildPower -= morphFrom.getBuildSpeed();
             if (morphFrom.isBuilder() && !morphFrom.isAbleToAssist()) ecoState.noAssistBuildPower -= morphFrom.getBuildSpeed();
-            // TODO resource income/usage for lost morph unit.
+            // resource income/usage for lost morph unit.
+            for (int r=0;r<ecoState.resources[0].length;r++) {
+                float deltaRes=owner.getUnitResoureProduct(morphFrom, owner.avgEco.resName[i]);
+                if (deltaRes>0.0f)
+                    ecoState.resources[AdvECO.R_Income][i] -= deltaRes;
+                else if ((deltaRes<0.0f))
+                    ecoState.resources[AdvECO.R_Usage][i] -= deltaRes;
+            }
         }
         ecoState.time+=t2+t2w;
         

@@ -2,6 +2,7 @@ Changelog for future relase
 
 === dev a1.8 (future) ===
 - some economic improvement (for metal map)
+- more precission tech up by commander morphing (TODO TEST IT!)
 
 ! bug: Spring 94.1 and NOTA (or NotALobby): INIT failed and bod was uncontrolled.
 ! bug: NOTA, sometime bot was stopped work, check: metal extractor radius, army build - build no enabled unit (where T2 tower required).
