@@ -1,16 +1,16 @@
 Changelog for future relase
 
-=== dev a1.7 ===
+=== dev a1.8 (future) ===
+- some economic improvement (for metal map)
+
+! bug: Spring 94.1 and NOTA (or NotALobby): INIT failed and bod was uncontrolled.
+! bug: NOTA, sometime bot was stopped work, check: metal extractor radius, army build - build no enabled unit (where T2 tower required).
+
+--- Old, from a1.7: ---
 Done:
-- now bot can use army (option "army control")
-- text command "enable/disable army control"
-- reserved territory for metal extractor and geotermal points (normal map, tetris base planing only).
-- rezcurrect bot set as army, now they can work as scout.
 - modify technology unlock system: depends not tech level, only specific UnitDefs.
   (TODO: check on bugs)
 
-- bug fix: where set as default metal map by init settings, data structure not initialized
-- bug fix: on metal map build metal extractors, where energy low.
 ! found bug: morph com to 3 lever, or morph nano to hight level may be disabled control under unit, and take some crash. TODO: check sending this units to TArmyGroup.
 
 Will be add:
