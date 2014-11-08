@@ -183,7 +183,7 @@ public class ModSpecification {
 
         // ZeroK
         if (modName.equals("ZK")) {
-            treeMap_Eco.put("cormex", new float[] { 2.0f, 0.0f } ); // Metal Extractor
+            treeMap_Eco.put("cormex", new float[] { 2.7f, 0.2f } ); // Metal Extractor
             // TODO Zero-K extractor metal multiplier = sqrt(1+energy/4)) 
             luaMetalExtractor=owner.clb.getUnitDefByName("cormex");
             firstFactoryIsFree=true;

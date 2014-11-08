@@ -61,6 +61,17 @@ public class UnitSelector {
         return stationaryUnits;
     }
     
+    /**
+     * Select only able to atack units.
+     * @param selectFrom
+     * @return ableToAtack units, or empty list.
+     */
+    public static ArrayList<UnitDef> atackUnits(List<UnitDef> selectFrom) {
+        ArrayList<UnitDef> atackUnits=new ArrayList<UnitDef>();
+        for (UnitDef def:selectFrom) if (def.isAbleToAttack() && !ModSpecification.isStationarFactory(def))
+            atackUnits.add(def);
+        return atackUnits;
+    }
     
     /**
      * Select unit from allUnits where unit.getDef()==selectOnly;

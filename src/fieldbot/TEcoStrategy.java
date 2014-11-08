@@ -603,7 +603,7 @@ public class TEcoStrategy {
 //                owner.sendTextMsg(" cel->electrostanciya1-" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resE;
             } // FIXME this is bad logic, if pE<0.1 or pM<0 then can be have problem
-            if ( (pMstor < 0.50 && pEstor>pMstor) || (avg_delta_M*2<avg_delta_E && pEstor>0.30)) {
+            if ( (pMstor < 0.50 && pEstor>pMstor) || (avg_delta_M<0 && avg_delta_E>1 && pEstor>0.30)) {
 //                owner.sendTextMsg(" cel->metal2-" , FieldBOT.MSG_DBG_SHORT);
                 bestUnitR = resM;
             }
@@ -615,8 +615,7 @@ public class TEcoStrategy {
         if ( pMstor>0.9 && pEstor>EconvertK && avg_delta_M>0 || bestUnitR==null) {
 //            owner.sendTextMsg(" cel->4" , FieldBOT.MSG_DBG_SHORT);
             final float resourceProportion[]=owner.modSpecific.resourceProportion; // last:{1.0f, 10.0f};
-            if (currentRes[AdvECO.R_Income][0]*resourceProportion[0]<currentRes[AdvECO.R_Income][1]*resourceProportion[1])
-                // < or use /
+            if (currentRes[AdvECO.R_Income][0]/resourceProportion[0]>currentRes[AdvECO.R_Income][1]/resourceProportion[1])
                  bestUnitR = resE;
             else bestUnitR = resM; // FIXME on metal map do build too much metal extractors on ARM!
         }

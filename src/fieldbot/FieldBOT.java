@@ -317,13 +317,11 @@ try {
  
  //----
     try {
-        //bases = new ArrayList<TBase>();
         smartGroups=new ArrayList<AGroupManager>();
         smartGroupsToRemove = new ArrayList<AGroupManager>();
         commanders=new ArrayList<Unit>();
         techLevels=new HashMap<Integer, Integer>();
         // TODO maybe same final?
-
   
         modSpecific = new ModSpecification(this);
         avgEco = new AdvECO(14, clb, modSpecific); // TODO подобрать лучшее время сбора информ.
@@ -360,6 +358,7 @@ try {
     }
 
  //----
+    if(ret!=0) sendTextMsg("init return "+ret+";", MSG_ERR);
          
   cpuTimer.stop();
 return ret;
@@ -1115,7 +1114,7 @@ public int unitCreated(Unit unit, Unit builder) {
         if (sGroup.contains(unit)) foundHomeBase=true;
     }
     if (!foundHomeBase) addToSameGroup(unit);
-    sendTextMsg("done unitCreated.", MSG_DBG_ALL);
+//    sendTextMsg("done unitCreated.", MSG_DBG_ALL);
    cpuTimer.stop();
   } catch (Exception e) {
       sendTextMsg("ERROR unitCreated, exception: "+e.toString(), MSG_ERR);
@@ -1130,9 +1129,9 @@ return ret;
 public int unitFinished(Unit unit) {
   cpuTimer.start();
   try {
-    sendTextMsg("unitFinished ", MSG_DBG_SHORT);
+//    sendTextMsg("unitFinished ", MSG_DBG_SHORT);
     if (deadLstUnit.contains(unit)) { // !!! DEBUG! TEST!
-        sendTextMsg("unit in deadLstUnit!", MSG_DBG_SHORT);
+        sendTextMsg("unitFinished: unit in deadLstUnit!", MSG_DBG_SHORT);
       cpuTimer.stop();
         return 0;
     }
@@ -1145,7 +1144,7 @@ public int unitFinished(Unit unit) {
     }
     if (!foundHomeBase) addToSameGroup(unit);
     
-    sendTextMsg("done unitFinished.", MSG_DBG_ALL);
+//    sendTextMsg("done unitFinished.", MSG_DBG_ALL);
   } catch (Exception e) {
       sendTextMsg("ERROR unitFinished, exception: "+e.toString(), MSG_ERR);
       e.printStackTrace();
@@ -1160,9 +1159,9 @@ public int unitFinished(Unit unit) {
 public int unitIdle(Unit unit) {
   cpuTimer.start();
   try {
-    sendTextMsg("unitIdle ", MSG_DBG_SHORT);
+//    sendTextMsg("unitIdle ", MSG_DBG_SHORT);
     if (deadLstUnit.contains(unit)) { // TEST!
-        sendTextMsg("unit in deadLstUnit!", MSG_DBG_SHORT);
+        sendTextMsg("unitIdle: unit in deadLstUnit!", MSG_DBG_SHORT);
      cpuTimer.stop();
         return 0;
     }
@@ -1174,7 +1173,7 @@ public int unitIdle(Unit unit) {
     }
     if (!foundHomeBase) addToSameGroup(unit);
     
-    sendTextMsg("done unitIdle.", MSG_DBG_ALL);
+//    sendTextMsg("done unitIdle.", MSG_DBG_ALL);
   } catch (Exception e) {
       sendTextMsg("ERROR unitIdle, exception: "+e.toString(), MSG_ERR);
       e.printStackTrace();
@@ -1189,9 +1188,9 @@ public int unitIdle(Unit unit) {
 public int unitMoveFailed(Unit unit) {
   cpuTimer.start();
   try {
-    sendTextMsg("unitMoveFailed ", MSG_DBG_SHORT);
+//    sendTextMsg("unitMoveFailed ", MSG_DBG_SHORT);
     if (deadLstUnit.contains(unit)) { // !!! DEBUG! TEST!!!
-        sendTextMsg("unit in deadLstUnit!", MSG_DBG_SHORT);
+        sendTextMsg("unitMoveFailed: unit in deadLstUnit!", MSG_DBG_SHORT);
       cpuTimer.stop();
         return 0;
     }
@@ -1202,7 +1201,7 @@ public int unitMoveFailed(Unit unit) {
         if (sGroup.contains(unit)) foundHomeBase=true;
     }
     if (!foundHomeBase) addToSameGroup(unit);
-    sendTextMsg("done unitMoveFailed.", MSG_DBG_ALL);
+//    sendTextMsg("done unitMoveFailed.", MSG_DBG_ALL);
   } catch (Exception e) {
       sendTextMsg("ERROR unitMoveFailed, exception: "+e.toString(), MSG_ERR);
       e.printStackTrace();
@@ -1222,7 +1221,7 @@ public int unitDamaged(Unit unit, Unit attacker, float damage, AIFloat3 dir, Wea
 public int unitDestroyed(Unit unit, Unit attacker) {
   cpuTimer.start();
   try {
-    sendTextMsg("unitDestroyed: "+unit.getDef().getName(), MSG_DBG_SHORT);
+//    sendTextMsg("unitDestroyed: "+unit.getDef().getName(), MSG_DBG_SHORT);
     deadLstUnit.add(unit);// TODO !!!Test
     onLostUnit(unit);
     boolean foundHomeBase=false;
@@ -1231,7 +1230,7 @@ public int unitDestroyed(Unit unit, Unit attacker) {
         sGroup.unitDestroyed(unit,attacker);
         // TODO break?
     }
-    sendTextMsg("done unitDestroyed.", MSG_DBG_ALL);
+//    sendTextMsg("done unitDestroyed.", MSG_DBG_ALL);
   } catch (Exception e) {
       sendTextMsg("ERROR unitDestroyed, exception: "+e.toString(), MSG_ERR);
       e.printStackTrace();
@@ -1246,7 +1245,7 @@ public int unitDestroyed(Unit unit, Unit attacker) {
 public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
   cpuTimer.start();
   try {
-    sendTextMsg("unitGiven from "+oldTeamId+" to "+newTeamId, MSG_DBG_SHORT);
+//    sendTextMsg("unitGiven from "+oldTeamId+" to "+newTeamId, MSG_DBG_SHORT);
 //    showUnitInfoDebug(unit); // for DEBUG!
     
     // TODO do need  onLostUnit(unit) ?
@@ -1273,7 +1272,7 @@ public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
         onAddUnit(unit);
     }
     
-    sendTextMsg("done unitGiven.", MSG_DBG_ALL);
+//    sendTextMsg("done unitGiven.", MSG_DBG_ALL);
   } catch (Exception e) {
       sendTextMsg("ERROR unitGiven, exception: "+e.toString(), MSG_ERR);
       e.printStackTrace();
@@ -1287,7 +1286,7 @@ public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
 @Override
 public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {
   cpuTimer.start();
-    sendTextMsg("TODO!!! unitCaptured from "+oldTeamId+" to "+newTeamId, MSG_DBG_SHORT);
+    sendTextMsg("TODO unitCaptured from "+oldTeamId+" to "+newTeamId, MSG_DBG_SHORT);
   try {
     if (oldTeamId==teamId && newTeamId!=teamId) { // out from AI control
         deadLstUnit.add(unit);
@@ -1295,7 +1294,7 @@ public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {
         for (AGroupManager sGroup:smartGroups) sGroup.removeUnit(unit); // remove from all list.
     }
     // TODO captured to AI.
-    sendTextMsg("done unitCaptured.", MSG_DBG_ALL);
+//    sendTextMsg("done unitCaptured.", MSG_DBG_ALL);
   } catch (Exception e) {
       sendTextMsg("ERROR unitCaptured, exception: "+e.toString(), MSG_ERR);
       e.printStackTrace();
@@ -1444,9 +1443,9 @@ public int playerCommand(java.util.List<Unit> units, int commandTopicId, int pla
 public int commandFinished(Unit unit, int commandId, int commandTopicId) {
   cpuTimer.start();
   try {
-    sendTextMsg("commandFinished ", MSG_DBG_SHORT);
+//    sendTextMsg("commandFinished ", MSG_DBG_SHORT);
     if (deadLstUnit.contains(unit)) { // !!! DEBUG! TEST!!!
-        sendTextMsg("unit in deadLstUnit!", MSG_DBG_SHORT);
+        sendTextMsg("commandFinished: unit in deadLstUnit!", MSG_DBG_SHORT);
         return 0;
     }
     
@@ -1459,7 +1458,7 @@ public int commandFinished(Unit unit, int commandId, int commandTopicId) {
         addToSameGroup(unit);
         sendTextMsg("On cmdFinish unit without base. ", MSG_DBG_SHORT);
     }
-    sendTextMsg("done commandFinished.", MSG_DBG_ALL);
+//    sendTextMsg("done commandFinished.", MSG_DBG_ALL);
   } catch (Exception e) {
       sendTextMsg("ERROR commandFinished, exception: "+e.toString(), MSG_ERR);
       e.printStackTrace();

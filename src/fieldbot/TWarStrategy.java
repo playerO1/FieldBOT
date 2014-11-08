@@ -135,24 +135,24 @@ public class TWarStrategy {
           for (WeaponMount weaponMount:unit.getWeaponMounts())
         {
             WeaponDef weapon=weaponMount.getWeaponDef();
-            if (!weapon.isParalyzer()  // Если не парализует... 
+            if (!weapon.isParalyzer() 
                 && weapon.isAbleToAttackGround() && !weapon.isShield()) { // и т.д.
                 //range = Math.max(range, weapon.getRange());
                 //weapon.getDamage().getTypes() !!!!!!
-                owner.sendTextMsg(" Weapon types: "+weapon.getDamage().getTypes().toString(), FieldBOT.MSG_DBG_ALL);
+//                owner.sendTextMsg(" Weapon types: "+weapon.getDamage().getTypes().toString(), FieldBOT.MSG_DBG_ALL);
 
                 float dMultipler=weapon.getSalvoSize()*weapon.getProjectilesPerShot();
                 float dmg= weapon.getDamage().getTypes().get(weaponDamagType);
                 dmg = 0.8f*dmg + 0.2f*dmg*weapon.getAreaOfEffect();// как повреждения распространяются по площади.
                  //TODO дополнительный параметр по оружию: насколько "массово" должно быть оружие - против толпы мелких, например.
                     //weapon.getDamage().getImpulseBoost();
-              owner.sendTextMsg(" Weapon "+weapon.getName()+" damage="+dmg+" x multipler="+dMultipler+" (isSelfExplode="+weapon.isSelfExplode()+" isNoSelfDamage="+weapon.isNoSelfDamage()+" isParalyzer="+weapon.isParalyzer()+" isShield="+weapon.isShield()+" isAbleToAttackGround="+weapon.isAbleToAttackGround()+");" ,FieldBOT.MSG_DBG_ALL);
+//              owner.sendTextMsg(" Weapon "+weapon.getName()+" damage="+dmg+" x multipler="+dMultipler+" (isSelfExplode="+weapon.isSelfExplode()+" isNoSelfDamage="+weapon.isNoSelfDamage()+" isParalyzer="+weapon.isParalyzer()+" isShield="+weapon.isShield()+" isAbleToAttackGround="+weapon.isAbleToAttackGround()+");" ,FieldBOT.MSG_DBG_ALL);
                 damage += dmg*dMultipler;
-            } else owner.sendTextMsg(" Weapon "+weapon.getName()+" isSelfExplode="+weapon.isSelfExplode()+", isNoSelfDamage="+weapon.isNoSelfDamage()+" isParalyzer="+weapon.isParalyzer()+" isShield="+weapon.isShield()+" isAbleToAttackGround="+weapon.isAbleToAttackGround()+";" ,FieldBOT.MSG_DBG_ALL);
+            } // DEBUG: else owner.sendTextMsg(" Weapon "+weapon.getName()+" isSelfExplode="+weapon.isSelfExplode()+", isNoSelfDamage="+weapon.isNoSelfDamage()+" isParalyzer="+weapon.isParalyzer()+" isShield="+weapon.isShield()+" isAbleToAttackGround="+weapon.isAbleToAttackGround()+";" ,FieldBOT.MSG_DBG_ALL);
         }
         if (unit.isAbleToKamikaze()) {
             damage=0;
-            owner.sendTextMsg(" Unit able to kamikadze. Weapon damage skip to 0. Unit="+unit.getName()+";" ,FieldBOT.MSG_DBG_ALL);
+//            owner.sendTextMsg(" Unit able to kamikadze. Weapon damage skip to 0. Unit="+unit.getName()+";" ,FieldBOT.MSG_DBG_ALL);
         }
         //---------
         if (damage==0.0) range=0;
@@ -597,14 +597,24 @@ public class TWarStrategy {
                         haveRes=false; //TODO if res>2 add breack for optimization;
             }
 
-            if (haveRes) {
-        owner.sendTextMsg("army: haveRes, start make unt, i="+armyTypeStage, FieldBOT.MSG_DLG);
+            if (haveRes)
+            {
+        owner.sendTextMsg("army: haveRes, start make unt, i="+armyTypeStage, FieldBOT.MSG_DBG_SHORT);
                 boolean defenceTower=false; // build defence tower, or atack army
                 boolean onlyRadar=false; // work if defence tower only
                 if (armyTypeStage<2) {
                     defenceTower=true;
                     onlyRadar = armyTypeStage==1;
                 }
+
+                // Choose best base for make army
+                TBase bestBase=owner.getBestBase(true);
+               if (bestBase==null) {
+                   owner.sendTextMsg("army: not best base", FieldBOT.MSG_DBG_SHORT);
+                   break; // EXIT from case section
+               }
+                    
+                ArrayList<UnitDef> unitTypes=new ArrayList<UnitDef>(bestBase.getBuildList(true));
 
                 float timeL=2*60;
                 int unitL=10; //Integer.MAX_VALUE;
@@ -616,7 +626,11 @@ public class TWarStrategy {
                         kachestva=KACHESTVA_RADAR;
                     } else {
                         unitL=4;
+                        timeL=1*60;
                         kachestva=KACHESTVA_DEFTOWER;
+                        if (KACHESTVA_DEFTOWER[P_CONSTRUCTOR]<=0) // select nano towers, if in KACHESTVA_DEFTOWER[] exist work
+                          unitTypes=UnitSelector.atackUnits(unitTypes); // select only able to atack buildings
+                        // TODO preselect this for movable unit too, if not for radar/spam/work only.
                     }
                 } else {
                     switch (armyTypeStage%7) {
@@ -639,33 +653,26 @@ public class TWarStrategy {
                         //case 1: radar / KACHESTVA_ARMY
                     }
                 }
-                
+
                 armyTypeStage++; // inc stage
                 if (armyTypeStage>30) armyTypeStage=0;
                 if (armyTypeStage>5 && armyTypeStage<10) {
                     // do not do army now, concentrate to eco.
                 } else {
-                    // Choose best base for make army
-                    TBase bestBase=owner.getBestBase(true);
-
-                    if (bestBase!=null)
-                    {
             owner.sendTextMsg("army: bestBase="+bestBase, FieldBOT.MSG_DLG);
-                        int weaponType=0;//!!! 0 - default. TODO
-                        HashMap<UnitDef,Integer> armyUnits
-                                =owner.warStrategy.shooseArmy(bestBase, defenceTower, new ArrayList<UnitDef>(bestBase.getBuildList(true)),timeL,unitL,kachestva, weaponType);
-                            // TODO special unit enabled/disabled check (research center depends, TA/RD mod!)
-
-                        // Send signal to base for make unit
-                        if (armyUnits!=null) {
-                            // TODO move and create method for translate Map into TBase commands to build.
-                            sendBuildMessageToBase(armyUnits, bestBase, defenceTower);
-                            if (lastBuildScoutGroup==1) lastBuildScoutGroup=2;
-                            //    else lastBuildScoutGroup=0;
-                        } else owner.sendTextMsg("No plan for army!", FieldBOT.MSG_DBG_SHORT);                        
-                    }
-                    else armyTypeStage--;
+                    int weaponType=0;//!!! 0 - default. TODO
+                    HashMap<UnitDef,Integer> armyUnits
+                            =owner.warStrategy.shooseArmy(bestBase, defenceTower, unitTypes ,timeL,unitL,kachestva, weaponType);
+                        // TODO special unit enabled/disabled check (research center depends, TA/RD mod!)
+                    // Send signal to base for make unit
+                    if (armyUnits!=null) {
+                        // TODO move and create method for translate Map into TBase commands to build.
+                        sendBuildMessageToBase(armyUnits, bestBase, defenceTower);
+                        if (lastBuildScoutGroup==1) lastBuildScoutGroup=2;
+                        //    else lastBuildScoutGroup=0;
+                    } else owner.sendTextMsg("No plan for army!", FieldBOT.MSG_DBG_SHORT);                        
                 }
+
             }
             armyControlStage++;
           break;

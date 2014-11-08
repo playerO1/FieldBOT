@@ -38,7 +38,7 @@ public class TScoutModule {
     
     public final float mapWidth, mapHeight;
     
-    public float[][] scountMap;
+    public float[][] scountMap; // TODO use scountMap!
     public final float smCellWidth, smCellHeight;
     
     /**
@@ -67,7 +67,7 @@ public class TScoutModule {
         smCellHeight=Math.min(mapHeight/30, 50);
         scountMap=new float[Math.round(mapWidth/smCellWidth)][Math.round(mapHeight/smCellHeight)];
         for (int i=0; i<scountMap.length; i++) Arrays.fill(scountMap[i], 0.0f);
-        owner.sendTextMsg("Create TScoutManager, map inxed size="+scountMap.length+"x"+scountMap[0].length, FieldBOT.MSG_DBG_SHORT);
+        owner.sendTextMsg("Create TScoutManager, map index size="+scountMap.length+"x"+scountMap[0].length, FieldBOT.MSG_DBG_SHORT);
         
         enemyUnits=new LinkedList<Unit>();
         enemyInLOS=new LinkedList<Unit>();
@@ -137,14 +137,20 @@ public class TScoutModule {
         return nearP;
     }
     
-// ---------------    
-    private boolean registerEnemy(Unit unit) {
+// ---------------
+    /**
+     * 
+     * @param unit
+     * @param byLOS - for Spring 94.1 else maybe crash on access.
+     * @return 
+     */
+    private boolean registerEnemy(Unit unit, boolean byLOS) {
         if (!enemyUnits.contains(unit)) {
             last_enemyComeWatch=unit.getPos();
             if (!MathPoints.isValidPoint(last_enemyComeWatch)
                 || last_enemyComeWatch.x==0 && last_enemyComeWatch.y==0 && last_enemyComeWatch.z==0)
                 last_enemyComeWatch=null;
-            if (lastEnemmyBuildings==null) {
+            if (lastEnemmyBuildings==null && byLOS) {
                 UnitDef ud=unit.getDef(); // FIXME on Spring 94 maybe take crash
                 if (ud!=null && !ud.isAbleToMove())
                     lastEnemmyBuildings=last_enemyComeWatch;
@@ -154,13 +160,20 @@ public class TScoutModule {
         }
         return false;
     }
-    private boolean unRegisterEnemy(Unit unit, boolean byDestroy) {
+    /**
+     * 
+     * @param unit
+     * @param byDestroy
+     * @param byLOS - jnly for SPring 94.1
+     * @return 
+     */
+    private boolean unRegisterEnemy(Unit unit, boolean byDestroy, boolean byLOS) {
         if (enemyUnits.contains(unit) && !byDestroy) {
             last_enemyLeaveWatch=unit.getPos();
             if (!MathPoints.isValidPoint(last_enemyLeaveWatch)
                 || last_enemyLeaveWatch.x==0 && last_enemyLeaveWatch.y==0 && last_enemyLeaveWatch.z==0)
                 last_enemyLeaveWatch=null;
-            if (last_enemyLeaveWatch!=null) {
+            if (last_enemyLeaveWatch!=null && byLOS) {
                 UnitDef ud=unit.getDef(); // FIXME on Spring 94 maybe take crash (radar)
                 if (ud!=null && !ud.isAbleToMove())
                     lastEnemmyBuildings=last_enemyLeaveWatch;
@@ -235,24 +248,24 @@ public class TScoutModule {
 
     //@Override
     public void enemyEnterLOS(Unit enemy) {
-        if (enemyInLOS.add(enemy)) registerEnemy(enemy);
+        if (enemyInLOS.add(enemy)) registerEnemy(enemy, true);
     }
     //@Override
     public void enemyLeaveLOS(Unit enemy) {
         if (enemyInLOS.remove(enemy)) {
-            if (!enemyInRadar.contains(enemy)) unRegisterEnemy(enemy, false);
+            if (!enemyInRadar.contains(enemy)) unRegisterEnemy(enemy, false, true);
         }
     }
 
     //@Override
     public void enemyEnterRadar(Unit enemy) {
         if (enemy==null) return; // !!!!!!
-        if (enemyInRadar.add(enemy)) registerEnemy(enemy);
+        if (enemyInRadar.add(enemy)) registerEnemy(enemy, false);
     }
     //@Override
     public void enemyLeaveRadar(Unit enemy) {
         if (enemyInRadar.remove(enemy)) {
-            if (!enemyInLOS.contains(enemy)) unRegisterEnemy(enemy, false);
+            if (!enemyInLOS.contains(enemy)) unRegisterEnemy(enemy, false, false);
         }
     }
 
@@ -266,7 +279,7 @@ public class TScoutModule {
 //        if (enemy==null) {
 //            owner.sendTextMsg("WTF ETTOR: enemyDestroyed enemy==null", FieldBOT.MSG_ERR);
 //        } else 
-        unRegisterEnemy(enemy, true);
+        unRegisterEnemy(enemy, true, false); // TODO by LOS or by RADAR ????
     }
 
     //@Override
