@@ -347,6 +347,8 @@ public class ModSpecification {
      * @return true - it is LUA metal maker (can return false for native metal maker), false - no resource maker
      */
     public boolean isMetalMaker(UnitDef def) {
+        // TODO For Spring >= 98 check GameRulesParam !!!!!!!!!
+        // see http://springrts.com/phpbb/viewtopic.php?f=15&t=32732&start=20
         return treeMap_Eco.containsKey(def.getName());
     }
     /**
