@@ -757,8 +757,16 @@ public class TBase extends AGroupManager{
         //FIXME MAKE CASHE!!!!!!!!!!!!!
         
         float p=0.0f;
-        for (Unit u:idleCons) if (!u.isParalyzed() && (!noFactory || !ModSpecification.isStationarFactory(u.getDef()))) p+= u.getDef().getBuildSpeed();
-        if (!onlyIdle) for (Unit u:workingCons) if (!u.isParalyzed() && (!noFactory || !ModSpecification.isStationarFactory(u.getDef()))) p+= u.getDef().getBuildSpeed();
+        for (Unit u:idleCons) if (!u.isParalyzed() && 
+                (!noFactory ||
+                !ModSpecification.isStationarFactory(u.getDef())) ||
+                ModSpecification.isRealyAbleToAssist(u.getDef())) // for NOTA build tower
+                    p+= u.getDef().getBuildSpeed();
+        if (!onlyIdle) for (Unit u:workingCons) if (!u.isParalyzed() && (
+                !noFactory ||
+                !ModSpecification.isStationarFactory(u.getDef()))
+                || ModSpecification.isRealyAbleToAssist(u.getDef())) // for NOTA build tower
+                    p+= u.getDef().getBuildSpeed();
         // TODO noAssistable(), isAbletoAssist ?
         return p;
     }

@@ -778,7 +778,7 @@ protected static final int CMD_MORPH = 31410;
      */
     public static boolean isRealyAbleToAssist(UnitDef def) {
         // for assist, constructor or nano tower
-        boolean isAble = def.isAbleToAssist() && !isStationarFactory(def);
+        boolean isAble = def.isAbleToAssist() && (!isStationarFactory(def) || def.isCommander()); // for NOTA - isCommander, TODO other NOTA builder tower
         if (!isAble) return false;
         String hName=def.getHumanName();
         if (hName.contains("Air Repair") || hName.contains("Air Support Pad")) return false; // for Air Repair platform - usualy they can not assist, but they have assist option.
@@ -788,6 +788,7 @@ protected static final int CMD_MORPH = 31410;
     
     public static boolean isStationarFactory(UnitDef def) {
         return def.isBuilder() && (def.isAbleToMove() && (def.getSpeed()==0)) && !def.getBuildOptions().isEmpty();
+        // Warning: for NOTA it will be true for command center and other build tower!
     }
     
 }
