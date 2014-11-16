@@ -354,10 +354,11 @@ public class TEcoStrategy {
                 else tmpBP=lastIsNoAssistableBP;
             float t=getRashotBuildTime(def, startRes, tmpBP, 1.0f);
             T+=t;
-            for (int i=0;i<owner.avgEco.resName.length;i++) {
+            float resProduct[]=owner.getUnitResoureProduct(def);
+            for (int i=0;i<resProduct.length;i++) {
                 currentRes[AdvECO.R_Current][i]+= t * (currentRes[AdvECO.R_Income][i]-currentRes[AdvECO.R_Usage][i])
                                                - def.getCost(owner.avgEco.resName[i]);
-                float deltaRes=owner.getUnitResoureProduct(def, owner.avgEco.resName[i]);
+                float deltaRes=resProduct[i];
                 if (deltaRes>0.0f)
                     currentRes[AdvECO.R_Income][i] += deltaRes;
                 else if ((deltaRes<0.0f))
@@ -468,10 +469,11 @@ public class TEcoStrategy {
         // cashe for unit economic change, for more faster work
         final float[][] unitEffectEco=new float[startRes.length][startRes[0].length];
         final int numRes=owner.avgEco.resName.length;
+        float resProduct[]=owner.getUnitResoureProduct(build);
         for (int i=0;i<numRes;i++) {
             Resource res=owner.avgEco.resName[i];
             unitEffectEco[AdvECO.R_Current][i] = -build.getCost(res); // decrease current res
-            float deltaRes=owner.getUnitResoureProduct(build, res);
+            float deltaRes=resProduct[i];
             unitEffectEco[AdvECO.R_Income][i]=Math.max(0,deltaRes);
             unitEffectEco[AdvECO.R_Usage][i]=Math.max(0,-deltaRes); // increase usage
             unitEffectEco[AdvECO.R_Storage][i]=build.getStorage(res);
@@ -884,7 +886,7 @@ private ArrayList<UnitDef> select_EconomicUDefs(HashSet<UnitDef> defs)
         boolean isEcoUnit= (def.isBuilder() || def.isAbleToAssist()) && def.getBuildSpeed()>0;
         if (!isEcoUnit) for (Resource r:owner.clb.getResources())
         {
-            if ( owner.getUnitResoureProduct(def, r) > 0 ) {
+            if ( owner.getUnitResoureProduct(def, r) > 0 ) { // TODO do replace to float[]owner.getUnitResoureProduct(def) is actualy for speed?
                 isEcoUnit=true;
                 break;
             }
@@ -925,7 +927,8 @@ private EcoStateInfo calcEcoAftherTime(float maxT, EcoStateInfo ecoStart, ArrayL
             if (build.isAbleToAssist()) newEcoState.assistBuildPower += build.getBuildSpeed(); // учесть строительство
             else newEcoState.noAssistBuildPower += build.getBuildSpeed(); // !!!
             
-            for (int i=0;i<owner.avgEco.resName.length;i++) {
+            float resProduct[]=owner.getUnitResoureProduct(build);
+            for (int i=0;i<resProduct.length;i++) {
                 currentRes[AdvECO.R_Current][i]=currentRes[AdvECO.R_Current][i]
                         + t * (currentRes[AdvECO.R_Income][i]-currentRes[AdvECO.R_Usage][i]) // !!!!!!!!! Math.max(startRes[AdvECO.R_Income][r]-startRes[AdvECO.R_Usage][r],startRes[AdvECO.R_Income][r]/2.0f)
                         - build.getCost(owner.avgEco.resName[i]);
@@ -936,7 +939,7 @@ private EcoStateInfo calcEcoAftherTime(float maxT, EcoStateInfo ecoStart, ArrayL
                 // И невозможности отрицательных ресурсов
                 if (currentRes[AdvECO.R_Current][i]<0) currentRes[AdvECO.R_Current][i]=0;// !!!! TODO если не пропали, то что-то уменьшилось.
                 
-                float deltaRes=owner.getUnitResoureProduct(build, owner.avgEco.resName[i]);
+                float deltaRes=resProduct[i];
                 if (deltaRes>0.0f)
                     currentRes[AdvECO.R_Income][i] += deltaRes;
                 else if ((deltaRes<0.0f))
@@ -1033,13 +1036,15 @@ owner.sendTextMsg("i="+i+", t1="+t1+" ecoState="+ecoState.toString(), FieldBOT.M
             UnitDef morphFrom=toLevel.byMorph.getDef();
             if (morphFrom.isAbleToAssist()) ecoState.assistBuildPower -= morphFrom.getBuildSpeed();
             if (morphFrom.isBuilder() && !morphFrom.isAbleToAssist()) ecoState.noAssistBuildPower -= morphFrom.getBuildSpeed();
+            
+            float resProduct[]=owner.getUnitResoureProduct(morphFrom);
             // resource income/usage for lost morph unit.
             for (int r=0;r<ecoState.resources[0].length;r++) {
-                float deltaRes=owner.getUnitResoureProduct(morphFrom, owner.avgEco.resName[i]);
+                float deltaRes=resProduct[r];
                 if (deltaRes>0.0f)
-                    ecoState.resources[AdvECO.R_Income][i] -= deltaRes;
+                    ecoState.resources[AdvECO.R_Income][r] -= deltaRes;
                 else if ((deltaRes<0.0f))
-                    ecoState.resources[AdvECO.R_Usage][i] -= deltaRes;
+                    ecoState.resources[AdvECO.R_Usage][r] -= deltaRes;
             }
         }
         ecoState.time+=t2+t2w;

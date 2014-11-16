@@ -196,11 +196,10 @@ public class TTechLevel {
     {
         float[] maxRes=new float[botClb.avgEco.resName.length];
         Arrays.fill(maxRes, 0.0f);
-        for (UnitDef def:ecoUnits)
-          for (int i=0;i<maxRes.length;i++)
-        {
-          float r=botClb.getUnitResoureProduct(def, botClb.avgEco.resName[i]);
-          if (r>maxRes[i]) maxRes[i]=r;
+        for (UnitDef def:ecoUnits) {
+            float unitResP[]=botClb.getUnitResoureProduct(def);
+            for (int i=0;i<maxRes.length;i++) 
+                if (unitResP[i]>maxRes[i]) maxRes[i]=unitResP[i];
         }
         return maxRes;
     }
@@ -397,9 +396,9 @@ public class TTechLevel {
         if (byMorph()) {
             float t=botClb.modSpecific.getTimeForMprph(morphCMD);//morphTo.getBuildTime();// TODO как это время вычислить???!!! !!!!!!!!!!!!!!!
             float resToMorph[]=botClb.modSpecific.getResForMprph(morphCMD);
+            float resProduct[]=botClb.getUnitResoureProduct(byMorph.getDef());
             for (int i=0;i<needRes.length;i++) { // учесть потери от неработающего юнита во время апгрейда...
-                float w=botClb.getUnitResoureProduct(byMorph.getDef(), botClb.avgEco.resName[i]);
-                needRes[i]+=w*t + resToMorph[i]; // потери от простаивания + стоимость апгрейда
+                needRes[i] += resProduct[i]*t + resToMorph[i]; // потери от простаивания + стоимость апгрейда
             }
         }
         return needRes;
@@ -448,11 +447,9 @@ public class TTechLevel {
         float ecoR[]=new float[botClb.avgEco.resName.length];
         for (UnitDef def:unitLst) {
             float R=0.0f;
-            for (int i=0;i<botClb.avgEco.resName.length;i++) {
-                Resource res=botClb.avgEco.resName[i];
-                float r=botClb.getUnitResoureProduct(def, res);
-                if (r>ecoR[i]) ecoR[i]=r;
-            }
+            float resP[]=botClb.getUnitResoureProduct(def);
+            for (int i=0;i<resP.length;i++)
+                if (resP[i]>ecoR[i]) ecoR[i]=resP[i];
         }
         return botClb.avgEco.getResourceCoast(ecoR);
     }
@@ -478,8 +475,9 @@ public class TTechLevel {
             float[][] currRes2=AdvECO.cloneFloatMatrix(currRes);
             UnitDef fromMorph=byMorph.getDef(); // and remove morphFrom from future economic
             buildPower -= fromMorph.getBuildSpeed();
-            for (int i=0;i<currRes2[0].length;i++) {
-                float deltaRes=owner.getUnitResoureProduct(fromMorph, owner.avgEco.resName[i]);
+            float resProduct[]=owner.getUnitResoureProduct(fromMorph);
+            for (int i=0;i<resProduct.length;i++) {
+                float deltaRes=resProduct[i];
                 if (deltaRes>0.0f)
                     currRes2[AdvECO.R_Income][i] -= deltaRes;
                 else if ((deltaRes<0.0f))

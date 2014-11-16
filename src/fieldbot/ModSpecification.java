@@ -373,9 +373,11 @@ public class ModSpecification {
         float min,max;
         boolean existMakeRes=false;
         min=max=0.0f;
-        for (Resource r:owner.clb.getResources()) {
-            float x=owner.getUnitResoureProduct(def, r);
-            if (def.getMakesResource(r)!=0.0f) existMakeRes=true;
+        float resProduct[]=owner.getUnitResoureProduct(def);
+        Resource resName[]=owner.avgEco.resName;
+        for (int i=0;i<resName.length;i++) {
+            if (def.getMakesResource(resName[i])!=0.0f) existMakeRes=true;
+            float x=resProduct[i];
             min=Math.min(min,x);
             max=Math.max(max,x);
         }
@@ -390,8 +392,9 @@ public class ModSpecification {
     public float getNativeConversionKMetalMaker(UnitDef def) {
         float sMin,sMax;
         sMin=sMax=0.0f;
-        for (Resource r:owner.clb.getResources()) {
-            float x=owner.getUnitResoureProduct(def, r);
+        float resProduct[]=owner.getUnitResoureProduct(def);
+        for (int i=0; i<resProduct.length; i++) {
+            float x=resProduct[i];
             if (x<0.0f) sMin+=x;
             else sMax+=x;
         }

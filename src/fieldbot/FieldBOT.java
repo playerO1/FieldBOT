@@ -496,6 +496,7 @@ public ArrayList<AIFloat3> getMetalSpotsInRadius(AIFloat3 center, float r) {
     return mPoints;
 }
    
+//TODO move getUnitResoureProduct to ModSpecification, or to AdvECO
     /**
      * Get unit resource income-usage (can work with LUA metal maker by using modSpecific.getResourceConversionFor(...)).
      * @param def unit type
@@ -520,22 +521,72 @@ public ArrayList<AIFloat3> getMetalSpotsInRadius(AIFloat3 center, float r) {
 //            sendTextMsg("Tidal calc for "+def.getName()+" map tid shreng="+mapTidal+" def tid res gen="+defTidalGenerator+ " resProduct+="+resProduct, MSG_DBG_ALL);
         }
         
-        float defExtractRes=def.getExtractsResource(res);
-        if (isMetalFieldMap>=0 && defExtractRes!=0) {  // add extract resource
-            float mapResAvgExtract=clb.getMap().getExtractorRadius(res);
-            double metalExSquare = mapResAvgExtract;
-                metalExSquare = metalExSquare * metalExSquare * Math.PI;
-            resProduct+=defExtractRes * metalExSquare * clb.getMap().getResourceMapSpotsAverageIncome(res);
-//            sendTextMsg("Extract calc for "+def.getName()+" extr square="+metalExSquare+" map avg res income="+mapResAvgExtract+" def extract res gen="+defExtractRes+ " resProduct+="+resProduct, MSG_DBG_ALL);
+        if (isMetalFieldMap>=0) {
+            float defExtractRes=def.getExtractsResource(res);
+            if (defExtractRes!=0) {  // add extract resource
+                float mapResAvgExtract=clb.getMap().getExtractorRadius(res);
+                double metalExSquare = mapResAvgExtract;
+                    metalExSquare = metalExSquare * metalExSquare * Math.PI;
+                resProduct+=defExtractRes * metalExSquare * clb.getMap().getResourceMapSpotsAverageIncome(res);
+    //            sendTextMsg("Extract calc for "+def.getName()+" extr square="+metalExSquare+" map avg res income="+mapResAvgExtract+" def extract res gen="+defExtractRes+ " resProduct+="+resProduct, MSG_DBG_ALL);
+            }
         }
 
         // - - Depends of MOD part! MMaker - -
         float modSpecRes[]=modSpecific.getResourceConversionFor(def);
         if (modSpecRes!=null) {
-            if (res.getName().equals("Metal")) resProduct += modSpecRes[0];
-            if (res.getName().equals("Energy")) resProduct +=modSpecRes[1];
+            if (res.equals(avgEco.resName[0])) resProduct += modSpecRes[0];
+            if (res.equals(avgEco.resName[1])) resProduct +=modSpecRes[1];
         }
         // TODO In mod EvolutionRTS all metal extractor make 1 (or 0.5) metall! In Zero-K extract metal on special formuls!
+        
+        return resProduct;
+    }   
+    
+    /**
+     * Get unit resource income-usage (can work with LUA metal maker by using modSpecific.getResourceConversionFor(...)).
+     * It work faster that getUnitResoureProduct(UnitDef, Resource) for more that 1 resource item.
+     * @param def unit type
+     * @return resource incoming (+) or resource using (-) array for all resources
+     */
+    public float[] getUnitResoureProduct(UnitDef def) {
+        final float mapWind=clb.getMap().getCurWind();
+        final float mapTidal=clb.getMap().getTidalStrength();
+        
+        final float modSpecRes[]=modSpecific.getResourceConversionFor(def); // Depends of MOD part! MMaker
+
+        float resProduct[] = new float[avgEco.resName.length];
+        for (int r=0; r<resProduct.length; r++)
+        {
+            Resource res=avgEco.resName[r];
+            resProduct[r] = 0.0f + def.getMakesResource(res)+def.getResourceMake(res)-def.getUpkeep(res);
+
+            float defWindGenerator=def.getWindResourceGenerator(res);
+            if (mapWind>0 && defWindGenerator!=0) {
+                resProduct[r] += defWindGenerator/120.0f*mapWind; // !!! test, maybe mod specifed!!
+    //            sendTextMsg("Wind calc for "+def.getName()+" map wind="+mapWind+" def wind res gen="+defWindGenerator+ " resProduct+="+resProduct, MSG_DBG_ALL);
+            }
+        
+            float defTidalGenerator=def.getTidalResourceGenerator(res);
+            if (mapTidal>0 && defTidalGenerator!=0) {
+                resProduct[r] += defTidalGenerator*mapTidal; // TODO TEST tidal res !!!!
+    //            sendTextMsg("Tidal calc for "+def.getName()+" map tid shreng="+mapTidal+" def tid res gen="+defTidalGenerator+ " resProduct+="+resProduct, MSG_DBG_ALL);
+            }
+        
+            if (isMetalFieldMap>=0) {
+                float defExtractRes=def.getExtractsResource(res);
+                if (defExtractRes!=0) {  // add extract resource
+                    float mapResAvgExtract=clb.getMap().getExtractorRadius(res);
+                    double metalExSquare = mapResAvgExtract;
+                        metalExSquare = metalExSquare * metalExSquare * Math.PI;
+                    resProduct[r]+=defExtractRes * metalExSquare * clb.getMap().getResourceMapSpotsAverageIncome(res);
+        //            sendTextMsg("Extract calc for "+def.getName()+" extr square="+metalExSquare+" map avg res income="+mapResAvgExtract+" def extract res gen="+defExtractRes+ " resProduct+="+resProduct, MSG_DBG_ALL);
+                }
+            }
+            
+            if (modSpecRes!=null) resProduct[r] += modSpecRes[r]; // Depends of MOD part! MMaker
+            // TODO In mod EvolutionRTS all metal extractor make 1 (or 0.5) metall! In Zero-K extract metal on special formuls!
+        }
         
         return resProduct;
     }    
