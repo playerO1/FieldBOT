@@ -116,16 +116,35 @@ public static final int MSG_NOSHOW=0;
 
 protected static int LOG_level_show=MSG_ERR; // in game message log level
 
+/**
+ * Send message to chat and to log file
+ * @param msg text
+ * @param msgShowLvl MSG_DBG_ALL, MSG_DBG_SHORT, MSG_ERR, MSG_DLG. It is only for chat, check with LOG_level_show. All message write in log file.
+ * @return 0 - success, -1 - fail
+ */
 public int sendTextMsg(String msg, int msgShowLvl) {
   try {
     if (msgShowLvl<=LOG_level_show) clb.getGame().sendTextMessage(msg, DEFAULT_ZONE);
-    //if (addToLog)  + , boolean addToLog
     log.info(msg);
   } catch (Exception ex) {
     ex.printStackTrace();
-    return 1;
+    return -1;
   }
   return 0;
+}
+/**
+ * Print next message to chat and log file:
+ *  ERROR %comment%, exception: e.toString()
+ *  STACK TRACE> ... stacktrake lines
+ * @param comment method name, or other small comment
+ * @param e exception
+ */
+private void printStackTrakeToChat(String comment, Exception e) {
+    sendTextMsg("ERROR "+comment+", exception: "+e.toString(), MSG_ERR);
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    e.printStackTrace(pw);
+    sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
 }
 
 public boolean isDebugging() {
@@ -912,11 +931,7 @@ public int update(int frame) {
 //    sendTextMsg("done update.", MSG_DBG_ALL);
   cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR update, exception: "+e.toString(), MSG_ERR);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     printStackTrakeToChat("update",e);
      cpuTimer.stop();
       return -1;
   }
@@ -1013,11 +1028,7 @@ public int message(int player, String message) {
     else sendTextMsg("ERROR message: talkingDialogModule is null (not initialize).", MSG_ERR);
    cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR message, exception: "+e.toString(), MSG_ERR);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     printStackTrakeToChat("message",e);
      cpuTimer.stop();
       return -1;
   }
@@ -1028,7 +1039,9 @@ public int message(int player, String message) {
 
     @Override
     public int luaMessage(java.lang.String inData){  
-        sendTextMsg("on luaMessage inData="+inData+"", MSG_DBG_ALL);
+  try {
+  cpuTimer.start();
+        sendTextMsg("on luaMessage inData="+inData+"", MSG_DBG_SHORT);
 // This function was taking and owerwrite from https://github.com/Anarchid/zkgbai/blob/master/src/zkgbai/graph/GraphManager.java#L83 (code from (C) Anarchid)
         final String DATA_METAL_MAKR="METAL_SPOTS:";
     	if(inData.startsWith(DATA_METAL_MAKR))
@@ -1053,6 +1066,12 @@ public int message(int player, String message) {
             // TODO start boxes
     	}
         //*/
+   cpuTimer.stop();
+  } catch (Exception e) {
+     printStackTrakeToChat("luaMessage",e);
+     cpuTimer.stop();
+      return -1;
+  }
     	return 0; //signaling: OK
     }
 
@@ -1131,8 +1150,7 @@ public int unitCreated(Unit unit, Unit builder) {
 //    sendTextMsg("done unitCreated.", MSG_DBG_ALL);
    cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR unitCreated, exception: "+e.toString(), MSG_ERR);
-      e.printStackTrace();
+     printStackTrakeToChat("unitCreated",e);
      cpuTimer.stop();
       return -1;
   }
@@ -1160,8 +1178,7 @@ public int unitFinished(Unit unit) {
     
 //    sendTextMsg("done unitFinished.", MSG_DBG_ALL);
   } catch (Exception e) {
-      sendTextMsg("ERROR unitFinished, exception: "+e.toString(), MSG_ERR);
-      e.printStackTrace();
+     printStackTrakeToChat("unitFinished",e);
      cpuTimer.stop();
       return -1;
   }
@@ -1189,8 +1206,7 @@ public int unitIdle(Unit unit) {
     
 //    sendTextMsg("done unitIdle.", MSG_DBG_ALL);
   } catch (Exception e) {
-      sendTextMsg("ERROR unitIdle, exception: "+e.toString(), MSG_ERR);
-      e.printStackTrace();
+     printStackTrakeToChat("unitIdle",e);
     cpuTimer.stop();
       return -1;
   }
@@ -1217,8 +1233,7 @@ public int unitMoveFailed(Unit unit) {
     if (!foundHomeBase) addToSameGroup(unit);
 //    sendTextMsg("done unitMoveFailed.", MSG_DBG_ALL);
   } catch (Exception e) {
-      sendTextMsg("ERROR unitMoveFailed, exception: "+e.toString(), MSG_ERR);
-      e.printStackTrace();
+     printStackTrakeToChat("unitMoveFailed",e);
      cpuTimer.stop();
       return -1;
   }
@@ -1246,8 +1261,7 @@ public int unitDestroyed(Unit unit, Unit attacker) {
     }
 //    sendTextMsg("done unitDestroyed.", MSG_DBG_ALL);
   } catch (Exception e) {
-      sendTextMsg("ERROR unitDestroyed, exception: "+e.toString(), MSG_ERR);
-      e.printStackTrace();
+     printStackTrakeToChat("unitDestroyed",e);
   cpuTimer.stop();
       return -1;
   }
@@ -1288,8 +1302,7 @@ public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
     
 //    sendTextMsg("done unitGiven.", MSG_DBG_ALL);
   } catch (Exception e) {
-      sendTextMsg("ERROR unitGiven, exception: "+e.toString(), MSG_ERR);
-      e.printStackTrace();
+     printStackTrakeToChat("unitGiven",e);
   cpuTimer.stop();
       return -1;
   }
@@ -1310,8 +1323,7 @@ public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {
     // TODO captured to AI.
 //    sendTextMsg("done unitCaptured.", MSG_DBG_ALL);
   } catch (Exception e) {
-      sendTextMsg("ERROR unitCaptured, exception: "+e.toString(), MSG_ERR);
-      e.printStackTrace();
+     printStackTrakeToChat("unitCaptured",e);
   cpuTimer.stop();
       return -1;
   }
@@ -1329,11 +1341,7 @@ public int enemyEnterLOS(Unit enemy) {
         }
    cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR enemyEnterLOS, exception: "+e.toString(), MSG_ERR);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+      printStackTrakeToChat("enemyEnterLOS",e);
      cpuTimer.stop();
       return -1;
   }
@@ -1350,11 +1358,7 @@ public int enemyLeaveLOS(Unit enemy) {
         }
    cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR enemyLeaveLOS, exception: "+e.toString(), MSG_ERR);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+      printStackTrakeToChat("enemyLeaveLOS",e);
      cpuTimer.stop();
       return -1;
   }    return 0; // signaling: OK
@@ -1370,11 +1374,7 @@ public int enemyEnterRadar(Unit enemy) {
         }
    cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR enemyEnterRadar, exception: "+e.toString(), MSG_ERR);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+      printStackTrakeToChat("enemyEnterRadar",e);
      cpuTimer.stop();
       return -1;
   }
@@ -1391,11 +1391,7 @@ public int enemyLeaveRadar(Unit enemy) {
         }
    cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR enemyLeaveRadar, exception: "+e.toString(), MSG_ERR);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+      printStackTrakeToChat("enemyLeaveRadar",e);
      cpuTimer.stop();
       return -1;
   }
@@ -1412,11 +1408,7 @@ public int enemyDamaged(Unit enemy, Unit attacker, float damage, AIFloat3 dir, W
         }
    cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR enemyDamaged, exception: "+e.toString(), MSG_ERR);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+      printStackTrakeToChat("enemyDamaged",e);
      cpuTimer.stop();
       return -1;
   }    return 0; // signaling: OK
@@ -1432,11 +1424,7 @@ public int enemyDestroyed(Unit enemy, Unit attacker) {
         }
    cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR enemyDestroyed, exception: "+e.toString(), MSG_ERR);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+      printStackTrakeToChat("enemyDestroyed",e);
      cpuTimer.stop();
       return -1;
   }
@@ -1474,8 +1462,7 @@ public int commandFinished(Unit unit, int commandId, int commandTopicId) {
     }
 //    sendTextMsg("done commandFinished.", MSG_DBG_ALL);
   } catch (Exception e) {
-      sendTextMsg("ERROR commandFinished, exception: "+e.toString(), MSG_ERR);
-      e.printStackTrace();
+      printStackTrakeToChat("commandFinished",e);
   cpuTimer.stop();
       return -1;
   }
@@ -1490,11 +1477,8 @@ public int seismicPing(AIFloat3 pos, float strength) {
     scoutModule.seismicPing(pos, strength);
    cpuTimer.stop();
   } catch (Exception e) {
-      sendTextMsg("ERROR seismicPing, exception: "+e.toString(), MSG_ERR);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-      sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+     printStackTrakeToChat("seismicPing",e);
+
      cpuTimer.stop();
       return -1;
   }
