@@ -626,6 +626,14 @@ public class TEcoStrategy {
 //        owner.sendTextMsg(" do call getBestGeneratorRes for resource:"+bestUnitR.getName(), FieldBOT.MSG_DBG_ALL);
         UnitDef bestUnit = getBestGeneratorRes(bestUnitR, buildVariants,buildPower, currentRes);
 
+        // -------- ------- --------
+        // build storage, if deltaRes+- > 20% and storage using >80%
+        if (   pEstor>EconvertK && pMstor>0.8
+            && avg_delta_M>1 && avg_delta_E>1) {
+            if (avg_delta_E/avg_stor_E>0.35) bestUnit=getBestStorageRes(resE, buildVariants, buildPower, currentRes);
+            if (avg_delta_M/avg_stor_M>0.35) bestUnit=getBestStorageRes(resM, buildVariants, buildPower, currentRes);
+        }
+
         // workers:
         if (bestUnit!=null && avg_cur_E/avg_stor_E > 0.60 && avg_cur_M/avg_stor_M >0.50 && avg_delta_M>1 && (avg_delta_E>2 || avg_cur_E/avg_stor_E >= EconvertK)) {
 
@@ -665,7 +673,6 @@ public class TEcoStrategy {
             }
         }
         // -------- ------- --------
-        // TODO build storage, if deltaRes+- > 20% and storage using >80%
         
 //        if (bestUnit!=null) owner.sendTextMsg(" vibor: "+bestUnit.getName()+" - " + bestUnit.getHumanName() , FieldBOT.MSG_DBG_ALL);
 //        else owner.sendTextMsg(" NO SELECT!" , FieldBOT.MSG_DBG_SHORT);
