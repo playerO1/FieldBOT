@@ -225,61 +225,6 @@ for (int i = 0; i < numInfo; i++) {
   if (key.equals("shortName")) this.botShortName=value;
 }
 
-short opt_talkingDialogModule_allowEnemyTeamCommand=0;
-short opt_armyControl=0;
-
-optionValues = new Properties();
-OptionValues opVals = clb.getSkirmishAI().getOptionValues();
-int numOpVals = opVals.getSize();
-for (int i = 0; i < numOpVals; i++) {
-  String key = opVals.getKey(i);
-  String value = opVals.getValue(i);
-  optionValues.setProperty(key, value);
-  
-  // --- Определение параметров запуска бота ---
-  if (key.equals("commandbyenemy")) {
-      if (value.equals("1")) opt_talkingDialogModule_allowEnemyTeamCommand=1;
-      if (value.equals("0")) opt_talkingDialogModule_allowEnemyTeamCommand=-1;
-  }
-  if (key.equals("autotechup")) {
-      if (value.equals("1")) autoTechUp=true;
-      if (value.equals("0")) autoTechUp=false;
-  }
-  useTechUpMode=0; // default
-  if (key.equals("smarttechup")) {
-      if (value.equals("2")) useTechUpMode=2;
-      if (value.equals("1")) useTechUpMode=1;
-      if (value.equals("0")) useTechUpMode=0;
-  }
-  if (key.equals("usearmy")) {
-      if (value.equals("1")) opt_armyControl=1;
-      if (value.equals("0")) opt_armyControl=-1;
-  }
-  if (key.equals("messagelevel")) {
-      try {
-        int lvl=Integer.parseInt(value);
-        LOG_level_show=lvl;
-      } catch (NumberFormatException e) {
-          //TODO show error.
-      }
-  }
-  if (key.equals("builddecorator")) {
-      if (value.equals("random")) defauldBasePlaning=0;
-      if (value.equals("spiral")) defauldBasePlaning=1;
-      if (value.equals("circle")) defauldBasePlaning=2;
-      if (value.equals("tetris")) defauldBasePlaning=3;
-  }
-  if (key.equals("metaldetect")) {
-      try {
-        isMetalFieldMap=Integer.parseInt(value);
-      } catch (NumberFormatException e) {
-          //TODO show error.
-      }
-  }
-  
-
-  // ------
-}
 
 // initialize the log
 try {
@@ -294,11 +239,73 @@ try {
     } else {
         log.setLevel(Level.INFO);
     }
- } catch (Exception ex) {
-  System.out.println("Field BOT: Failed initializing the logger!");
+} catch (Exception ex) {
+  System.err.println("Field BOT: Failed initializing the logger!");
   ex.printStackTrace();
   ret = -2;
- }
+}
+
+short opt_talkingDialogModule_allowEnemyTeamCommand=0;
+short opt_armyControl=0;
+
+try {
+    optionValues = new Properties();
+    OptionValues opVals = clb.getSkirmishAI().getOptionValues();
+    int numOpVals = opVals.getSize();
+    for (int i = 0; i < numOpVals; i++) {
+      String key = opVals.getKey(i);
+      String value = opVals.getValue(i);
+      optionValues.setProperty(key, value);
+
+      // --- Определение параметров запуска бота ---
+      if (key.equals("commandbyenemy")) {
+          if (value.equals("1")) opt_talkingDialogModule_allowEnemyTeamCommand=1;
+          if (value.equals("0")) opt_talkingDialogModule_allowEnemyTeamCommand=-1;
+      }
+      if (key.equals("autotechup")) {
+          if (value.equals("1")) autoTechUp=true;
+          if (value.equals("0")) autoTechUp=false;
+      }
+      useTechUpMode=0; // default
+      if (key.equals("smarttechup")) {
+          if (value.equals("2")) useTechUpMode=2;
+          if (value.equals("1")) useTechUpMode=1;
+          if (value.equals("0")) useTechUpMode=0;
+      }
+      if (key.equals("usearmy")) {
+          if (value.equals("1")) opt_armyControl=1;
+          if (value.equals("0")) opt_armyControl=-1;
+      }
+      if (key.equals("messagelevel")) {
+          try {
+            int lvl=Integer.parseInt(value);
+            LOG_level_show=lvl;
+          } catch (NumberFormatException e) {
+              //TODO show error.
+          }
+      }
+      if (key.equals("builddecorator")) {
+          if (value.equals("random")) defauldBasePlaning=0;
+          if (value.equals("spiral")) defauldBasePlaning=1;
+          if (value.equals("circle")) defauldBasePlaning=2;
+          if (value.equals("tetris")) defauldBasePlaning=3;
+      }
+      if (key.equals("metaldetect")) {
+          try {
+            isMetalFieldMap=Integer.parseInt(value);
+          } catch (NumberFormatException e) {
+              //TODO show error.
+          }
+      }
+
+
+      // ------
+    }
+} catch (Exception e) {
+    log.log(Level.WARNING, "Failed read start properties.", e);
+    //ret = -5;
+}
+
 
  try {
     log.info("initializing team " + teamId);
@@ -310,10 +317,10 @@ try {
     logProperties(log, Level.FINE, optionValues);
 
     ret = 0;
-    } catch (Exception ex) {
+ } catch (Exception ex) {
     log.log(Level.SEVERE, "Failed initializing", ex);
     ret = -3;
- }
+}
  
  //----
     try {
@@ -358,7 +365,7 @@ try {
     }
 
  //----
-    if(ret!=0) sendTextMsg("init return "+ret+";", MSG_ERR);
+    if(ret!=0) sendTextMsg("ERROR: init return "+ret+";", MSG_ERR);
          
   cpuTimer.stop();
 return ret;
