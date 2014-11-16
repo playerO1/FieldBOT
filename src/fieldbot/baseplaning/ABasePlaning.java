@@ -280,13 +280,12 @@ public abstract class ABasePlaning {
         if (unitType.isNeedGeo()) return findFreeGeoPointAt(unitType, owner.center, owner.radius, null)!=null; // TODO test it!
         
         boolean needMetalSpots=needMetalPosition(unitType);
-
         if (needMetalSpots) {
-            if (owner.owner.isMetalFieldMap==FieldBOT.IS_NO_METAL) return false; // !!!
+            if (owner.owner.isMetalFieldMap==FieldBOT.IS_NO_METAL) return false; // FIXME maybe true? It always can build, just not take profit
             return findFreeMetalPointAt(unitType, owner.center, owner.radius, null)!=null;
         }
 
-        // быстро проверить в центре
+        // fast check on center
         if (cashe_LastCanBuildPoint!=null) {
             if (map.isPossibleToBuildAt(unitType, cashe_LastCanBuildPoint, buildFacing)) return true;
         } else {

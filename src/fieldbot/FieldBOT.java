@@ -329,10 +329,12 @@ try {
         commanders=new ArrayList<Unit>();
         techLevels=new HashMap<Integer, Integer>();
         // TODO maybe same final?
-  
+        
+         if (isMetalFieldMap==-2) checkForMetal(); // test for metal map
         modSpecific = new ModSpecification(this);
-        avgEco = new AdvECO(14, clb, modSpecific); // TODO подобрать лучшее время сбора информ.
-        scoutModule = new TScoutModule(this);
+        avgEco = new AdvECO(14, clb, modSpecific); // TODO check more better time for collect information
+         initMetalData(); // init metal data (required know about isMetalFieldMap)
+        scoutModule = new TScoutModule(this);// TODO maybe this make crash on S94 with NOTALobby?
         ecoStrategy = new TEcoStrategy(this);
         warStrategy = new TWarStrategy(this);
         talkingDialogModule = new TBOTTalking(this);
@@ -340,19 +342,21 @@ try {
          if (opt_talkingDialogModule_allowEnemyTeamCommand==-1) talkingDialogModule.allowEnemyTeamCommand=false;
          if (opt_armyControl==1) warStrategy.makeArmy=true;
          if (opt_armyControl==-1) warStrategy.makeArmy=false;
-        
+
+         
         deadLstUnit=new ArrayList<Unit>();
         techUpTrigger=null;
         
-        // Проверка требования людей для стартовой позиции
+        // Check human query for start position (DON't WORK!)
         AIFloat3 queryStartPoint=talkingDialogModule.checkStartPositionMessage();
         if (queryStartPoint!=null) {
             sendTextMsg("Command acepted: start at "+queryStartPoint.x+":"+queryStartPoint.z, MSG_DLG);
+            clb.getGame().sendStartPosition(false, queryStartPoint);
             clb.getGame().sendStartPosition(true, queryStartPoint);
             // TODO DO NOT WORK! Command acepted, but start on other position. It maybe bug on Spring 94.1. TEst it later.
         }
         
-        //bases.add(new TBase(this, clb.getMap().getStartPos(), 1000)); // Init first base
+        
         addSmartGroup(new TBase(this, clb.getMap().getStartPos(), 2000));  // Init first base
         
     } catch (Exception e) {
@@ -430,12 +434,14 @@ public void checkForMetal()
 }
 /**
  * Should be call for init metal data.
+ * Write info to allMetallSpots.
  */
 private void initMetalData() {
     // Init metal points
     if (isMetalFieldMap==IS_METAL_FIELD || isMetalFieldMap==-2) allMetallSpots=null;
     else {
         Resource metal=clb.getResourceByName("Metal");
+        if (metal==null) sendTextMsg("Resource Metal not found on this mod for initMetalData()!", MSG_ERR);
         if (allMetallSpots==null) allMetallSpots=new ArrayList<AIFloat3>();
         else return;// !!!
         if (isMetalFieldMap==IS_NORMAL_METAL) { //&& (allMetallSpots==null || allMetallSpots.isEmpty())) {
@@ -454,6 +460,7 @@ private void initMetalData() {
 }
 
 private List<AIFloat3> allMetallSpots;
+
 /**
  * return point for metal spots in radius.
  * @param center
@@ -820,8 +827,8 @@ public int update(int frame) {
     avgEco.update(frame);
     
   if (!inGameInitDone) {
-        if (isMetalFieldMap==-2) checkForMetal(); // test for metal!!!
-        initMetalData(); // !!!
+        //this method move to init() : if (isMetalFieldMap==-2) checkForMetal(); // test for metal!!!
+        // initMetalData(); // !!!
         inGameInitDone=true;
 
         Mod mod=clb.getMod();

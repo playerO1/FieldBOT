@@ -781,8 +781,9 @@ protected static final int CMD_MORPH = 31410;
         boolean isAble = def.isAbleToAssist() && (!isStationarFactory(def) || def.isCommander()); // for NOTA - isCommander, TODO other NOTA builder tower
         if (!isAble) return false;
         String hName=def.getHumanName();
-        if (hName.contains("Air Repair") || hName.contains("Air Support Pad")) return false; // for Air Repair platform - usualy they can not assist, but they have assist option.
-        //if (hName.equals("Giant")) return false; // TA mod, TLL air repair ship with anti-nuke. P.S. It realy can repair other units on TA 2.31.
+        if (hName.contains("Air Repair") || hName.contains("Air Support Pad") ) return false; // for Air Repair platform - usualy they can not assist, but they have assist option.
+        // Remark: NOTA unit SMART is realy able to assist, it is not only mobile air repair pad.
+        //if (hName.equals("Giant")) return false; // TA mod, TLL air repair ship with anti-nuke. P.S. It realy can repair other units on TA 2.31, just small radius.
         return true;
     }
     

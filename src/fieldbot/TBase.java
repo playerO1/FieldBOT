@@ -179,7 +179,7 @@ public class TBase extends AGroupManager{
         
         cashe_NOTcanBuildOnBase_true=null;
         cashe_CANBuildOnBase_true=null;
-        //не сбрасывать кэш построек...
+        //do not trop cashe of stationary buildings
         //cashe_NOTcanBuildOnBase_false=null;
         //cashe_CANBuildOnBase_false=null;
     }
