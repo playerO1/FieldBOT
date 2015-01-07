@@ -43,7 +43,7 @@ Using: ground, wather units.
 Using metal makers, can play on metal field map and non-metal map.
 Average CPU usage: 0.7%-2.0%, some time 20.0% and lag 1 second.
 Known support mod's: BA, TA, NOTA
-Required AI Interface modification for play on TA/RT: increase memory limit on jvm.properties file.
+Warning, Java AI Interface in spring 98 may be breaking and work unstable.
 ]],
 		desc   = 'this should help to find out whether this AI is what they want',
 	},
