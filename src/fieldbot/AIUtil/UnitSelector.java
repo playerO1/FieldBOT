@@ -21,6 +21,7 @@ package fieldbot.AIUtil;
 import com.springrts.ai.oo.clb.CommandDescription;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
+import fieldbot.FieldBOT;
 import fieldbot.ModSpecification;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -140,6 +141,54 @@ public class UnitSelector {
     // TBase.getBuildListFor()
     // TBase.getBuildPower() ?
     // TBase.getContainUnitDefsList()
+    //TBase.getBuildList()
+
+    /**
+     * Get all build options from all unit types.
+     * Do not check canBuildOnBaseSurface and don't check unlock system (tech level and research center depends)
+     * If you want get it from TBase, please use TBase.getBuildList() - it more important for CPU optimization and cashes.
+     * 
+     */
+    HashSet<UnitDef> getAllBuildOptions(HashSet<UnitDef> currentUnitTypesSet) {
+        HashSet<UnitDef> lst=new HashSet<UnitDef>();
+        for (UnitDef unitType:currentUnitTypesSet)
+            lst.addAll(unitType.getBuildOptions());
+        return lst;
+    }
+    /**
+     * Get all build options from all units.
+     * Do not check canBuildOnBaseSurface and don't check unlock system (tech level and research center depends)
+     * If you want get it from TBase, please use TBase.getBuildList() - it more important for CPU optimization and cashes.
+     * 
+     */
+    HashSet<UnitDef> getAllBuildOptions(List<Unit> currentUnits) {
+        HashSet<UnitDef> unitTypes=new HashSet<UnitDef>();
+        for (Unit u:currentUnits) unitTypes.add(u.getDef());
+        HashSet<UnitDef> lst=new HashSet<UnitDef>();
+        for (UnitDef unitType:unitTypes)
+            lst.addAll(unitType.getBuildOptions());
+        return lst;
+    }
+    
+    /**
+     * Get only locked unit on list with all build options
+     * @param owner for use ModSpecification API
+     * @param buildSet list of all unit that can build, with depends level unit and lock unit
+     * @return set with lock unit who depends special level or unit. Or null - if mod not support it. or no unit in list....
+     */
+    HashSet<UnitDef> getDependsFrom_sepcialUnlock(FieldBOT owner, HashSet<UnitDef> buildSet) {
+        if (owner.modSpecific.specificUnitEnabled) return null;//!!!!!
+        HashSet<UnitDef> noRequiredUList=(HashSet)buildSet.clone();
+        if (owner.modSpecific.removeUnitWhenCantBuildWithTeclLevel(noRequiredUList))
+        {
+            HashSet<UnitDef> diffLst=(HashSet)buildSet.clone();
+            diffLst.removeAll(noRequiredUList);
+            return diffLst;
+        }
+        return null;
+    }
+    //TODO list for unlock units.
+
     
     // TEcoStrategy.getBestGeneratorRes()
     // TEcoStrategy.getOptimalBuildingForNow()
@@ -166,5 +215,6 @@ public class UnitSelector {
     // FieldBOT.getOwnerGroup()
     // FieldBOT.getNearGroup()
     // FieldBOT.getNearBase()
+    
     
 }
