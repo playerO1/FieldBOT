@@ -523,18 +523,18 @@ public class TWarStrategy {
     private int armyControlStage=-1;
     private short lastBuildScoutGroup=0; // 2 - true
     
-    /**
-     * Army control tick.
-     * @param frame 
-     */
-    public void update(int frame) {
-        if (!makeArmy) return;
+/**
+ * Army control tick.
+ * @param frame 
+ */
+public void update(int frame) {
+    if (!makeArmy) return;
         
         // TODO Army control
         
         
             // Scout/Atack
-        if (frame%400==105 || frame%400==305) {
+    if (frame%400==105 || frame%400==305) {
             for (AGroupManager sGroup:owner.smartGroups)
             {
                 if (sGroup instanceof TArmyGroup) {
@@ -551,7 +551,7 @@ public class TWarStrategy {
                 }
                 // TODO scout group
             }
-        }
+    //}
         
         switch (armyControlStage) {
          case 0: // Make war group
@@ -569,7 +569,7 @@ public class TWarStrategy {
                             owner.addSmartGroup(army);
         owner.sendTextMsg("new army created:"+army, FieldBOT.MSG_DLG);
                             if (lastBuildScoutGroup==2) {
-                                army.targetScout = true;
+                                army.doScout();
                                 lastBuildScoutGroup=0;
                             }
                         } else owner.sendTextMsg("new army CAN NOT Create: unit not removed from group, size="+transferUnits.size(), FieldBOT.MSG_DLG);
@@ -682,6 +682,7 @@ public class TWarStrategy {
 
         }
     }
+  }
     
     // -----------
     

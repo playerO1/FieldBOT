@@ -27,7 +27,7 @@ import java.util.Collection;
 import java.util.HashSet;
 
 /**
- *
+ * Abstract Group Manager - controll unit for complete special target.
  * @author PlayerO1
  */
 public abstract class AGroupManager {
