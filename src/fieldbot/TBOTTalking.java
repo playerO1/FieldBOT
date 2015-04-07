@@ -549,7 +549,7 @@ public void message(int player, String message) { // TODO return result, boolean
             else owner.sendTextMsg("Not special command for rejected.", FieldBOT.MSG_DLG);
         }
         if (message.contains("status")) {
-            owner.sendTextMsg("Enemy chat listen: "+allowEnemyTeamCommand+", Auto tech up: "+owner.autoTechUp, FieldBOT.MSG_DLG);
+            owner.sendTextMsg("Enemy chat listen: "+allowEnemyTeamCommand+", Auto tech up: "+owner.autoTechUp+", Army control:"+owner.warStrategy.makeArmy, FieldBOT.MSG_DLG);
             owner.sendTextMsg("My name allias: "+Arrays.toString(MyNames), FieldBOT.MSG_DLG);
             owner.sendTextMsg("Have tech levels: "+owner.techLevels.keySet().toString(), FieldBOT.MSG_DLG);
             owner.sendTextMsg("Avg resources: "+owner.avgEco.toString(), FieldBOT.MSG_DLG);

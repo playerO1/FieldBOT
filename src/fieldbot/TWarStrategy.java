@@ -534,7 +534,7 @@ public void update(int frame) {
         
         
             // Scout/Atack
-    if (frame%400==105 || frame%400==305) {
+    if (frame%250==100 || frame%250==200) {
             for (AGroupManager sGroup:owner.smartGroups)
             {
                 if (sGroup instanceof TArmyGroup) {
@@ -655,7 +655,7 @@ public void update(int frame) {
                 }
 
                 armyTypeStage++; // inc stage
-                if (armyTypeStage>30) armyTypeStage=0;
+                if (armyTypeStage>25) armyTypeStage=0;
                 if (armyTypeStage>5 && armyTypeStage<10) {
                     // do not do army now, concentrate to eco.
                 } else {

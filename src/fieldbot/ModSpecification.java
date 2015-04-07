@@ -655,7 +655,7 @@ protected static final int CMD_MORPH = 31410;
                 val=defaultVal;
             }
         } else {
-            owner.sendTextMsg(" parsing ERROR: symbol ["+key+"] not found on ["+source+"]." , FieldBOT.MSG_ERR);
+            owner.sendTextMsg(" parsing WARNING: symbol ["+key+"] not found on ["+source+"]." , FieldBOT.MSG_DBG_SHORT);
             val=defaultVal;
         }
         return val;
@@ -686,7 +686,7 @@ protected static final int CMD_MORPH = 31410;
                 val=defaultVal;
             }
         } else {
-            owner.sendTextMsg(" parsing ERROR: symbol ["+key+"] not found on ["+source+"]." , FieldBOT.MSG_ERR);
+            owner.sendTextMsg(" parsing WARNING: symbol ["+key+"] not found on ["+source+"]." , FieldBOT.MSG_DBG_SHORT);
             val=defaultVal;
         }
         return val;
@@ -708,8 +708,7 @@ protected static final int CMD_MORPH = 31410;
                     if (Float.isNaN(t)) {
                         t=0; // no time found? TODO time check for morph.
                         owner.sendTextMsg(" time not found for ID"+morphCmd.getId(), FieldBOT.MSG_DBG_SHORT);
-                    }
-                    owner.sendTextMsg(" new time parsing for ID"+morphCmd.getId()+", t="+t, FieldBOT.MSG_DBG_SHORT);
+                    } else owner.sendTextMsg(" new time parsing for ID"+morphCmd.getId()+", t="+t, FieldBOT.MSG_DBG_SHORT);
                     break;
                 default:
                     throw new IllegalArgumentException(" this mode "+MORPH_GETINFO_MODE+" not support. To doing this."); // TODO mode 3 for Spring >97
