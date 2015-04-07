@@ -58,7 +58,10 @@ public static double simplexDouble(double[][] A, double[] b, double[] c, double[
             new NonNegativeConstraint(true));
 
     //double[] solution = optSolution.getPoint();
-    System.arraycopy(optSolution.getPointRef(), 0, x, 0, x.length);
+    double[] x_=optSolution.getPointRef(); // TODO it is bad fix for n*1.0. To do iteration.
+    for (int i=0;i<x_.length;i++) if (x_[i]>0) x_[i]=Math.round(x_[i]-0.5);
+
+    System.arraycopy(x_, 0, x, 0, x.length);
     return optSolution.getValue();
     // - - -    
 }
@@ -82,7 +85,7 @@ public static double justOneMaximize(double[][] A, double[] b, double[] c, doubl
             N=b[j]/A[j][i];
             minN=Math.min(minN, N);
         }
-        minN=Math.round(minN); // round unit count.
+        if (minN>0) minN=Math.round(minN-0.5); // round unit count. -0.5 for limit of no split
         double profit=minN*c[i];
         if (profit>maxF) {
             maxF=profit;
