@@ -1,5 +1,9 @@
 Changelog of FieldBOT.
 
+=== dev a1.8 ===
+- improve army enemy detector (and add bug's)
+- fix floating point number in army build plane (not full fix)
+
 === dev a1.7 ===
 Done:
 - now bot can use army (option "army control")
