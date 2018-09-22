@@ -300,32 +300,35 @@ public abstract class ABasePlaning {
         final int NUM_SpiralRot=3; // число витков спирали
         AIFloat3 buildPos;
         double startAng=2*Math.random()*Math.PI;
-        for (int i=1; i<=NUM_APPROX_POINTS; i++) { // TODO использовать лучший вид спирали
+        // TODO использовать лучший вид спирали
+        
+        // fast check map.isPossibleToBuildAt faster that map.findClosestBuildSite
+        for (int i=1; i<=NUM_APPROX_POINTS; i++) {
             //if (mainBuilder!=null) buildPos = mainBuilder.getPos();
             buildPos=new AIFloat3(owner.center);
             double r = owner.radius * ((1.0/(double)NUM_APPROX_POINTS)*(double)i);
             double ang=startAng + ((double)NUM_SpiralRot * ((double)i/(2*Math.PI)));
             buildPos.x+=r*Math.sin(ang);buildPos.z+=r*Math.cos(ang);
-
-//            if (needMetalSpots) {
-//                AIFloat3 metalP=owner.owner.clb.getMap().getResourceMapSpotsNearest(resMetal, buildPos);
-//                float l=MathPoints.getDistanceBetweenFlat(metalP, buildPos);
-//                if (l<owner.radius ) { //|| l<extrRadius) { // !!!!!!!!!
-//                    if (map.isPossibleToBuildAt(unitType, metalP, buildFacing)) return true;
-//                }
-//            } else {
                 if (map.isPossibleToBuildAt(unitType, buildPos, buildFacing)) {
                     cashe_LastCanBuildPoint=buildPos;
                     return true;
-                } else {
-                    // ближную (полуускоренно)...
-                    AIFloat3 np=map.findClosestBuildSite(unitType, buildPos, owner.radius/NUM_APPROX_POINTS*2, Math.min(unitType.getXSize(), unitType.getZSize())/2, buildFacing); // TODO test!
-                    if (MathPoints.isValidPoint(np)) {
-                        cashe_LastCanBuildPoint=np;
-                        return true;
-                    }
-                }
-//            }
+            }
+        }
+        
+        startAng=2*Math.random()*Math.PI;
+        // more slow check map.findClosestBuildSite that map.isPossibleToBuildAt
+        for (int i=1; i<=NUM_APPROX_POINTS; i++) {
+            //if (mainBuilder!=null) buildPos = mainBuilder.getPos();
+            buildPos=new AIFloat3(owner.center);
+            double r = owner.radius * ((1.0/(double)NUM_APPROX_POINTS)*(double)i);
+            double ang=startAng + ((double)NUM_SpiralRot * ((double)i/(2*Math.PI)));
+            buildPos.x+=r*Math.sin(ang);buildPos.z+=r*Math.cos(ang);
+            // check nearest zone
+            AIFloat3 np=map.findClosestBuildSite(unitType, buildPos, owner.radius/NUM_APPROX_POINTS*2, Math.min(unitType.getXSize(), unitType.getZSize())/2, buildFacing); // TODO test!
+            if (MathPoints.isValidPoint(np)) {
+                cashe_LastCanBuildPoint=np;
+                return true;
+            }
         }
         
         return false;
