@@ -32,7 +32,7 @@ import java.util.Map.Entry;
 public class TBOTTalking {
     
     public final FieldBOT owner;
-    public final Map ownerMap;// !!!
+    public final Map ownerMap;
     
     /**
      * Принимать текстовые команды от противников?

@@ -45,10 +45,10 @@ public class TPlanCell {
     
     /**
      * 
-     * @param forUnitType для кого
-     * @param count сколько в группе мест
-     * @param padding отступы от границ
-     * @param spacing отступы между элементами
+     * @param forUnitType for this unit type /  для кого
+     * @param count how many unit in group / сколько в группе мест
+     * @param padding between border / отступы от границ
+     * @param spacing between element / отступы между элементами
      */
     public TPlanCell(UnitDef forUnitType, int count, float padding, float spacing) {
         // TODO if count<=0 ?
@@ -99,8 +99,9 @@ public class TPlanCell {
     }
     
     /**
+     * Return elelent position by element number
      * Выдаёт позицию элемента по номеру позиции
-     * @param n номер позиции... нумерация с нуля?...
+     * @param n number of position. Start from 0.
      * @return позиция с учётом центра группы
      */
     public AIFloat3 getPos(int n) {

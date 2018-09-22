@@ -27,7 +27,7 @@ public class AdvECO {
     /**
      * Current resources
      */
-    private float resCurrent[][]; // TODO...
+    //private float resCurrent[][]; // TODO...
     
     /**
      * average current resource (cashe)

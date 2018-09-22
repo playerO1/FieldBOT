@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 user2
+ * Copyright (C) playerO1 2014 - 2018
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,7 +20,6 @@ package fieldbot;
 
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.UnitDef;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 

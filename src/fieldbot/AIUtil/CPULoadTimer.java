@@ -13,9 +13,7 @@ import java.util.Date;
  */
 public class CPULoadTimer {
     
-    private Date timeFirstStart,timerStartAt,timerStopAt,timerGameTime; // для подсчёта времени
-	
-    public boolean lastHasStarted=false; // TODO улучшить. временная переменная для хранения промежуточного состояния...
+    private Date timeFirstStart,timerStartAt,timerStopAt,timerGameTime; // for time check / для подсчёта времени
 	
     
     /**
@@ -27,7 +25,7 @@ public class CPULoadTimer {
     
     public CPULoadTimer()
     {
-        timerStartAt=timerStopAt=null; //...
+        timerStartAt=timerStopAt=null;
         timerGameTime=new Date(0); // set game time = 0 milisecond
         timeFirstStart=new Date(); // time of init
     }
@@ -37,8 +35,8 @@ public class CPULoadTimer {
      */
     public void start()
     {
-        if (timerStartAt!=null) stop(); // !!!!!!
-        timerStartAt=new Date();//!!!!!
+        if (timerStartAt!=null) stop();
+        timerStartAt=new Date();
     }
     
     /**
