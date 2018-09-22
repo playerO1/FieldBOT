@@ -16,7 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 */
-
+/*
+New version FieldBot September 2018 for Spring 104.
+*/
 package fieldbot;
 
 
@@ -782,7 +784,7 @@ public TBase spawnNewBase(AIFloat3 newBasePoint, float workerUsagePercent)
             Unit aCons = itr1.next();
             UnitDef cDef=aCons.getDef();
             if (!ModSpecification.isRealyAbleToMove(cDef)
-                || cDef.isCommander()
+                || modSpecific.isCommander(cDef)
                 || aCons.isParalyzed()
                 || !ModSpecification.isAbleToBuildBase(cDef) // So, they can build new base?
                 ) itr1.remove(); // Если нельзя переместить на новую базу
@@ -1031,11 +1033,11 @@ public boolean addToSameGroup(Unit unit) {
 private void onAddUnit(Unit unit) {
     if (!unit.isBeingBuilt()) {
         UnitDef def=unit.getDef();
-        if (def.isCommander()) commanders.add(unit);
+        if (modSpecific.isCommander(def)) commanders.add(unit);
         
         modSpecific.onAddUnit(def); // TODO show debug message about unlock technology
         
-        int uTLvl = def.getTechLevel();
+        int uTLvl = modSpecific.getTechLevel(def);
         Integer foundNLvl=techLevels.get(uTLvl);
         if (foundNLvl==null) {
             sendTextMsg("Now AI have new Tech Up to "+uTLvl+" tech level! (onAddUnit)", MSG_DLG);
@@ -1052,11 +1054,11 @@ private void onAddUnit(Unit unit) {
 private void onLostUnit(Unit unit) {
     if (!unit.isBeingBuilt()) {
         UnitDef def=unit.getDef();
-        if (def.isCommander()) commanders.remove(unit);
+        if (modSpecific.isCommander(def)) commanders.remove(unit);
 
         modSpecific.onRemoveUnit(def); // TODO show debug message about lock technology
         
-        int uTLvl = def.getTechLevel();
+        int uTLvl = modSpecific.getTechLevel(def);
         Integer foundNLvl=techLevels.get(uTLvl);
         if (foundNLvl==null) {
             sendTextMsg("Error: unit lost with unregister tech level "+uTLvl+"! (onLostUnit)", MSG_ERR);
@@ -1132,7 +1134,8 @@ public int message(int player, String message) {
 
 
 public void showUnitDefInfoDebug(UnitDef unit){
-    sendTextMsg("Unit info: " + unit.getName()+" humanName: "+unit.getHumanName()+" techLevel: "+unit.getTechLevel()+" defID: "+unit.getUnitDefId(), MSG_DBG_SHORT);
+    sendTextMsg("Unit info: " + unit.getName()+" humanName: "+unit.getHumanName()+" techLevel: "+modSpecific.getTechLevel(unit)+" defID: "+unit.getUnitDefId(), MSG_DBG_SHORT);
+    sendTextMsg("Unit is: AbleToAssist " + unit.isAbleToAssist()+" AbleToMove "+unit.isAbleToMove()+" Assistable "+unit.isAssistable(), MSG_DBG_SHORT);
     sendTextMsg("Unit is: AbleToAssist " + unit.isAbleToAssist()+" AbleToMove "+unit.isAbleToMove()+" Assistable "+unit.isAssistable(), MSG_DBG_SHORT);
     sendTextMsg("build: BuildDistance " + unit.getBuildDistance()+", BuildSpeed "+unit.getBuildSpeed()+"; moving speed="+unit.getSpeed(), MSG_DBG_SHORT);
     

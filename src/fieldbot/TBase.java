@@ -219,7 +219,7 @@ public class TBase extends AGroupManager{
         }
         UnitDef ut=unit.getDef();
         // ut.isCommander()
-        if (ut.isCommander() || ut.isAbleToAssist() || (ut.isBuilder() && !ut.getBuildOptions().isEmpty())) { // TODO test! Unit 'Necro' on TA is not builder, but ut.isBuilder()=true but not able to assist.
+        if (ModSpecification.isCommander(ut) || ut.isAbleToAssist() || (ut.isBuilder() && !ut.getBuildOptions().isEmpty())) { // TODO test! Unit 'Necro' on TA is not builder, but ut.isBuilder()=true but not able to assist.
             if (!idleCons.contains(unit) && !workingCons.contains(unit)) idleCons.add(unit);
             if (ENABLE_CASHING) dropCashe();
             return true;
@@ -333,6 +333,7 @@ public class TBase extends AGroupManager{
     // TODO setAllAsWork/idle()
 
     /**
+     * How does much want this unit need for group?
      * На сколько нужен этот юнит данной группе
      * @return 
      */
@@ -340,17 +341,17 @@ public class TBase extends AGroupManager{
     public float doYouNeedUnit(Unit unit) {
         float k=0.7f;
         UnitDef ud=unit.getDef();
-        // TODO учесть дистанцию
+        // TODO учесть дистанцию / check distance
         switch (baseType) {
-            case 0: // главная база
+            case 0: // primary base / главная база
                 if (ud.isBuilder()) k+=0.2f;
-                if (ud.isCommander()) k+=0.2f;
+                if (ModSpecification.isCommander(ud)) k+=0.2f;
                 break;
             case 1: // развед база
                 if (ud.isAbleToRepair()) k+=0.1f;
                 if (ud.isBuilder()) k+=0.1f;
                 if (ud.isAbleToAttack()) k+=0.2f;
-                if (ud.isCommander()) k-=0.2f; // командир не нужен в развед части
+                if (ModSpecification.isCommander(ud)) k-=0.2f; // commander do not required for scout / командир не нужен в развед части
                 if (ud.isStealth()) k+=0.2f;
                 break;
             default:// ?? Not set.
@@ -403,14 +404,14 @@ public class TBase extends AGroupManager{
      */
    @Override
     public HashSet<UnitDef> getContainUnitDefsList(boolean onlyWhatIdle) {
-        // -- кэш --
+        // -- cache --
         if (ENABLE_CASHING) if (!onlyWhatIdle && cashe_getContainUnitDefsList_false!=null) return cashe_getContainUnitDefsList_false;
         // -- --
         
         HashSet<UnitDef> currentUnitTypesSet=new HashSet<UnitDef>(); // типы юнитов
         for (Unit builder:getAllUnits(onlyWhatIdle)) currentUnitTypesSet.add(builder.getDef());
         
-        // -- обновить кэш --
+        // -- invalidate cache --
         if (ENABLE_CASHING) if (!onlyWhatIdle) cashe_getContainUnitDefsList_false=currentUnitTypesSet;
         // -- --
         

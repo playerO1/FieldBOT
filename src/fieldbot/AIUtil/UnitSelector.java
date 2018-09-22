@@ -111,6 +111,7 @@ public class UnitSelector {
     
     // ModSpecification.getRealBuildList()
     // ModSpecification.selectDefByTechLevel()
+    @Deprecated
     public static ArrayList<UnitDef> selectDefByTechLevel(ArrayList<UnitDef> defs,int level) {
         return ModSpecification.selectDefByTechLevel(defs, level); // Export, TODO move to this file, and remove on mod specification.
     }

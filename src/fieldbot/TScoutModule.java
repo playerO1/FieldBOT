@@ -267,8 +267,8 @@ public class TScoutModule {
      */
     private void refreshMap_part(int frame) {
         int p=frame%(scountMap_enemy.length*scountMap_enemy[0].length); // !!!! check it.
-        int i=p/(scountMap_enemy.length-1);
-        int j=p%(scountMap_enemy.length-1); //scountMap_enemy[i].length;
+        int i=p/(scountMap_enemy.length);
+        int j=p%(scountMap_enemy.length); //scountMap_enemy[i].length;
           cell_refreshEnemyOnMap(i,j, false);
           cell_refreshScoutOnMap(i,j, false);
         if (lst_RM_i==-1) { // stop refresh

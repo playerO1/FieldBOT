@@ -106,7 +106,7 @@ public class TTechLevel {
         needBaseBuilders.add(baseUnit);
         
         HashSet<Integer> tmpTechLevels=new HashSet<Integer>();
-        tmpTechLevels.add( baseUnit.getTechLevel() );
+        tmpTechLevels.add( ModSpecification.getTechLevel(baseUnit) );
         
         // 2. Way to economic
         
@@ -144,7 +144,7 @@ public class TTechLevel {
                 HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(bestWorker.getBuildOptions());
                 newWorkerUnitDefs.removeAll(unitOldBuild);
 
-                tmpTechLevels.add( bestWorker.getTechLevel() );
+                tmpTechLevels.add( ModSpecification.getTechLevel(bestWorker) );
 
                 if (botClb.modSpecific.specificUnitEnabled)
                     botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, needBaseBuilders);
@@ -160,7 +160,7 @@ public class TTechLevel {
         
         levelNewDef=new ArrayList<UnitDef>(newUnitDefs);
         
-        for (UnitDef def:levelNewDef) tmpTechLevels.add( def.getTechLevel() );
+        for (UnitDef def:levelNewDef) tmpTechLevels.add( ModSpecification.getTechLevel(def) );
         
         techLevelNumber = new int[tmpTechLevels.size()]; // List of all tech levels
         int i=0;
@@ -290,7 +290,7 @@ public class TTechLevel {
         needBaseBuilders.add(morphTo);
         
         HashSet<Integer> tmpTechLevels=new HashSet<Integer>();
-        tmpTechLevels.add( morphTo.getTechLevel() ); // TODO check is null !!!
+        tmpTechLevels.add( ModSpecification.getTechLevel(morphTo) ); // TODO check is null !!!
         
         // Ветка до экономики
 
@@ -327,7 +327,7 @@ public class TTechLevel {
                 HashSet<UnitDef> newWorkerUnitDefs=new HashSet<UnitDef>(bestWorker.getBuildOptions());
                 newWorkerUnitDefs.removeAll(unitOldBuild);
 
-                tmpTechLevels.add( bestWorker.getTechLevel() );
+                tmpTechLevels.add( ModSpecification.getTechLevel(bestWorker) );
 
                 if (botClb.modSpecific.specificUnitEnabled)
                   botClb.modSpecific.removeUnitWhenCantBuildWithTeclLevel(newWorkerUnitDefs, needBaseBuilders);// tech level depends
@@ -346,7 +346,7 @@ public class TTechLevel {
         levelNewDef=new ArrayList<UnitDef>();
         levelNewDef.addAll(newUnitDefs); //!!!
         
-        for (UnitDef def:levelNewDef) tmpTechLevels.add( def.getTechLevel() );
+        for (UnitDef def:levelNewDef) tmpTechLevels.add( ModSpecification.getTechLevel(def) );
         // Перечень всех тех. уровней
         techLevelNumber = new int[tmpTechLevels.size()];
         int i=0;
@@ -645,7 +645,7 @@ public class TTechLevel {
         String s="level="+Arrays.toString(techLevelNumber);
         if (byMorph()) s+=" (by Morph)";
         s+=" ecoK="+Arrays.toString(ecoK)+" build power="+builderK+" need build: {";
-        for (UnitDef def:needBaseBuilders) s+=" "+def.getName()+" -tlvl"+def.getTechLevel()+"- "+def.getHumanName()+",";
+        for (UnitDef def:needBaseBuilders) s+=" "+def.getName()+" -tlvl"+ModSpecification.getTechLevel(def)+"- "+def.getHumanName()+",";
         s+="} new: {";
         for (UnitDef def:levelNewDef) s+=" "+def.getName()+",";
         s+="}";

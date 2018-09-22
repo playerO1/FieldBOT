@@ -21,21 +21,21 @@ import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
  */
 public class MathOptimizationMethods {
     
-    // A - ресурсы на выпуск всех товаров (юнитов)
-    // b - предел ресурсов
-    // c - выгода
-    // x - кол-во
+    // A - resources for make units
+    // b - resources limit
+    // c - profit
+    // x - count of units (out)
 
     /**
      * 
-     * @param A ресурсы на выпуск всех товаров (юнитов) [номер ресурса][номер юнита]
-     * @param b предел ресурсов (ограничение)
-     * @param c выгода
-     * @param x out кол-во выпуска (план выпуска, ответ)
-     * @return суммарная выгода плана x
+     * @param A resources for make units [resource][unit]
+     * @param b resources limit (depends)
+     * @param c profit
+     * @param x count of units (out)
+     * @return profit for x
      */
 public static double simplexDouble(double[][] A, double[] b, double[] c, double[] x) {
-      
+      //TODO low limit: minimal atack,HP,speed...
 //    return justOneMaximize(A,b,c, x); // maybe fast, but not precission
     
     // - - -

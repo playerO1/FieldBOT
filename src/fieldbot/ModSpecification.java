@@ -163,6 +163,7 @@ public class ModSpecification {
             // TLL 
             treeMap_Eco.put("tllammaker", new float[] { 14.2f, -1000f } ); // Moho Metal Maker
             treeMap_Eco.put("tllmm", new float[] { 1.08f, -100f } ); // Metal Maker
+            treeMap_Eco.put("tllmetalmakerlvl1", new float[] { 2.4f, -200f } ); // Advanced Metal Maker (T1.5)
             treeMap_Eco.put("tllwmmohoconv", new float[] { 14.7f, -1000f } ); // Floating Moho Metal Maker
             treeMap_Eco.put("tllwmconv", new float[] { 1.16f, -100f } ); // Metal Producer (floating)
         }
@@ -486,10 +487,11 @@ public class ModSpecification {
      * @param level parameter for select
      * @return list with units when def.getTechLevel()==level
      */
+    @Deprecated
     public static ArrayList<UnitDef> selectDefByTechLevel(ArrayList<UnitDef> defs,int level)
     {
         ArrayList<UnitDef> selectedLst=new ArrayList<UnitDef>();
-        for (UnitDef def:defs) if (def.getTechLevel()==level) selectedLst.add(def);
+        for (UnitDef def:defs) if (getTechLevel(def)==level) selectedLst.add(def);
         return selectedLst;
     }
     
@@ -780,7 +782,7 @@ protected static final int CMD_MORPH = 31410;
      */
     public static boolean isRealyAbleToAssist(UnitDef def) {
         // for assist, constructor or nano tower
-        boolean isAble = def.isAbleToAssist() && (!isStationarFactory(def) || def.isCommander()); // for NOTA - isCommander, TODO other NOTA builder tower
+        boolean isAble = def.isAbleToAssist() && (!isStationarFactory(def) || isCommander(def)); // for NOTA - isCommander, TODO other NOTA builder tower
         if (!isAble) return false;
         String hName=def.getHumanName();
         if (hName.contains("Air Repair") || hName.contains("Air Support Pad") ) return false; // for Air Repair platform - usualy they can not assist, but they have assist option.
@@ -794,4 +796,18 @@ protected static final int CMD_MORPH = 31410;
         // Warning: for NOTA it will be true for command center and other build tower!
     }
     
+    
+    // Deprecated Spring 98 command. Removed from Spring 104:
+    @Deprecated
+    public static boolean isCommander(UnitDef def) {
+        //return def.isCommander();
+         // fixme NoSuchMethodError: com.springrts.ai.AICallback.UnitDef_isCommander(I)Z
+        //check by name or def.getCategory()
+        return def.canManualFire() && def.isAbleToCloak() && def.getName().contains("com");
+    }
+    @Deprecated
+    public static int getTechLevel(UnitDef def) {
+        //fixme return def.getTechLevel();
+        return 1;
+    }
 }

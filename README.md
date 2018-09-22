@@ -9,6 +9,8 @@ Support maps: non-metal, metal field, can work with normal metal map but take on
 Can fast load with big map and TA mod, it's better that same other bot.
 
 For install this bot, you can compile him from source. Or download last version from /dist/ and read readme.txt for learn how install it.
+
+Warning: Spring version >98 on Linux 64 have corrupted Java interface - can crash on network game, or sometime. It can be heck on NullJavaAI bot too.
 --------
 HISTORY of develop.
 This bot made for Spring RTS game.
