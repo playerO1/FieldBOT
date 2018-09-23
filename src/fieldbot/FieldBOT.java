@@ -158,7 +158,7 @@ public boolean isDebugging() {
 
 public String botShortName;
 //protected ArrayList<TBase> bases; // TODO ПЕРЕДЕЛАТЬ в AGroupManager. Было: Список баз.
-protected ArrayList<AGroupManager> smartGroups;
+protected ArrayList<AGroupManager> smartGroups=new ArrayList<AGroupManager>();
 private ArrayList<AGroupManager> smartGroupsToRemove; // temp list for remove from cycle.
 
 /**
@@ -169,6 +169,7 @@ public AdvECO avgEco;
 public TEcoStrategy ecoStrategy;
 public TWarStrategy warStrategy;
 public ModSpecification modSpecific;
+public EnvironmentInterface environmentInterface;
 public TBOTTalking talkingDialogModule;
 public TScoutModule scoutModule;
 
@@ -181,7 +182,7 @@ protected ArrayList<Unit> deadLstUnit;
  * List of having commanders.
  * TODO use it.
  */
-protected ArrayList<Unit> commanders; //TODO use it
+protected ArrayList<Unit> commanders;
 
 /**
  * List of TechLevel (key) and unit count of this level (value)
@@ -344,16 +345,40 @@ try {
 }
  
  //----
-    try {
         smartGroups=new ArrayList<AGroupManager>();
         smartGroupsToRemove = new ArrayList<AGroupManager>();
         commanders=new ArrayList<Unit>();
         techLevels=new HashMap<Integer, Integer>();
-        // TODO maybe same final?
+
+    int retCode = init2();
+    if (retCode!=0) ret=retCode;
+ //----
+    if(ret!=0) sendTextMsg("ERROR: init return "+ret+";", MSG_ERR);
+//    init2(); try init into update(); cause Spring hard chash today.
+         
+  cpuTimer.stop();
+return ret;
+}
+
+protected boolean init2Done=false;
+protected int init2() {
+    try {
+        short opt_talkingDialogModule_allowEnemyTeamCommand=0;
+        short opt_armyControl=0;
+      // --- Определение параметров запуска бота ---
+      {
+        String value;
+      if ( (value=optionValues.getProperty("commandbyenemy"))!=null) {
+          if (value.equals("1")) opt_talkingDialogModule_allowEnemyTeamCommand=1;
+          if (value.equals("0")) opt_talkingDialogModule_allowEnemyTeamCommand=-1;
+      }
+    }
+        
         
          if (isMetalFieldMap==-2) checkForMetal(); // test for metal map
         modSpecific = new ModSpecification(this);
         avgEco = new AdvECO(14, clb, modSpecific); // TODO check more better time for collect information
+        environmentInterface = new EnvironmentInterface(modSpecific, avgEco, this);
          initMetalData(); // init metal data (required know about isMetalFieldMap)
         scoutModule = new TScoutModule(this);// TODO maybe this make crash on S94 with NOTALobby?
         ecoStrategy = new TEcoStrategy(this);
@@ -381,19 +406,15 @@ try {
         addSmartGroup(new TBase(this, clb.getMap().getStartPos(), 2000));  // Init first base
         
     } catch (Exception e) {
-        ret=-4;
         sendTextMsg("ERROR init, exception: "+e.toString(), MSG_ERR);
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         e.printStackTrace(pw);
       sendTextMsg(" STACK TRACE> "+sw.toString(), MSG_ERR);
+        return -4;
     }
-
- //----
-    if(ret!=0) sendTextMsg("ERROR: init return "+ret+";", MSG_ERR);
-         
-  cpuTimer.stop();
-return ret;
+    init2Done = true;
+    return 0;
 }
 
 @Override
@@ -498,51 +519,18 @@ public ArrayList<AIFloat3> getMetalSpotsInRadius(AIFloat3 center, float r) {
     return mPoints;
 }
    
-//TODO move getUnitResoureProduct to ModSpecification, or to AdvECO
     /**
      * Get unit resource income-usage (can work with LUA metal maker by using modSpecific.getResourceConversionFor(...)).
+     * 
+     * todo Deprecated: use EnvironmentInterface.getUnitResoureProduct(UnitDef, Resource);
+     * 
      * @param def unit type
      * @param res resource type
      * @return resource incoming (+) or resource using (-)
      */
+    @Deprecated
     public float getUnitResoureProduct(UnitDef def, Resource res) {
-        //TODO make faster!
-        float resProduct = 0.0f + def.getMakesResource(res)+def.getResourceMake(res)-def.getUpkeep(res);
-        
-        float mapWind=clb.getMap().getCurWind();
-        float defWindGenerator=def.getWindResourceGenerator(res);
-        if (mapWind>0 && defWindGenerator!=0) {
-            resProduct += defWindGenerator/120.0f*mapWind; // !!! test, maybe mod specifed!!
-//            sendTextMsg("Wind calc for "+def.getName()+" map wind="+mapWind+" def wind res gen="+defWindGenerator+ " resProduct+="+resProduct, MSG_DBG_ALL);
-        }
-        
-        float mapTidal=clb.getMap().getTidalStrength();
-        float defTidalGenerator=def.getTidalResourceGenerator(res);
-        if (mapTidal>0 && defTidalGenerator!=0) {
-            resProduct += defTidalGenerator*mapTidal; // TODO TEST tidal res !!!!
-//            sendTextMsg("Tidal calc for "+def.getName()+" map tid shreng="+mapTidal+" def tid res gen="+defTidalGenerator+ " resProduct+="+resProduct, MSG_DBG_ALL);
-        }
-        
-        if (isMetalFieldMap>=0) {
-            float defExtractRes=def.getExtractsResource(res);
-            if (defExtractRes!=0) {  // add extract resource
-                float mapResAvgExtract=clb.getMap().getExtractorRadius(res);
-                double metalExSquare = mapResAvgExtract;
-                    metalExSquare = metalExSquare * metalExSquare * Math.PI;
-                resProduct+=defExtractRes * metalExSquare * clb.getMap().getResourceMapSpotsAverageIncome(res);
-    //            sendTextMsg("Extract calc for "+def.getName()+" extr square="+metalExSquare+" map avg res income="+mapResAvgExtract+" def extract res gen="+defExtractRes+ " resProduct+="+resProduct, MSG_DBG_ALL);
-            }
-        }
-
-        // - - Depends of MOD part! MMaker - -
-        float modSpecRes[]=modSpecific.getResourceConversionFor(def);
-        if (modSpecRes!=null) {
-            if (res.equals(avgEco.resName[0])) resProduct += modSpecRes[0];
-            if (res.equals(avgEco.resName[1])) resProduct +=modSpecRes[1];
-        }
-        // TODO In mod EvolutionRTS all metal extractor make 1 (or 0.5) metall! In Zero-K extract metal on special formuls!
-        
-        return resProduct;
+        return environmentInterface.getUnitResoureProduct(def, res);
     }   
     
     /**
@@ -552,47 +540,12 @@ public ArrayList<AIFloat3> getMetalSpotsInRadius(AIFloat3 center, float r) {
      * @return resource incoming (+) or resource using (-) array for all resources
      */
     public float[] getUnitResoureProduct(UnitDef def) {
-        final float mapWind=clb.getMap().getCurWind();
-        final float mapTidal=clb.getMap().getTidalStrength();
-        
-        final float modSpecRes[]=modSpecific.getResourceConversionFor(def); // Depends of MOD part! MMaker
-
-        float resProduct[] = new float[avgEco.resName.length];
-        for (int r=0; r<resProduct.length; r++)
-        {
-            Resource res=avgEco.resName[r];
-            resProduct[r] = 0.0f + def.getMakesResource(res)+def.getResourceMake(res)-def.getUpkeep(res);
-
-            float defWindGenerator=def.getWindResourceGenerator(res);
-            if (mapWind>0 && defWindGenerator!=0) {
-                resProduct[r] += defWindGenerator/120.0f*mapWind; // !!! test, maybe mod specifed!!
-    //            sendTextMsg("Wind calc for "+def.getName()+" map wind="+mapWind+" def wind res gen="+defWindGenerator+ " resProduct+="+resProduct, MSG_DBG_ALL);
-            }
-        
-            float defTidalGenerator=def.getTidalResourceGenerator(res);
-            if (mapTidal>0 && defTidalGenerator!=0) {
-                resProduct[r] += defTidalGenerator*mapTidal; // TODO TEST tidal res !!!!
-    //            sendTextMsg("Tidal calc for "+def.getName()+" map tid shreng="+mapTidal+" def tid res gen="+defTidalGenerator+ " resProduct+="+resProduct, MSG_DBG_ALL);
-            }
-        
-            if (isMetalFieldMap>=0) {
-                float defExtractRes=def.getExtractsResource(res);
-                if (defExtractRes!=0) {  // add extract resource
-                    float mapResAvgExtract=clb.getMap().getExtractorRadius(res);
-                    double metalExSquare = mapResAvgExtract;
-                        metalExSquare = metalExSquare * metalExSquare * Math.PI;
-                    resProduct[r]+=defExtractRes * metalExSquare * clb.getMap().getResourceMapSpotsAverageIncome(res);
-        //            sendTextMsg("Extract calc for "+def.getName()+" extr square="+metalExSquare+" map avg res income="+mapResAvgExtract+" def extract res gen="+defExtractRes+ " resProduct+="+resProduct, MSG_DBG_ALL);
-                }
-            }
-            
-            if (modSpecRes!=null) resProduct[r] += modSpecRes[r]; // Depends of MOD part! MMaker
-            // TODO In mod EvolutionRTS all metal extractor make 1 (or 0.5) metall! In Zero-K extract metal on special formuls!
-        }
-        
-        return resProduct;
+        return environmentInterface.getUnitResoureProduct(def);
     }    
 
+    public float getCost(UnitDef def, Resource res) {
+        return environmentInterface.getCost(def, res);
+    }
 // ==================================
 
 private boolean inGameInitDone=false; // post-start initialization pass mark
@@ -877,32 +830,9 @@ public ArrayList<TBase> selectTBasesList() {
     return basesList;
 }
 
-@Override
-public int update(int frame) {
-  try {
-  cpuTimer.start();
-    currentFrime=frame;
-//    sendTextMsg("update frame="+frame, MSG_DBG_ALL);
-      
-    if (!deadLstUnit.isEmpty()) deadLstUnit.clear();
-    if (!smartGroupsToRemove.isEmpty()) { // TODO test.
-        for (AGroupManager group:smartGroupsToRemove) { // send units to other groups
-            List<Unit> freeUnits=group.getAllUnits(false);
-            // TODO what doing with units?
-            for (Unit u:freeUnits) addToSameGroup(u);
-        }
 
-        if (smartGroups.removeAll(smartGroupsToRemove)) smartGroupsToRemove.clear();
-        //TODO don't forget call removeSmartGroup(null) if add some methods/cashes for calling on this function;
-    }
-      
-    avgEco.update(frame);
+protected void init3() {
     
-  if (!inGameInitDone) {
-        //this method move to init() : if (isMetalFieldMap==-2) checkForMetal(); // test for metal!!!
-        // initMetalData(); // !!!
-        inGameInitDone=true;
-
         Mod mod=clb.getMod();
         sendTextMsg("MOD info. Name: "+mod.getHumanName()+" short name:"+mod.getShortName()+" version:"+mod.getVersion()+" description:"+mod.getDescription(), MSG_DBG_SHORT);
         sendTextMsg("ENGINE: "+clb.getEngine().getVersion().getFull(), MSG_DBG_SHORT);
@@ -925,7 +855,38 @@ public int update(int frame) {
 //        }
 //        sendTextMsg("----  ----", FieldBOT.MSG_DBG_ALL);
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          
+       
+}
+@Override
+public int update(int frame) {
+  try {
+  cpuTimer.start();
+    currentFrime=frame;
+    
+    if (!init2Done) {
+        init2();
+    }
+    
+//    sendTextMsg("update frame="+frame, MSG_DBG_ALL);
+      
+    if (!deadLstUnit.isEmpty()) deadLstUnit.clear();
+    if (!smartGroupsToRemove.isEmpty()) { // TODO test.
+        for (AGroupManager group:smartGroupsToRemove) { // send units to other groups
+            List<Unit> freeUnits=group.getAllUnits(false);
+            // TODO what doing with units?
+            for (Unit u:freeUnits) addToSameGroup(u);
+        }
+
+        if (smartGroups.removeAll(smartGroupsToRemove)) smartGroupsToRemove.clear();
+        //TODO don't forget call removeSmartGroup(null) if add some methods/cashes for calling on this function;
+    }
+      
+    avgEco.update(frame);
+    
+  if (!inGameInitDone) {
+        init3();
+        inGameInitDone=true;
+   
   } else {
 
     talkingDialogModule.update(frame);

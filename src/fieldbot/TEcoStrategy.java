@@ -75,12 +75,18 @@ public class TEcoStrategy {
     private static final float MAX_BUILD_TIME_FOR_GENERATORRES=4*60; // не выбирать здания, которые строятся дольше.
     private static final float USE_STORAGE_PERCENT=0.7f; // на сколько полагаться на хранящиеся ресурсы.
 
-    
+    final Resource resM;
+    final Resource resE;
+
     
     public TEcoStrategy(FieldBOT owner) {
         this.owner=owner;
         useOptimisticResourceCalc=true;
         makeEco=true;
+        
+        // todo use soft logic - new mod can have not noly Metal/Energy.
+        resM=owner.clb.getResourceByName("Metal");
+        resE=owner.clb.getResourceByName("Energy");
     }
     
     
@@ -312,7 +318,7 @@ public class TEcoStrategy {
         final Resource resName[]=owner.avgEco.resName; // !!! test
         float T=MINIMAL_BUILD_TIME;
         for (int rN=0; rN<currentRes[resName.length].length;rN++) {
-            float nehvatkaRes=build.getCost(resName[rN])-resCurrentMultipler*currentRes[AdvECO.R_Current][rN];
+            float nehvatkaRes=owner.getCost(build,resName[rN])-resCurrentMultipler*currentRes[AdvECO.R_Current][rN];
             if (nehvatkaRes>0) {
                 //float resPostupl=currentRes[AdvECO.R_Income][rN]-currentRes[AdvECO.R_Usage][rN];
                 float resPostupl=currentRes[AdvECO.R_Income][rN]-currentRes[AdvECO.R_Usage][rN]; // !!!!!!!!!!!!!
@@ -357,7 +363,7 @@ public class TEcoStrategy {
             float resProduct[]=owner.getUnitResoureProduct(def);
             for (int i=0;i<resProduct.length;i++) {
                 currentRes[AdvECO.R_Current][i]+= t * (currentRes[AdvECO.R_Income][i]-currentRes[AdvECO.R_Usage][i])
-                                               - def.getCost(owner.avgEco.resName[i]);
+                                               - owner.getCost(def, owner.avgEco.resName[i]);
                 float deltaRes=resProduct[i];
                 if (deltaRes>0.0f)
                     currentRes[AdvECO.R_Income][i] += deltaRes;
@@ -424,7 +430,7 @@ public class TEcoStrategy {
         // TODO сделать boolean mojetVliatNaPosleduyshie=false;... если критич. ресурсы не меняются, то нет и зависимость линейна.
         // TODO use getWaitTimeForProductResource. часть кода отсюда уже скопированно в getWaitTimeForProductResource()
         for (int rN=0; rN<currentRes[resName.length].length;rN++) {
-            float nehvatkaRes=build.getCost(resName[rN])-resCurrentMultipler*currentRes[AdvECO.R_Current][rN];
+            float nehvatkaRes=owner.getCost(build,resName[rN])-resCurrentMultipler*currentRes[AdvECO.R_Current][rN];
             if (nehvatkaRes>0.0f) {
                 //float resPostupl=currentRes[AdvECO.R_Income][rN]-currentRes[AdvECO.R_Usage][rN]; // было
                 float resPostupl=currentRes[AdvECO.R_Income][rN]-currentRes[AdvECO.R_Usage][rN];
@@ -472,7 +478,7 @@ public class TEcoStrategy {
         float resProduct[]=owner.getUnitResoureProduct(build);
         for (int i=0;i<numRes;i++) {
             Resource res=owner.avgEco.resName[i];
-            unitEffectEco[AdvECO.R_Current][i] = -build.getCost(res); // decrease current res
+            unitEffectEco[AdvECO.R_Current][i] = -owner.getCost(build,res); // decrease current res
             float deltaRes=resProduct[i];
             unitEffectEco[AdvECO.R_Income][i]=Math.max(0,deltaRes);
             unitEffectEco[AdvECO.R_Usage][i]=Math.max(0,-deltaRes); // increase usage
@@ -536,8 +542,8 @@ public class TEcoStrategy {
         // --------
         Resource bestUnitR=null; // select best unit for generate this resource
         //Economy eco = owner.clb.getEconomy();
-        final Resource resM=owner.clb.getResourceByName("Metal");
-        final Resource resE=owner.clb.getResourceByName("Energy");
+        //final Resource resM=owner.clb.getResourceByName("Metal");
+        //final Resource resE=owner.clb.getResourceByName("Energy");
         // - - - - -
         
         //float buildPower=onBase.getBuildPower(false,true); // !!!
@@ -931,7 +937,7 @@ private EcoStateInfo calcEcoAftherTime(float maxT, EcoStateInfo ecoStart, ArrayL
             for (int i=0;i<resProduct.length;i++) {
                 currentRes[AdvECO.R_Current][i]=currentRes[AdvECO.R_Current][i]
                         + t * (currentRes[AdvECO.R_Income][i]-currentRes[AdvECO.R_Usage][i]) // !!!!!!!!! Math.max(startRes[AdvECO.R_Income][r]-startRes[AdvECO.R_Usage][r],startRes[AdvECO.R_Income][r]/2.0f)
-                        - build.getCost(owner.avgEco.resName[i]);
+                        - owner.getCost(build,owner.avgEco.resName[i]);
 
                 // Учесть потери от нехватки складов
                 if (currentRes[AdvECO.R_Current][i]>currentRes[AdvECO.R_Storage][i])
@@ -1001,7 +1007,7 @@ owner.sendTextMsg("i="+i+", t1="+t1+" ecoState="+ecoState.toString(), FieldBOT.M
                     ecoState.resources[AdvECO.R_Current][r] += 
                             t2w *
                             (ecoState.resources[AdvECO.R_Income][r]-ecoState.resources[AdvECO.R_Usage][r])
-                            - assistWorker.getCost(owner.avgEco.resName[r]);
+                            - owner.getCost(assistWorker,owner.avgEco.resName[r]);
                 }
                 ecoState.assistBuildPower+=assistWorker.getBuildSpeed();
             }
